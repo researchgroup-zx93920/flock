@@ -8,7 +8,7 @@ int main(){
     const char * problem = "TransportSimplex";
     
     // todo: accept fileName as argv
-    std::string fileName = "../data/TransportModel_10_10_2000_equalityConstr.dat";
+    std::string fileName = "../data/TransportModel_toy.dat";
     
     int matrixDemands, matrixSupplies, * demands, * supplies, * flows;
     double * costMatrix;
@@ -39,10 +39,11 @@ int main(){
     // find_nw_corner_bfs_seq(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
 
    // Vogel's Approximation - sequencial
-   find_vogel_bfs_seq(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
+   // find_vogel_bfs_seq(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
+   find_vogel_bfs_parallel(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
    
-    // Modified Distribution Methods - Parallel >>
-    
+   // Modified Distribution Methods - Parallel >>
+   // printLocalDebugArray(flows, matrixSupplies, matrixDemands, "Flows");
 
    // Inflows we have M+N-1 non-zeros giving m+n-1 equations in m+n variables
    // Solve this equation to find dual and corresponding to each form the reduced costs >>
