@@ -258,6 +258,7 @@ __global__ void find_max(vogelDifference * d_diff, vogelDifference *output, int 
     height: matrixHeight
 */
 __global__ void find_least_two_with_indexes(double * flatMatrix2D, vogelDifference * diff, int orientation, 
+    int * rowCovered, int *colCovered,
     int width, int height, int offset) {
     
     int indx = blockDim.x*blockIdx.x + threadIdx.x;
@@ -267,6 +268,9 @@ __global__ void find_least_two_with_indexes(double * flatMatrix2D, vogelDifferen
     
     int max_indx = orientation == 0?height:width;
     // If computing row differences - for max indx is height, else if col diff then max index is width
+
+    bool skip_flag = orientation == 0?rowCovered[indx]:colCovered[indx];
+    // Skip flag tells if a row-col is to be ignored
 
     int (* fx) (int a, int b, int c) = orientation==0?&rowIndxInFlat:&colIndxInFlat;
     // fx is an indexing method for flattened arrays =>
@@ -279,7 +283,7 @@ __global__ void find_least_two_with_indexes(double * flatMatrix2D, vogelDifferen
     temp1 = INT_FAST16_MAX; // Find some C-eqvlnt of this thing
     temp2 = INT_FAST16_MAX;
     
-    if (indx < max_indx) {
+    if (indx < max_indx && !skip_flag) {
 
         for (int i=0; i< iterations; i++) {
             // Only look at columns not covered >>     
@@ -302,17 +306,24 @@ __global__ void find_least_two_with_indexes(double * flatMatrix2D, vogelDifferen
 }
 
 
-__global__ void consumeDemandSupply(int * supplies, int * demands, int * rowCovered, int * columnCovered, 
-        int row_indx, int col_indx) {
-
-        if (supplies[row_indx] >= demands[col_indx]) {
-            // Demand point consumes the supply
-            supplies[row_indx] -= demands[col_indx];
+__global__ void consumeDemandSupply(int * d_supplies, int * d_demands, int * rowCovered, int * columnCovered, 
+        int * f, int row_indx, int col_indx) {
+        
+        int sup = d_supplies[row_indx];
+        int dem = d_demands[col_indx];
+        if (sup >= dem) {
+            // Demand point consumed the supply and got eliminated
+            f[0] = dem; // Message to host
+            f[1] = 1; // Message to host
+            d_supplies[row_indx] = sup - dem;
             columnCovered[col_indx] = 1;
         }
         
         else {
-            demands[col_indx] -= supplies[row_indx];
+            // Supply point consumed the demand and got eliminated
+            f[0] = sup; // Message to host
+            f[1] = 0; // Message to host
+            d_demands[col_indx] = dem - sup;
             rowCovered[row_indx] = 1;
         }
 }
@@ -348,12 +359,12 @@ void find_vogel_bfs_parallel(int * supplies, int * demands, double * costMatrix,
         std::cout<<"Vogel Kernel - Step 0"<<std::endl; 
 
         int number_of_blocks = ceil(1.0*matrixSupplies/blockSize);
-        int * d_supplies, * d_demands, *rowCovered, *columnCovered, row_indx, col_indx;
+        int * d_supplies, * d_demands, *rowCovered, *columnCovered, * h_f, *d_f, row_indx, col_indx;
         double * d_costMatrix;
         
         vogelDifference * d_diff, *d_diff_buffer, * h_diff_buffer, tempDiff;
         h_diff_buffer = (vogelDifference *) malloc((number_of_blocks)*sizeof(vogelDifference));
-
+        
         cudaMalloc((void **) &d_supplies, matrixSupplies*sizeof(int));
         cudaMemcpy(d_supplies, supplies, matrixSupplies*sizeof(int), cudaMemcpyHostToDevice);
         
@@ -363,7 +374,7 @@ void find_vogel_bfs_parallel(int * supplies, int * demands, double * costMatrix,
         cudaMalloc((void **) &d_costMatrix, matrixSupplies*matrixDemands*sizeof(double));
         cudaMemcpy(d_costMatrix, costMatrix, matrixSupplies*matrixDemands*sizeof(double), cudaMemcpyHostToDevice);
 
-        // Booking Structures on device >>
+        // Booking Structures on device and host >>
         cudaMalloc((void **) &d_diff, (matrixSupplies+matrixDemands)*sizeof(vogelDifference));
         cudaMalloc((void **) &d_diff_buffer, (number_of_blocks)*sizeof(vogelDifference));
         
@@ -372,6 +383,9 @@ void find_vogel_bfs_parallel(int * supplies, int * demands, double * costMatrix,
 
         cudaMalloc((void **) &columnCovered, matrixDemands*sizeof(int));
         cudaMemset(columnCovered, 0, matrixDemands*sizeof(int));
+
+        h_f = (int *) malloc(sizeof(int)*2);
+        cudaMalloc((void **) &d_f, sizeof(int)*2);
 
         // Step 1 : 
         
@@ -382,51 +396,61 @@ void find_vogel_bfs_parallel(int * supplies, int * demands, double * costMatrix,
         dim3 blockD(blockSize, 1, 1);
         dim3 gridD(number_of_blocks, 1, 1);
 
-        std::cout<<"Vogel Kernel - Step 1 : Row Differences"<<std::endl; 
-        find_least_two_with_indexes<<<gridD, blockD>>>(d_costMatrix, d_diff, 0, matrixDemands, matrixSupplies, 0);
-        std::cout<<"Vogel Kernel - Step 1 : Col Differences"<<std::endl;
-        find_least_two_with_indexes<<<gridD, blockD>>>(d_costMatrix, d_diff, 1, matrixDemands, matrixSupplies, matrixSupplies);
-        
-        cudaDeviceSynchronize();
+        for (int iter=0; iter<matrixSupplies+matrixDemands-1; iter++) {
 
-        // Find max of Row and Col Differences >>
-        // d_diff is still on device => Directly Call the reduction kernel
-        find_max<<<blockD, gridD>>>(d_diff, d_diff_buffer, matrixSupplies+ matrixDemands);
-        cudaDeviceSynchronize();
+            std::cout<<"Vogel Kernel - Step 1 : Row Differences"<<std::endl; 
+            find_least_two_with_indexes<<<gridD, blockD>>>(d_costMatrix, d_diff, 0, rowCovered, columnCovered, matrixDemands, matrixSupplies, 0);
+            std::cout<<"Vogel Kernel - Step 1 : Col Differences"<<std::endl;
+            find_least_two_with_indexes<<<gridD, blockD>>>(d_costMatrix, d_diff, 1, rowCovered, columnCovered, matrixDemands, matrixSupplies, matrixSupplies);
+            
+            cudaDeviceSynchronize();
 
-        cudaMemcpy(h_diff_buffer, d_diff_buffer, sizeof(vogelDifference)*number_of_blocks, cudaMemcpyDeviceToHost);
-        // Now Reduce a small segment on device for h_diff >>
-        // Recall - We're still finding max of differences but now from a very small set
-        tempDiff = h_diff_buffer[0];
-        for (int i=1; i<number_of_blocks; i++) {
-            if (h_diff_buffer[i].diff >= tempDiff.diff) {
-                tempDiff = h_diff_buffer[i];
+            // Find max of Row and Col Differences >>
+            // d_diff is still on device => Directly Call the reduction kernel
+            find_max<<<blockD, gridD>>>(d_diff, d_diff_buffer, matrixSupplies+ matrixDemands);
+            cudaDeviceSynchronize();
+
+            cudaMemcpy(h_diff_buffer, d_diff_buffer, sizeof(vogelDifference)*number_of_blocks, cudaMemcpyDeviceToHost);
+            // Now Reduce a small segment on device for h_diff >>
+            // Recall - We're still finding max of differences but now from a very small set
+            tempDiff = h_diff_buffer[0];
+            for (int i=1; i<number_of_blocks; i++) {
+                if (h_diff_buffer[i].diff >= tempDiff.diff) {
+                    tempDiff = h_diff_buffer[i];
+                }
             }
+            
+            // vogelDifference d = tempDiff;
+            // std::cout<<"Max Diff : "<<d.diff<<std::endl;
+            // std::cout<<"Max Diff : indx "<<d.indx<<std::endl;
+            // std::cout<<"Max Diff : leastCost "<<d.ileast_1<<std::endl;
+            
+            // Identify this is a row difference or col difference
+            // Now the flow assignment cell is - tempDiff.idx and tempDiff.ileast_1 
+
+            if (tempDiff.indx > matrixSupplies) {
+                // This is a col difference
+                row_indx = tempDiff.ileast_1;
+                col_indx = tempDiff.indx - matrixSupplies;
+            }
+            else {
+                col_indx = tempDiff.ileast_1;
+                row_indx = tempDiff.indx;
+            }
+            
+            // Assign Supply Demand smartly with kernel - Direcly update device copy of demands and 
+            // supplies to determine residual, use 1 thread for this and update flow in host
+            
+            // Get some way around this - do we have a device struc messaging protocol >> 
+            consumeDemandSupply<<<1, 1>>>(d_supplies, d_demands, rowCovered, columnCovered, d_f, row_indx, col_indx);
+            cudaDeviceSynchronize();
+
+            cudaMemcpy(h_f, d_f, sizeof(int)*2, cudaMemcpyHostToDevice);
+            flows[row_indx*matrixSupplies+col_indx] = h_f[0];
+
         }
         
-        // vogelDifference d = tempDiff;
-        // std::cout<<"Max Diff : "<<d.diff<<std::endl;
-        // std::cout<<"Max Diff : indx "<<d.indx<<std::endl;
-        // std::cout<<"Max Diff : leastCost "<<d.ileast_1<<std::endl;
-
-        // Identify this is a row difference or col difference
-        if (tempDiff.indx > matrixSupplies) {
-            // This is a col difference
-            row_indx = tempDiff.ileast_1;
-            col_indx = tempDiff.indx - matrixSupplies;
-        }
-        else {
-            col_indx = tempDiff.ileast_1;
-            row_indx = tempDiff.indx;
-        }
-
-        
-
-        // Assign Supply Demand smartly with kernel - Direcly update device copy of demands and 
-        // supplies to determine residual, use 1 thread for this and update flow in host
-        
-
-        // Now the flow assignment cell is - tempDiff.idx and tempDiff.ileast_1 
+        printLocalDebugArray(flows, matrixSupplies, matrixDemands, "flows");
 
         cudaFree(d_supplies);
         cudaFree(d_demands);
