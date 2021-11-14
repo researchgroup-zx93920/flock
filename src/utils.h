@@ -56,14 +56,6 @@ __host__ __device__ struct MatrixCell {
     }
 };
 
-struct vogelDifference {
-        float diff;
-        int indx, ileast_1, ileast_2;
-        // idx it itselves index in diff array
-        // ileast_1 and ileast2 are indexes of min-2 values
-        // least_1,least_2,
-};
-
 void readSize(int &matrixDemands, int &matrixSupplies, std::string filename);
 void readFile(int * supplies, int * demands, MatrixCell * costMatrix, std::string filename);
 

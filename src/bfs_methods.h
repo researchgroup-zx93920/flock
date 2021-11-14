@@ -9,7 +9,7 @@
 
 #include "utils.h"
 
-#define blockSize 256
+#define blockSize 512
 
 #ifndef BFS
 #define BFS

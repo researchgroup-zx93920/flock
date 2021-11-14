@@ -46,10 +46,58 @@ struct colgen{
 
 struct compareCells {
   __host__ __device__  bool operator()(const MatrixCell i, const MatrixCell j) const{
-        return (i.cost < j.cost);
+        return (i.cost <= j.cost);
     }
 };
 
+struct vogelDifference {
+        float diff;
+        int idx, ileast_1, ileast_2;
+        // idx stores itselves index in difference array
+        // ileast_1 and ileast2 are indexes of min-2 values
+        // least_1,least_2,
+};
+
+__global__ void initializeDifferencesVector(vogelDifference * minima, int size) {
+        
+        int indx = blockIdx.x*blockDim.x + threadIdx.x;
+        
+        if (indx < size) {
+                vogelDifference d = {.idx = indx, .ileast_1 = 0, .ileast_2 = 1, .diff = 0.0};
+                minima[indx] = d;
+        }
+}
+
+__global__ updateDifferences(vogelDifferences *diff, MatrixCell *row_book, MatrixCell *col_book, int n_rows, int n_cols, int prev_eleminated) {
+        
+        int indx = blockIdx.x*blockDim.x + threadIdx.x;
+        if (indx < n_rows && prev_eleminated > n_rows) {
+                /* Then a column was eliminated - 
+                In this case row minima are updated and column minima are maintained
+                        1. RowMinima exist at indx < n_rows in diff
+                        2. Elimiated col indx = prev_eliminated - n_rows
+                        3. Now see if the corresponding diff has either ileast-1 or ileast-2 equal to elimiated col indx
+                        4. Increment
+                */
+                int rejectColIdx = prev_eleminated - n_rows;
+                // In row_book index from [indx*n_cols] upto [(indx+1)*n_cols] is the sorted order of row costs 
+                MatrixCell least1 = row_book[indx*n_cols + diff[indx].ileast_1]; // Minimum
+                MatrixCell least2 = row_book[indx*n_cols + diff[indx].ileast_2]; // Second Minimum
+
+        }
+
+        else if (indx < n_rows + n_cols && prev_eleminated < n_rows) {
+                /* Then a row was eliminated - 
+                In this case col minima are updated and row minima are maintained
+                        1. ColMinima exist at indx > n_rows in diff
+                        2. Elimiated row indx = prev_eliminated
+                        3. Now see if the corresponding diff has either ileast-1 or ileast-2 equal to elimiated col indx
+                        4. Increment
+                */
+        }
+
+
+}
 
 /*
 Step 0: For each of the rows and columns - Determine the sorted order of col indexes and row indexes respectively
@@ -69,7 +117,7 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
         // Book-keeping Structures on device >>
         
         // *********************************
-        // Row Bookeeping
+        // Row Wise Bookeeping
         // *********************************
 
         thrust::device_vector<MatrixCell> device_costMatrixRowBook(matrixSupplies*matrixDemands);  
@@ -77,6 +125,7 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
         
         // auto rowgen = [=]  __device__ (MatrixCell x) {return x.row;};  
         // -> Alternative way using such lambda exp (compile with --expt-extended-lambda -std=c++11) 
+        // same implement on column section
         
         rowgen op1;
         thrust::device_vector<int> device_rowSegments(matrixSupplies*matrixDemands);
@@ -101,14 +150,11 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
         // std::cout << "vectorized sorting time for rows:" << mytime/(float)USECPSEC << "s" << std::endl;
 
         // *********************************
-        // Column Bookeeping
+        // Column Wise Bookeeping
         // *********************************
 
         thrust::device_vector<MatrixCell> device_costMatrixColBook(matrixSupplies*matrixDemands);  
         thrust::copy(thrust::device, device_costMatrix.begin(),device_costMatrix.end(), device_costMatrixColBook.begin());
-        
-        // auto rowgen = [=]  __device__ (MatrixCell x) {return x.row;};  
-        // -> Alternative way using such lambda exp (compile with --expt-extended-lambda -std=c++11) 
         
         colgen op2;
         thrust::device_vector<int> device_colSegments(matrixSupplies*matrixDemands);
@@ -128,14 +174,34 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
                 device_costMatrixColBook.begin());
         
         cudaDeviceSynchronize();
+        
         // mytime = dtime_usec(mytime);
         // std::cout << "vectorized sorting time for cols:" << mytime/(float)USECPSEC << "s" << std::endl;
 
-        /*
-        Todo: 
-        Row-current Minima pointer [[0,1],[0,1],[0,1] . . .]
-        Col-current Minima pointer [[0,1],[0,1],[0,1] . . .]
+        // Freeup Some Memory
+        device_rowSegments.clear();
+        device_colSegments.clear();
+        
+        /* 
+        Illustration:
+
+        - Row-current Minima pointer [[0,1],[0,1],[0,1] . . .] 
+        - Col-current Minima pointer [[0,1],[0,1],[0,1] . . .]
+        
+        vogelDifference vector was created to accomodate the above need
+        Further currentMinimaVect concat's both
         */
+        // Vector of indexes of row and col minima in current iteration of vogel - 
+        thrust::device_vector<vogelDifference> currentMinimaVect(matrixSupplies+matrixDemands);
+        thrust::device_vector<bool> rowColCovered(matrixSupplies+matrixDemands);
+        thrust::fill(rowColCovered.begin(), rowColCovered.end(), false);
+
+        vogelDifference * vect = thrust::raw_pointer_cast(currentMinimaVect.data());
+        
+        dim3 dimBlock(blockSize, 1, 1);
+        dim3 dimGrid(ceil(1.0*currentMinimaVect.size()/blockSize),1,1);
+        initializeDifferencesVector<<<dimGrid, dimBlock>>>(vect, currentMinimaVect.size());
+
 
         // for (size_t i = 0; i < device_costMatrixColBook.size(); i++){
         //         std::cout << "device_costMatrixColBook[" << i << "] = " << device_costMatrixColBook[i] << std::endl;
