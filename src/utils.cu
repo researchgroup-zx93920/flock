@@ -16,7 +16,7 @@ void readSize(int &matrixDemands, int &matrixSupplies, std::string filename)
 	myfile.close();
 }
 
-void readFile(int * supplies, int * demands, double *costMatrix, std::string filename)
+void readFile(int * supplies, int * demands, MatrixCell * costMatrix, std::string filename)
 {
 	std::string s = filename;
 	std::ifstream myfile(s.c_str());
@@ -49,15 +49,23 @@ void readFile(int * supplies, int * demands, double *costMatrix, std::string fil
         }
 
         // Read Cost Matrix >>
-		long largestIndx = matrixSupplies*matrixDemands;
+		float _cost;
 
-		for (long i = 0; i < largestIndx; i++)
-		{	
-			myfile >> costMatrix[i];
+		for (int i=0; i<matrixSupplies; i++){
+			for (int j=0; j<matrixDemands; j++) {
+				myfile >> _cost;
+				int indx = i*matrixDemands + j;
+				MatrixCell m = {.row = i, .col = j, .cost = _cost};
+				costMatrix[indx] = m;
+			}
 		}
-		
+
 		myfile.close();
 	}
-
-	
 }
+
+std::ostream& operator << (std::ostream& o, const MatrixCell& x) {
+    o << x.cost;
+    return o;
+}
+
