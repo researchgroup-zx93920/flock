@@ -69,3 +69,8 @@ std::ostream& operator << (std::ostream& o, const MatrixCell& x) {
     return o;
 }
 
+std::ostream& operator << (std::ostream& o, const vogelDifference& x) {
+    o << x.diff <<" | Least 1 : "<<x.ileast_1 <<" | Least 2: "<<x.ileast_2;
+    return o;
+}
+

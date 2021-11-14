@@ -56,10 +56,19 @@ __host__ __device__ struct MatrixCell {
     }
 };
 
+struct vogelDifference {
+        int idx, ileast_1, ileast_2;
+        float diff;
+        // idx stores itselves index in difference array
+        // ileast_1 and ileast2 are indexes of min-2 values
+        // least_1,least_2,
+};
+
 void readSize(int &matrixDemands, int &matrixSupplies, std::string filename);
 void readFile(int * supplies, int * demands, MatrixCell * costMatrix, std::string filename);
 
 std::ostream& operator << (std::ostream& o, const MatrixCell& x);
+std::ostream& operator << (std::ostream& o, const vogelDifference& x);
 
 template <typename T>
 void printLocalDebugArray(T * d_array, int rows, int columns, const char *name) {

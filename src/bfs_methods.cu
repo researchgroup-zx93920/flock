@@ -50,52 +50,127 @@ struct compareCells {
     }
 };
 
-struct vogelDifference {
-        float diff;
-        int idx, ileast_1, ileast_2;
-        // idx stores itselves index in difference array
-        // ileast_1 and ileast2 are indexes of min-2 values
-        // least_1,least_2,
-};
-
-__global__ void initializeDifferencesVector(vogelDifference * minima, int size) {
+__global__ void initializeDifferencesVector(vogelDifference * minima, MatrixCell * row_book, MatrixCell * col_book, int n_rows, int n_cols) {
         
         int indx = blockIdx.x*blockDim.x + threadIdx.x;
         
-        if (indx < size) {
-                vogelDifference d = {.idx = indx, .ileast_1 = 0, .ileast_2 = 1, .diff = 0.0};
+        if (indx < n_rows+n_cols) {
+                float _diff;
+                if (indx < n_rows) {
+                        _diff = row_book[indx*n_cols + 1].cost - row_book[indx*n_cols].cost;
+                }
+                else { 
+                        _diff = col_book[(indx-n_rows)*n_rows + 1].cost - col_book[(indx-n_rows)*n_rows].cost;
+                }
+                vogelDifference d = {.idx = indx, .ileast_1 = 0, .ileast_2 = 1, .diff = _diff};
                 minima[indx] = d;
         }
 }
 
-__global__ updateDifferences(vogelDifferences *diff, MatrixCell *row_book, MatrixCell *col_book, int n_rows, int n_cols, int prev_eleminated) {
+
+__global__ void updateDifferences(
+        vogelDifference * minima, // Row and Column Differences 
+        MatrixCell *row_book, MatrixCell *col_book, // Row Wise and Column wise Look up (2n^2 Data Struct)
+        bool * covered,                 // Flags if particular row/col was covered
+        int n_rows, int n_cols, int prev_eliminated) {
         
         int indx = blockIdx.x*blockDim.x + threadIdx.x;
-        if (indx < n_rows && prev_eleminated > n_rows) {
-                /* Then a column was eliminated - 
+
+        // Note - Following if and else are simply the pivots of each other
+        // Same kernel uses prev_elminated values and accordingly updates row/col differences
+        if (indx < n_rows && prev_eliminated >= n_rows && !covered[indx]) {
+
+                /* Then a column was eliminated (The covered for this has already been set to true before invoke in O(1)) -
+                Now, indx corresponds to row ID's in vect, Only do this operator for uncovered rows
                 In this case row minima are updated and column minima are maintained
                         1. RowMinima exist at indx < n_rows in diff
                         2. Elimiated col indx = prev_eliminated - n_rows
-                        3. Now see if the corresponding diff has either ileast-1 or ileast-2 equal to elimiated col indx
-                        4. Increment
+                        3. Now see if the corresponding diff for indx'th row 
+                        has either ileast-1 or ileast-2 equal to elimiated col indx
+                        
+                        In row_book index from [indx*n_cols] upto [(indx+1)*n_cols] is the sorted order of indx'th 
+                        row costs 
+                        
+                        4. If previous was true then increment ileast1 ad ileast2 accordingly, o/w Untouched
                 */
-                int rejectColIdx = prev_eleminated - n_rows;
-                // In row_book index from [indx*n_cols] upto [(indx+1)*n_cols] is the sorted order of row costs 
-                MatrixCell least1 = row_book[indx*n_cols + diff[indx].ileast_1]; // Minimum
-                MatrixCell least2 = row_book[indx*n_cols + diff[indx].ileast_2]; // Second Minimum
-
+                int rejectColIdx = prev_eliminated - n_rows;
+                float _diff;
+                MatrixCell least1 = row_book[indx*n_cols + minima[indx].ileast_1]; // Minimum
+                MatrixCell least2 = row_book[indx*n_cols + minima[indx].ileast_2]; // Second Minimum
+                if (least1.col == rejectColIdx){
+                        // assign ileast2 to ileast1 and increment ileast2 to next uncovered
+                        minima[indx].ileast_1 = minima[indx].ileast_2;
+                        minima[indx].ileast_2 += 1;
+                        while (covered[n_rows + row_book[indx*n_cols + minima[indx].ileast_2].col]) {
+                                // Loop will keep moving untill - covered = false is found for the corresponding column
+                                // Boundary condition need to be applied >> pending!
+                               minima[indx].ileast_2 += 1;
+                        }
+                        _diff = row_book[indx*n_cols + minima[indx].ileast_2].cost - 
+                                                row_book[indx*n_cols + minima[indx].ileast_1].cost;
+                        minima[indx].diff = _diff;
+                }
+                else if (least2.col == rejectColIdx) {
+                        // let ileast1 stay what it is and increment ileast2 to next uncovered
+                        // Todo: TestBoundary Condition
+                        minima[indx].ileast_2 += 1;
+                        while (covered[n_rows + row_book[indx*n_cols + minima[indx].ileast_2].col]) {
+                                // Loop will keep moving untill - covered = false is found for the corresponding column
+                                // Boundary condition need to be applied >> pending!
+                                minima[indx].ileast_2 += 1;
+                        }
+                        _diff = row_book[indx*n_cols + minima[indx].ileast_2].cost - 
+                                                row_book[indx*n_cols + minima[indx].ileast_1].cost;
+                        minima[indx].diff = _diff;
+                }
         }
 
-        else if (indx < n_rows + n_cols && prev_eleminated < n_rows) {
-                /* Then a row was eliminated - 
+        else if (indx >= n_rows && indx < n_rows + n_cols && prev_eliminated < n_rows && !covered[indx]) {
+
+                /* Then a row was eliminated (The covered for this has already been set to true before invoke in O(1)) -
+                Now, indx corresponds to column ID's in vect, only do this operation for uncovered columns
                 In this case col minima are updated and row minima are maintained
-                        1. ColMinima exist at indx > n_rows in diff
-                        2. Elimiated row indx = prev_eliminated
-                        3. Now see if the corresponding diff has either ileast-1 or ileast-2 equal to elimiated col indx
-                        4. Increment
+                        1. ColMinima exist at indx >= n_rows in diff
+                        2. Elimiated row indx = prev_eliminated (-> directly)
+                        3. Now see if the corresponding diff for indx'th col 
+                        has either ileast-1 or ileast-2 equal to elimiated row indx
+                        
+                        In col_book index from [indx*n_rows] upto [(indx+1)*n_rows] is the sorted order of indx'th 
+                        col costs
+                        
+                        4. If previous was true then increment ileast1 ad ileast2 accordingly, o/w Untouched
                 */
+                int rejectRowIdx = prev_eliminated;
+                float _diff;
+                MatrixCell least1 = col_book[(indx-n_rows)*n_rows + minima[indx].ileast_1]; // Minimum
+                MatrixCell least2 = col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2]; // Second Minimum
+                if (least1.row == rejectRowIdx){
+                        // assign ileast2 to ileast1 and increment ileast2 to next uncovered
+                        minima[indx].ileast_1 = minima[indx].ileast_2;
+                        minima[indx].ileast_2 += 1;
+                        while (covered[col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].row]) {
+                                // Loop will keep moving untill - covered = false is found for the corresponding row
+                                // Boundary condition need to be applied >> pending!
+                               minima[indx].ileast_2 += 1;
+                        }
+                        _diff = col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].cost - 
+                                                col_book[(indx-n_rows)*n_rows + minima[indx].ileast_1].cost;
+                        minima[indx].diff = _diff;
+                }
+                else if (least2.row == rejectRowIdx) {
+                        // let ileast1 stay what it is and increment ileast2 to next uncovered
+                        // Todo: TestBoundary Condition
+                        minima[indx].ileast_2 += 1;
+                        while (covered[col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].row]) {
+                                // Loop will keep moving untill - covered = false is found for the corresponding row
+                                // Boundary condition need to be applied >> pending!
+                                minima[indx].ileast_2 += 1;
+                        }
+                        _diff = col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].cost - 
+                                                col_book[(indx-n_rows)*n_rows + minima[indx].ileast_1].cost;
+                        minima[indx].diff = _diff;
+                }
         }
-
 
 }
 
@@ -197,14 +272,48 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
         thrust::fill(rowColCovered.begin(), rowColCovered.end(), false);
 
         vogelDifference * vect = thrust::raw_pointer_cast(currentMinimaVect.data());
-        
+        MatrixCell * row_book = thrust::raw_pointer_cast(device_costMatrixRowBook.data());
+        MatrixCell * col_book = thrust::raw_pointer_cast(device_costMatrixColBook.data());
+        bool * covered = thrust::raw_pointer_cast(rowColCovered.data());
+
         dim3 dimBlock(blockSize, 1, 1);
         dim3 dimGrid(ceil(1.0*currentMinimaVect.size()/blockSize),1,1);
-        initializeDifferencesVector<<<dimGrid, dimBlock>>>(vect, currentMinimaVect.size());
+        initializeDifferencesVector<<<dimGrid, dimBlock>>>(vect, row_book, col_book, matrixSupplies, matrixDemands);
+        cudaDeviceSynchronize();
 
+        for (size_t i = 0; i < currentMinimaVect.size(); i++) {
+                std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
+        }
 
-        // for (size_t i = 0; i < device_costMatrixColBook.size(); i++){
-        //         std::cout << "device_costMatrixColBook[" << i << "] = " << device_costMatrixColBook[i] << std::endl;
-        // }
+        float _d = 1.0*INT_MIN;
+        vogelDifference default_diff = {.idx = -1, .ileast_1 = -1, .ileast_2 = -1,  .diff = _d};
+        int prev_eliminated;
+        
+        // Testing difference update column elimination >>
+        std::cout<<"***************************"<<std::endl;
+        prev_eliminated = matrixSupplies;
+        rowColCovered[prev_eliminated] = true;
+        currentMinimaVect[prev_eliminated] = default_diff;
+
+        updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, matrixSupplies, matrixDemands, prev_eliminated);
+        cudaDeviceSynchronize();
+
+        for (size_t i = 0; i < currentMinimaVect.size(); i++) {
+                std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
+        }
+
+        // Testing difference update row elimination >>
+        prev_eliminated = 0;
+        rowColCovered[prev_eliminated] = true;
+        currentMinimaVect[prev_eliminated] = default_diff;
+        std::cout<<"***************************"<<std::endl;
+
+        updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, matrixSupplies, matrixDemands, prev_eliminated);
+        cudaDeviceSynchronize();
+
+        for (size_t i = 0; i < currentMinimaVect.size(); i++) {
+                std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
+        }
+
 
 }
