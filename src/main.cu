@@ -7,7 +7,7 @@ int main(){
     // const char * problem = "TransportSimplex";
     
     // todo: accept fileName as argv
-    std::string fileName = "../data/TransportModel_10_10_2000_equalityConstr.dat";
+    std::string fileName = "../data/TransportModel_1024_2048_2000_equalityConstr.dat";
     
     int matrixDemands, matrixSupplies, * demands, * supplies, *flows;
     MatrixCell * costMatrix;
@@ -42,7 +42,7 @@ int main(){
     // Modified Distribution Method (u-v method) - parallel
     // 1. with-the initial flows (as obtained above) determine dual costs for each row and column constraints
     // 
-    printLocalDebugArray(flows, matrixSupplies, matrixDemands, "Flows");
+    // printLocalDebugArray(flows, matrixSupplies, matrixDemands, "Flows");
 
     // In flows we have M+N-1 non-zeros giving m+n-1 equations in m+n variables
     // Solve this equation to find dual and corresponding to each form the reduced costs >>

@@ -389,6 +389,7 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
         // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
         //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
         // }
+        std::cout<<"FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete"<<std::endl; 
 }
 
 /*
@@ -399,4 +400,6 @@ Improvement Idea - Reordering of rows and columns will improve performance
         - Also reorder demand supply accordingly >> Maintain the original indexes to assign flow
 */
 __host__ void find_russel_bfs_parallel(int * supplies, int * demands, MatrixCell * costMatrix, 
-        int * flows, int matrixSupplies, int matrixDemands) 
+        int * flows, int matrixSupplies, int matrixDemands) {
+
+        } 
