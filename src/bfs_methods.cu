@@ -43,10 +43,15 @@ struct colgen{
     }
 };
 
-
 struct compareCells {
   __host__ __device__  bool operator()(const MatrixCell i, const MatrixCell j) const{
         return (i.cost <= j.cost);
+    }
+};
+
+struct compareDiff {
+  __host__ __device__  bool operator()(const vogelDifference i, const vogelDifference j) const{
+        return (i.diff <= j.diff);
     }
 };
 
@@ -100,8 +105,8 @@ __global__ void updateDifferences(
                 if (least1.col == rejectColIdx){
                         // assign ileast2 to ileast1 and increment ileast2 to next uncovered
                         minima[indx].ileast_1 = minima[indx].ileast_2;
-                        minima[indx].ileast_2 += 1;
-                        while (covered[n_rows + row_book[indx*n_cols + minima[indx].ileast_2].col]) {
+                        minima[indx].ileast_2 = min(minima[indx].ileast_2+1, n_cols-1);
+                        while (covered[n_rows + row_book[indx*n_cols + minima[indx].ileast_2].col] && minima[indx].ileast_2 < n_cols-1) {
                                 // Loop will keep moving untill - covered = false is found for the corresponding column
                                 // Boundary condition need to be applied >> pending!
                                minima[indx].ileast_2 += 1;
@@ -113,11 +118,11 @@ __global__ void updateDifferences(
                 else if (least2.col == rejectColIdx) {
                         // let ileast1 stay what it is and increment ileast2 to next uncovered
                         // Todo: TestBoundary Condition
-                        minima[indx].ileast_2 += 1;
-                        while (covered[n_rows + row_book[indx*n_cols + minima[indx].ileast_2].col]) {
+                        minima[indx].ileast_2 = min(minima[indx].ileast_2+1, n_cols-1);
+                        while (covered[n_rows + row_book[indx*n_cols + minima[indx].ileast_2].col] && minima[indx].ileast_2 < n_cols-1) {
                                 // Loop will keep moving untill - covered = false is found for the corresponding column
                                 // Boundary condition need to be applied >> pending!
-                                minima[indx].ileast_2 += 1;
+                               minima[indx].ileast_2 += 1;
                         }
                         _diff = row_book[indx*n_cols + minima[indx].ileast_2].cost - 
                                                 row_book[indx*n_cols + minima[indx].ileast_1].cost;
@@ -147,8 +152,8 @@ __global__ void updateDifferences(
                 if (least1.row == rejectRowIdx){
                         // assign ileast2 to ileast1 and increment ileast2 to next uncovered
                         minima[indx].ileast_1 = minima[indx].ileast_2;
-                        minima[indx].ileast_2 += 1;
-                        while (covered[col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].row]) {
+                        minima[indx].ileast_2 = min(minima[indx].ileast_2+1, n_rows-1);
+                        while (covered[col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].row] && minima[indx].ileast_2 < n_rows-1) {
                                 // Loop will keep moving untill - covered = false is found for the corresponding row
                                 // Boundary condition need to be applied >> pending!
                                minima[indx].ileast_2 += 1;
@@ -160,11 +165,11 @@ __global__ void updateDifferences(
                 else if (least2.row == rejectRowIdx) {
                         // let ileast1 stay what it is and increment ileast2 to next uncovered
                         // Todo: TestBoundary Condition
-                        minima[indx].ileast_2 += 1;
-                        while (covered[col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].row]) {
+                        minima[indx].ileast_2 = min(minima[indx].ileast_2+1, n_rows-1);
+                        while (covered[col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].row] && minima[indx].ileast_2 < n_rows-1) {
                                 // Loop will keep moving untill - covered = false is found for the corresponding row
                                 // Boundary condition need to be applied >> pending!
-                                minima[indx].ileast_2 += 1;
+                               minima[indx].ileast_2 += 1;
                         }
                         _diff = col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].cost - 
                                                 col_book[(indx-n_rows)*n_rows + minima[indx].ileast_1].cost;
@@ -175,18 +180,13 @@ __global__ void updateDifferences(
 }
 
 /*
-Step 0: For each of the rows and columns - Determine the sorted order of col indexes and row indexes respectively
+Doc: Pending
 */
 __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell * costMatrix, 
         int * flows, int matrixSupplies, int matrixDemands) {
         
         // Step 0 :
-        std::cout<<"Vogel Kernel - Step 0"<<std::endl; 
-
-        int number_of_blocks = ceil(1.0*matrixSupplies/blockSize);
-
-        thrust::device_vector<int> device_supplies(supplies, supplies+matrixSupplies);
-        thrust::device_vector<int> device_demands(demands, demands+matrixDemands);
+        std::cout<<"FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures"<<std::endl; 
         thrust::device_vector<MatrixCell> device_costMatrix(costMatrix, costMatrix + matrixSupplies*matrixDemands);
 
         // Book-keeping Structures on device >>
@@ -208,7 +208,6 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
                 device_costMatrixRowBook.begin(), device_costMatrixRowBook.end(),  // input_range 1
                 device_rowSegments.begin(),                                        // output_range        
                 op1);                                                               // unary func
-
         
         // mytime = dtime_usec(0);
         thrust::stable_sort_by_key(
@@ -253,10 +252,15 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
         // mytime = dtime_usec(mytime);
         // std::cout << "vectorized sorting time for cols:" << mytime/(float)USECPSEC << "s" << std::endl;
 
+        // *********************************
+        // Prepare for iterations >>
+        // *********************************
+
         // Freeup Some Memory
         device_rowSegments.clear();
         device_colSegments.clear();
-        
+        std::cout<<"FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment"<<std::endl;
+
         /* 
         Illustration:
 
@@ -264,9 +268,14 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
         - Col-current Minima pointer [[0,1],[0,1],[0,1] . . .]
         
         vogelDifference vector was created to accomodate the above need
-        Further currentMinimaVect concat's both
+        Further currentMinimaVect concatenates both row differences and column differences vector 
+        so that that row/col reduction operations are simulataneous 
         */
-        // Vector of indexes of row and col minima in current iteration of vogel - 
+
+        // Add something to host for keeping residuals - 
+        thrust::host_vector<int> res_supplies(supplies, supplies+matrixSupplies);
+        thrust::host_vector<int> res_demands(demands, demands+matrixDemands);
+
         thrust::device_vector<vogelDifference> currentMinimaVect(matrixSupplies+matrixDemands);
         thrust::device_vector<bool> rowColCovered(matrixSupplies+matrixDemands);
         thrust::fill(rowColCovered.begin(), rowColCovered.end(), false);
@@ -278,42 +287,104 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
 
         dim3 dimBlock(blockSize, 1, 1);
         dim3 dimGrid(ceil(1.0*currentMinimaVect.size()/blockSize),1,1);
+        
         initializeDifferencesVector<<<dimGrid, dimBlock>>>(vect, row_book, col_book, matrixSupplies, matrixDemands);
         cudaDeviceSynchronize();
 
-        for (size_t i = 0; i < currentMinimaVect.size(); i++) {
-                std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
-        }
-
+        // Some more book-keeping - 
         float _d = 1.0*INT_MIN;
-        vogelDifference default_diff = {.idx = -1, .ileast_1 = -1, .ileast_2 = -1,  .diff = _d};
-        int prev_eliminated;
+        vogelDifference default_diff = {.idx = -1, .ileast_1 = -1, .ileast_2 = -1,  .diff = _d}; // assigned to eliminated item
+        int prev_eliminated, flow_row, flow_col;
+        MatrixCell host_assignmentCell;
+
+        // n_rows + n_cols - 1 ierations will generate the basic feasible solution
+        // Untested assumption - Absence of degeneracy - Todo
+        std::cout<<"FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment"<<std::endl; 
+        int counter = 0;
+        // matrixSupplies + matrixDemands - 1
+        while (counter < matrixSupplies + matrixDemands - 1) 
+        {
+                /* Procedure:
+                1. Find the max of differences - parallel op
+                2. Jump to ileast_1 in the corresponding row/col diff using the book - seq. op
+                3. Consume Demand and Supply - seq. op
+                4. Eliminate the respective - seq. op
+                */
+                thrust::device_vector<vogelDifference>::iterator _iter = thrust::max_element(currentMinimaVect.begin(), currentMinimaVect.end(), compareDiff());
+                vogelDifference host_maxDiff = currentMinimaVect[_iter -  currentMinimaVect.begin()];
+
+                // Following are all constant time ops, everything is happening on host -
+                if (host_maxDiff.idx >= matrixSupplies) {
+                        // some column has max diff
+                        flow_col = host_maxDiff.idx - matrixSupplies;
+                        host_assignmentCell = device_costMatrixColBook[(host_maxDiff.idx - matrixSupplies)*matrixSupplies + host_maxDiff.ileast_1];
+                        flow_row = host_assignmentCell.row;
+                }
+                else {
+                        // some row has max diff
+                        flow_row = host_maxDiff.idx;
+                        host_assignmentCell = device_costMatrixRowBook[host_maxDiff.idx*matrixDemands + host_maxDiff.ileast_1];
+                        flow_col = host_assignmentCell.col;
+                }
+
+                // std::cout<<"Flow Row = "<<flow_row<<std::endl;
+                // std::cout<<"Flow Col = "<<flow_col<<std::endl;
+
+                if (res_demands[flow_col] > res_supplies[flow_row]) {
+                        // consume available supply and update demand
+                        flows[flow_row*matrixDemands + flow_col] = res_supplies[flow_row];
+                        res_demands[flow_col] -= res_supplies[flow_row];
+                        res_supplies[flow_row] = 0;
+                        prev_eliminated = flow_row;
+                }
+                
+                else {
+                        // satisfy current demand and update supply
+                        flows[flow_row*matrixDemands + flow_col] = res_demands[flow_col];
+                        res_supplies[flow_row] -= res_demands[flow_col];
+                        res_demands[flow_col] = 0;
+                        prev_eliminated = matrixSupplies + flow_col;
+                }
+                
+                // Device is informed about the assignment
+                rowColCovered[prev_eliminated] = true;
+                currentMinimaVect[prev_eliminated] = default_diff;
+                
+                // Device adopts the assignment 
+                updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, matrixSupplies, matrixDemands, prev_eliminated);
+                cudaDeviceSynchronize();
+                counter++;
+        }
+
+        // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
+        //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
+        // }
         
-        // Testing difference update column elimination >>
-        std::cout<<"***************************"<<std::endl;
-        prev_eliminated = matrixSupplies;
-        rowColCovered[prev_eliminated] = true;
-        currentMinimaVect[prev_eliminated] = default_diff;
+        // // Testing difference update column elimination >>
+        // std::cout<<"***************************"<<std::endl;
+        // prev_eliminated = matrixSupplies;
+        // rowColCovered[prev_eliminated] = true;
+        // currentMinimaVect[prev_eliminated] = default_diff;
 
-        updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, matrixSupplies, matrixDemands, prev_eliminated);
-        cudaDeviceSynchronize();
+        // updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, matrixSupplies, matrixDemands, prev_eliminated);
+        // cudaDeviceSynchronize();
 
-        for (size_t i = 0; i < currentMinimaVect.size(); i++) {
-                std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
-        }
+        // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
+        //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
+        // }
 
-        // Testing difference update row elimination >>
-        prev_eliminated = 0;
-        rowColCovered[prev_eliminated] = true;
-        currentMinimaVect[prev_eliminated] = default_diff;
-        std::cout<<"***************************"<<std::endl;
+        // // Testing difference update row elimination >>
+        // prev_eliminated = 0;
+        // rowColCovered[prev_eliminated] = true;
+        // currentMinimaVect[prev_eliminated] = default_diff;
+        // std::cout<<"***************************"<<std::endl;
 
-        updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, matrixSupplies, matrixDemands, prev_eliminated);
-        cudaDeviceSynchronize();
+        // updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, matrixSupplies, matrixDemands, prev_eliminated);
+        // cudaDeviceSynchronize();
 
-        for (size_t i = 0; i < currentMinimaVect.size(); i++) {
-                std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
-        }
+        // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
+        //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
+        // }
 
 
 }
