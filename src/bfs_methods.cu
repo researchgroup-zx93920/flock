@@ -180,7 +180,11 @@ __global__ void updateDifferences(
 }
 
 /*
-Doc: Pending
+Doc: Pending - 
+Improvement Idea - Reordering of rows and columns will improve performance 
+        - First reorder based on cover
+        - Reorder based on minimum in prev_eliminated
+        - Also reorder demand supply accordingly >> Maintain the original indexes to assign flow
 */
 __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell * costMatrix, 
         int * flows, int matrixSupplies, int matrixDemands) {
@@ -385,6 +389,4 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
         // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
         //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
         // }
-
-
 }

@@ -7,7 +7,7 @@ int main(){
     // const char * problem = "TransportSimplex";
     
     // todo: accept fileName as argv
-    std::string fileName = "../data/TransportModel_toy.dat";
+    std::string fileName = "../data/TransportModel_10_10_2000_equalityConstr.dat";
     
     int matrixDemands, matrixSupplies, * demands, * supplies, *flows;
     MatrixCell * costMatrix;
