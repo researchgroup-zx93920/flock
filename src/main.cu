@@ -35,14 +35,16 @@ int main(){
     // Northwest Corner - sequencial
     // find_nw_corner_bfs_seq(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
 
-    // Vogel's Approximation - sequencial
+    // Vogel's Approximation - parallel
     // find_vogel_bfs_seq(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
     find_vogel_bfs_parallel(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
    
-    // Modified Distribution Methods - Parallel >>
+    // Modified Distribution Method (u-v method) - parallel
+    // 1. with-the initial flows (as obtained above) determine dual costs for each row and column constraints
+    // 
     printLocalDebugArray(flows, matrixSupplies, matrixDemands, "Flows");
 
-    // Inflows we have M+N-1 non-zeros giving m+n-1 equations in m+n variables
+    // In flows we have M+N-1 non-zeros giving m+n-1 equations in m+n variables
     // Solve this equation to find dual and corresponding to each form the reduced costs >>
    
 
