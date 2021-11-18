@@ -14,16 +14,18 @@
 #define UV
 
 struct Variable {
-    int value, 
+    float value;
     bool assigned = false;
 
-    __host__ __device__ Variable& operator=(const int& x)
+    __host__ __device__ Variable& operator=(const float& x)
     {
-        value=row;
+        value=x;
         assigned=true;
+        return *this;
     }
 };
 
+std::ostream& operator << (std::ostream& o, const Variable& x);
 
 
 __host__ void find_current_uv();
