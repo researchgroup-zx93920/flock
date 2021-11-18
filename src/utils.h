@@ -16,6 +16,13 @@ struct FileNotFoundException : public std::exception
     }
 };
 
+/*
+Container for a transportation simplex matrix cell C-ij. It's needed to retrive back the original 
+position of the cells after rearragnement in preprocessing step
+    - Stores i,j
+    - Stores C_ij
+
+*/
 __host__ __device__ struct MatrixCell {
     int row, col;
     float cost;
@@ -64,11 +71,16 @@ struct vogelDifference {
         // least_1,least_2,
 };
 
+struct flowInformation {
+    int row, col, qty;
+};
+
 void readSize(int &matrixDemands, int &matrixSupplies, std::string filename);
 void readFile(int * supplies, int * demands, MatrixCell * costMatrix, std::string filename);
 
 std::ostream& operator << (std::ostream& o, const MatrixCell& x);
 std::ostream& operator << (std::ostream& o, const vogelDifference& x);
+std::ostream& operator << (std::ostream& o, const flowInformation& x);
 
 template <typename T>
 void printLocalDebugArray(T * d_array, int rows, int columns, const char *name) {

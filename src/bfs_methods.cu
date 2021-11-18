@@ -1,6 +1,6 @@
 #include "bfs_methods.h"
 
-__host__ void find_nw_corner_bfs_seq(int * supplies, int * demands, MatrixCell * costMatrix, int * flows, 
+__host__ void find_nw_corner_bfs_seq(int * supplies, int * demands, MatrixCell * costMatrix, flowInformation * flows, 
         int matrixSupplies, int matrixDemands){
 
         std::cout<<"Running Northwest Corner Seq BFS Method"<<std::endl;
@@ -10,22 +10,25 @@ __host__ void find_nw_corner_bfs_seq(int * supplies, int * demands, MatrixCell *
         int current_col_number = 0;
         int current_demand = demands[current_row_number];
         int current_supply = supplies[current_col_number];
-
+        int counter = 0;
         // Allocate flow equal to minimum of demand and supply and update the buffer accordingly >>
         while (current_row_number < matrixSupplies && current_col_number < matrixDemands) {
 
                 if (current_demand >= current_supply) {
-                        flows[current_row_number*matrixDemands + current_col_number] = current_supply;
+                        flowInformation _this_flow = {.row = current_row_number, .col = current_col_number, .qty = current_supply};
+                        flows[counter] = _this_flow;
                         current_demand = current_demand -  current_supply;
                         current_row_number++;
                         current_supply = supplies[current_row_number];
                 }
                 else {
-                        flows[current_row_number*matrixDemands + current_col_number] = current_demand;
+                        flowInformation _this_flow = {.row = current_row_number, .col = current_col_number, .qty = current_demand};
+                        flows[counter] = _this_flow;
                         current_supply = current_supply -  current_demand;
                         current_col_number++;
                         current_demand = demands[current_col_number];
                 }
+                counter++;
         }
         std::cout<<"Feasible BFS Generated!"<<std::endl;
 }
@@ -108,7 +111,6 @@ __global__ void updateDifferences(
                         minima[indx].ileast_2 = min(minima[indx].ileast_2+1, n_cols-1);
                         while (covered[n_rows + row_book[indx*n_cols + minima[indx].ileast_2].col] && minima[indx].ileast_2 < n_cols-1) {
                                 // Loop will keep moving untill - covered = false is found for the corresponding column
-                                // Boundary condition need to be applied >> pending!
                                minima[indx].ileast_2 += 1;
                         }
                         _diff = row_book[indx*n_cols + minima[indx].ileast_2].cost - 
@@ -117,11 +119,9 @@ __global__ void updateDifferences(
                 }
                 else if (least2.col == rejectColIdx) {
                         // let ileast1 stay what it is and increment ileast2 to next uncovered
-                        // Todo: TestBoundary Condition
                         minima[indx].ileast_2 = min(minima[indx].ileast_2+1, n_cols-1);
                         while (covered[n_rows + row_book[indx*n_cols + minima[indx].ileast_2].col] && minima[indx].ileast_2 < n_cols-1) {
                                 // Loop will keep moving untill - covered = false is found for the corresponding column
-                                // Boundary condition need to be applied >> pending!
                                minima[indx].ileast_2 += 1;
                         }
                         _diff = row_book[indx*n_cols + minima[indx].ileast_2].cost - 
@@ -155,7 +155,6 @@ __global__ void updateDifferences(
                         minima[indx].ileast_2 = min(minima[indx].ileast_2+1, n_rows-1);
                         while (covered[col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].row] && minima[indx].ileast_2 < n_rows-1) {
                                 // Loop will keep moving untill - covered = false is found for the corresponding row
-                                // Boundary condition need to be applied >> pending!
                                minima[indx].ileast_2 += 1;
                         }
                         _diff = col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].cost - 
@@ -164,11 +163,9 @@ __global__ void updateDifferences(
                 }
                 else if (least2.row == rejectRowIdx) {
                         // let ileast1 stay what it is and increment ileast2 to next uncovered
-                        // Todo: TestBoundary Condition
                         minima[indx].ileast_2 = min(minima[indx].ileast_2+1, n_rows-1);
                         while (covered[col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].row] && minima[indx].ileast_2 < n_rows-1) {
                                 // Loop will keep moving untill - covered = false is found for the corresponding row
-                                // Boundary condition need to be applied >> pending!
                                minima[indx].ileast_2 += 1;
                         }
                         _diff = col_book[(indx-n_rows)*n_rows + minima[indx].ileast_2].cost - 
@@ -181,13 +178,15 @@ __global__ void updateDifferences(
 
 /*
 Doc: Pending - 
-Improvement Idea - Reordering of rows and columns will improve performance 
+Improvement Idea - 
+1. Reordering of rows and columns will improve performance 
         - First reorder based on cover
         - Reorder based on minimum in prev_eliminated
         - Also reorder demand supply accordingly >> Maintain the original indexes to assign flow
+2. Can we discard Matrix Cell Data Structure after the sorting job is done in step 1?
 */
 __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell * costMatrix, 
-        int * flows, int matrixSupplies, int matrixDemands) {
+        flowInformation * flows, int matrixSupplies, int matrixDemands) {
         
         // Step 0 :
         std::cout<<"FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures"<<std::endl; 
@@ -255,6 +254,19 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
         
         // mytime = dtime_usec(mytime);
         // std::cout << "vectorized sorting time for cols:" << mytime/(float)USECPSEC << "s" << std::endl;
+        // std::cout<<"Column Book:"<<std::endl;
+
+        // for (size_t i = 0; i < device_costMatrixColBook.size(); i++) {
+        //         std::cout << "device_costMatrixColBook[" << i << "] = " << device_costMatrixColBook[i] << std::endl;
+        // }
+
+        // std::cout<<"Row Book:"<<std::endl;
+
+        // for (size_t i = 0; i < device_costMatrixRowBook.size(); i++) {
+        //         std::cout << "device_costMatrixRowBook[" << i << "] = " << device_costMatrixRowBook[i] << std::endl;
+        // }
+
+
 
         // *********************************
         // Prepare for iterations >>
@@ -300,6 +312,7 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
         vogelDifference default_diff = {.idx = -1, .ileast_1 = -1, .ileast_2 = -1,  .diff = _d}; // assigned to eliminated item
         int prev_eliminated, flow_row, flow_col;
         MatrixCell host_assignmentCell;
+        flowInformation _this_flow;
 
         // n_rows + n_cols - 1 ierations will generate the basic feasible solution
         // Untested assumption - Absence of degeneracy - Todo
@@ -336,7 +349,8 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
 
                 if (res_demands[flow_col] > res_supplies[flow_row]) {
                         // consume available supply and update demand
-                        flows[flow_row*matrixDemands + flow_col] = res_supplies[flow_row];
+                        _this_flow = {.row = flow_row, .col = flow_col, .qty = res_supplies[flow_row]};
+                        flows[counter] = _this_flow;
                         res_demands[flow_col] -= res_supplies[flow_row];
                         res_supplies[flow_row] = 0;
                         prev_eliminated = flow_row;
@@ -344,7 +358,8 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
                 
                 else {
                         // satisfy current demand and update supply
-                        flows[flow_row*matrixDemands + flow_col] = res_demands[flow_col];
+                        _this_flow = {.row = flow_row, .col = flow_col, .qty = res_demands[flow_col]};
+                        flows[counter] = _this_flow;
                         res_supplies[flow_row] -= res_demands[flow_col];
                         res_demands[flow_col] = 0;
                         prev_eliminated = matrixSupplies + flow_col;
@@ -358,6 +373,11 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
                 updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, matrixSupplies, matrixDemands, prev_eliminated);
                 cudaDeviceSynchronize();
                 counter++;
+
+                // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
+                //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
+                // }
+        
         }
 
         // for (size_t i = 0; i < currentMinimaVect.size(); i++) {

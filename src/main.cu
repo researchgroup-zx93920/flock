@@ -7,10 +7,11 @@ int main(){
     // const char * problem = "TransportSimplex";
     
     // todo: accept fileName as argv
-    std::string fileName = "../data/TransportModel_1024_2048_2000_equalityConstr.dat";
+    std::string fileName = "../data/TransportModel_toy.dat";
     
-    int matrixDemands, matrixSupplies, * demands, * supplies, *flows;
+    int matrixDemands, matrixSupplies, * demands, * supplies;
     MatrixCell * costMatrix;
+    flowInformation * flows;
     
     // Read problem Instance >> 
     std::cout<<"File Name : "<<fileName<<std::endl;
@@ -29,20 +30,25 @@ int main(){
     // printLocalDebugArray(costMatrix, matrixSupplies, matrixDemands, "costs");
     
     // Initialize all flows to zero >>
-    flows = (int *) calloc(matrixSupplies*matrixDemands, sizeof(int));
+    flows = (flowInformation *) calloc(matrixSupplies+matrixDemands-1, sizeof(flowInformation));
 
     // Finding BFS
     // Northwest Corner - sequencial
     // find_nw_corner_bfs_seq(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
 
     // Vogel's Approximation - parallel
-    // find_vogel_bfs_seq(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
     find_vogel_bfs_parallel(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
-   
+
     // Modified Distribution Method (u-v method) - parallel
     // 1. with-the initial flows (as obtained above) determine dual costs for each row and column constraints
-    // 
-    // printLocalDebugArray(flows, matrixSupplies, matrixDemands, "Flows");
+
+    // - Updates the reduced costs vector
+    float * reduced_costs;
+    reduced_costs = (float *) malloc(sizeof(float)*matrixSupplies*matrixDemands);
+    find_reduced_costs(costMatrix, flows, reduced_costs, matrixSupplies, matrixDemands);
+    
+    // Finally >>
+    printLocalDebugArray(reduced_costs, matrixSupplies, matrixDemands, "Reduced Costs");
 
     // In flows we have M+N-1 non-zeros giving m+n-1 equations in m+n variables
     // Solve this equation to find dual and corresponding to each form the reduced costs >>

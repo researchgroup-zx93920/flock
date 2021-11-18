@@ -24,7 +24,7 @@ Note : To find the appropriate value in cost matrix for supply i to demand j -
 Use indexing formula - {i}*{No. of demands} + {j}  | Tip: Check the reader function in src 
 """
 
-import gurobipy as grb
+# import gurobipy as grb
 import random
 
 # >>>>>>>>>>>> Set Configuration Here >>>>>>>>>>>>>>
@@ -34,8 +34,8 @@ r_seed = 2000 # related to randomization
 exportEx = "dat" # Export file extension (.dat)
 balancedProblem = True
 
-matrix_demands = 10 
-matrix_supplies = 10
+matrix_demands = 100
+matrix_supplies = 100
 
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

@@ -74,3 +74,8 @@ std::ostream& operator << (std::ostream& o, const vogelDifference& x) {
     return o;
 }
 
+std::ostream& operator << (std::ostream& o, const flowInformation& x) {
+    o << "Flow " << x.qty <<" units from "<<x.row <<" to col "<<x.col<<std::endl;
+    return o;
+}
+
