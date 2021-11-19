@@ -27,10 +27,13 @@ struct Variable {
 
 std::ostream& operator << (std::ostream& o, const Variable& x);
 
-
-__host__ void find_current_uv();
-
 __host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flows, float * reduced_costs,
+    int matrixSupplies, int matrixDemands);
+
+__global__ void assign_next(flowInformation * flows, MatrixCell * device_costMatrix, Variable * u_vars, 
+    Variable * v_vars, int matrixSupplies, int matrixDemands);
+
+__global__ void computeReducedCosts(Variable * u_vars, Variable * v_vars, MatrixCell * device_costMatrix, float * reduced_costs, 
     int matrixSupplies, int matrixDemands);
 
 __host__ void pivot();

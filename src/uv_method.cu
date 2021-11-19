@@ -14,7 +14,7 @@ __global__ void computeReducedCosts(Variable * u_vars, Variable * v_vars, Matrix
         if (row_indx < matrixDemands && col_indx < matrixSupplies) {
             // r = u_i + v_j - C_ij;
             float r;
-            r = u_vars[col_indx] + v_vars[row_indx] - device_costMatrix[row_indx*matrixDemands+col_indx].cost;
+            r = u_vars[col_indx].value + v_vars[row_indx].value - device_costMatrix[row_indx*matrixDemands+col_indx].cost;
             reduced_costs[row_indx*matrixDemands+col_indx] = r;
         }
 
@@ -88,8 +88,8 @@ __host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flow
 
         // Questions ::
         // Diagonal zero - corner case for U-V method
-        dim3 dimGrid(matrixDemands, matrixSupplies, 1);
-        dim3 dimBlock(blockSize, blockSize, 1);
-        computeReducedCosts<<< dimGrid, dimBlock >>>(u_vars_ptr, v_vars_ptr, device_costMatrix_ptr, reduced_costs, matrixSupplies, matrixDemands);
-
+        dim3 dimGrid2(matrixDemands, matrixSupplies, 1);
+        dim3 dimBlock2(blockSize, blockSize, 1);
+        computeReducedCosts<<< dimGrid2, dimBlock2 >>>(u_vars_ptr, v_vars_ptr, device_costMatrix_ptr, reduced_costs, matrixSupplies, matrixDemands);
+        cudaDeviceSynchronize();
     }

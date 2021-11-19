@@ -8,7 +8,7 @@ int main(){
     // const char * problem = "TransportSimplex";
     
     // todo: accept fileName as argv
-    std::string fileName = "../data/TransportModel_toy.dat";
+    std::string fileName = "../data/TransportModel_10_10_2000_equalityConstr.dat";
     
     int matrixDemands, matrixSupplies, * demands, * supplies;
     MatrixCell * costMatrix;
@@ -50,7 +50,7 @@ int main(){
     find_reduced_costs(costMatrix, flows, reduced_costs, matrixSupplies, matrixDemands);
     
     // Finally >>
-    // printLocalDebugArray(reduced_costs, matrixSupplies, matrixDemands, "Reduced Costs");
+    printLocalDebugArray(reduced_costs, matrixSupplies, matrixDemands, "Reduced Costs");
 
     // In flows we have M+N-1 non-zeros giving m+n-1 equations in m+n variables
     // Solve this equation to find dual and corresponding to each form the reduced costs >>
