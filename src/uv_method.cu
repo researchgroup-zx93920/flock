@@ -5,17 +5,17 @@ std::ostream& operator << (std::ostream& o, const Variable& x) {
     return o;
 }
 
-__global__ void computeReducedCosts(Variable * u_vars, Variable * v_vars, MatrixCell * device_costMatrix, float * reduced_costs, 
+__global__ void computeReducedCosts(Variable * u_vars, Variable * v_vars, MatrixCell * device_costMatrix, float * device_reducedCosts_ptr, 
     int matrixSupplies, int matrixDemands) {
 
         int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
         int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
 
-        if (row_indx < matrixDemands && col_indx < matrixSupplies) {
+        if (row_indx < matrixSupplies && col_indx < matrixDemands) {
             // r = u_i + v_j - C_ij;
             float r;
-            r = u_vars[col_indx].value + v_vars[row_indx].value - device_costMatrix[row_indx*matrixDemands+col_indx].cost;
-            reduced_costs[row_indx*matrixDemands+col_indx] = r;
+            r = u_vars[row_indx].value + v_vars[col_indx].value - device_costMatrix[row_indx*matrixDemands+col_indx].cost;
+            device_reducedCosts_ptr[row_indx*matrixDemands+col_indx] = -1*r;
         }
 
 }
@@ -66,7 +66,7 @@ __host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flow
         default_assign.assigned = true;
         U_vars[0] = default_assign;
 
-        std::cout<<"Determining Solving the UV System"<<std::endl;
+        std::cout<<"Solving the UV System"<<std::endl;
         // Start solving the system of eqn's (complementary slackness conditions)
         dim3 dimGrid(ceil(1.0*matrixSupplies+matrixDemands-1/blockSize),1,1);
         dim3 dimBlock(blockSize,1,1);
@@ -82,14 +82,20 @@ __host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flow
         // C_ij = u_i + v_j;
         // C_ij = u_i + v_j;
 
-        for (int i=0; i < matrixSupplies+matrixDemands-1;i++ ){
+        for (int i=0; i < matrixSupplies+matrixDemands-1;i++ ) {
             assign_next <<< dimGrid, dimBlock >>> (device_flows_ptr, device_costMatrix_ptr, u_vars_ptr, v_vars_ptr, matrixSupplies, matrixDemands);
         }
 
         // Questions ::
         // Diagonal zero - corner case for U-V method
-        dim3 dimGrid2(matrixDemands, matrixSupplies, 1);
-        dim3 dimBlock2(blockSize, blockSize, 1);
-        computeReducedCosts<<< dimGrid2, dimBlock2 >>>(u_vars_ptr, v_vars_ptr, device_costMatrix_ptr, reduced_costs, matrixSupplies, matrixDemands);
+        std::cout<<"Computing Reduced Costs"<<std::endl;
+        dim3 dimGrid2(ceil(1.0*matrixDemands/blockSize), ceil(1.0*matrixSupplies/blockSize), 1);
+        dim3 dimBlock2(32, 32, 1);
+
+        thrust::device_vector<float> device_reducedCosts(matrixSupplies*matrixDemands);
+        float * device_reducedCosts_ptr = thrust::raw_pointer_cast(device_reducedCosts.data());
+        computeReducedCosts<<< dimGrid2, dimBlock2 >>>(u_vars_ptr, v_vars_ptr, device_costMatrix_ptr, device_reducedCosts_ptr, matrixSupplies, matrixDemands);
         cudaDeviceSynchronize();
+        cudaMemcpy(reduced_costs, device_reducedCosts_ptr, matrixDemands*matrixSupplies*sizeof(float), cudaMemcpyDeviceToHost);
+        // cudaFree() // Not Required - scope ended for thrust
     }
