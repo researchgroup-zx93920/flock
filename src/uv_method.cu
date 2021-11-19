@@ -5,6 +5,21 @@ std::ostream& operator << (std::ostream& o, const Variable& x) {
     return o;
 }
 
+__global__ void computeReducedCosts(Variable * u_vars, Variable * v_vars, MatrixCell * device_costMatrix, float * reduced_costs, 
+    int matrixSupplies, int matrixDemands) {
+
+        int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
+        int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
+
+        if (row_indx < matrixDemands && col_indx < matrixSupplies) {
+            // r = u_i + v_j - C_ij;
+            float r;
+            r = u_vars[col_indx] + v_vars[row_indx] - device_costMatrix[row_indx*matrixDemands+col_indx].cost;
+            reduced_costs[row_indx*matrixDemands+col_indx] = r;
+        }
+
+}
+
 __global__ void assign_next(flowInformation * flows, MatrixCell * device_costMatrix, Variable * u_vars, 
     Variable * v_vars, int matrixSupplies, int matrixDemands) {
     
@@ -56,7 +71,17 @@ __host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flow
         dim3 dimGrid(ceil(1.0*matrixSupplies+matrixDemands-1/blockSize),1,1);
         dim3 dimBlock(blockSize,1,1);
         
-        // Solve the system in at most m+n-1 iterations 
+        // Solve the system in at most m+n-1 iterations
+        
+        // assigned cells
+        //  (i - j) -> m + n
+
+        // m + n -1 ->>
+
+        // C_ij = u_i + v_j;
+        // C_ij = u_i + v_j;
+        // C_ij = u_i + v_j;
+
         for (int i=0; i < matrixSupplies+matrixDemands-1;i++ ){
             assign_next <<< dimGrid, dimBlock >>> (device_flows_ptr, device_costMatrix_ptr, u_vars_ptr, v_vars_ptr, matrixSupplies, matrixDemands);
         }
@@ -65,8 +90,6 @@ __host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flow
         // Diagonal zero - corner case for U-V method
         dim3 dimGrid(matrixDemands, matrixSupplies, 1);
         dim3 dimBlock(blockSize, blockSize, 1);
-        
-
-
+        computeReducedCosts<<< dimGrid, dimBlock >>>(u_vars_ptr, v_vars_ptr, device_costMatrix_ptr, reduced_costs, matrixSupplies, matrixDemands);
 
     }
