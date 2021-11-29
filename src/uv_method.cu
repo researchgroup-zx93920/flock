@@ -12,12 +12,11 @@ __global__ void computeReducedCosts(Variable * u_vars, Variable * v_vars, Matrix
         int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
 
         if (row_indx < matrixSupplies && col_indx < matrixDemands) {
-            // r = u_i + v_j - C_ij;
+            // r =  C_ij - u_i - v_j;
             float r;
-            r = u_vars[row_indx].value + v_vars[col_indx].value - device_costMatrix[row_indx*matrixDemands+col_indx].cost;
-            device_reducedCosts_ptr[row_indx*matrixDemands+col_indx] = -1*r;
+            r = device_costMatrix[row_indx*matrixDemands+col_indx].cost - u_vars[row_indx].value - v_vars[col_indx].value;
+            device_reducedCosts_ptr[row_indx*matrixDemands+col_indx] = r;
         }
-
 }
 
 __global__ void assign_next(flowInformation * flows, MatrixCell * device_costMatrix, Variable * u_vars, 
@@ -42,14 +41,14 @@ __global__ void assign_next(flowInformation * flows, MatrixCell * device_costMat
             var.value = device_costMatrix[eqn.row*matrixDemands+eqn.col].cost -  v_vars[eqn.col].value;
             u_vars[eqn.row] = var;
         }
-    } 
+    }
 }
 
 
 __host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flows, float * reduced_costs,
     int matrixSupplies, int matrixDemands){
         
-        std::cout<<"Determining Dual Costs"<<std::endl;
+        std::cout<<"TESTING CURRENT BFS: Determining Dual Costs"<<std::endl;
         // Start U-V vectors
         thrust::device_vector<Variable> U_vars(matrixSupplies);
         Variable * u_vars_ptr = thrust::raw_pointer_cast(U_vars.data());
@@ -66,7 +65,7 @@ __host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flow
         default_assign.assigned = true;
         U_vars[0] = default_assign;
 
-        std::cout<<"Solving the UV System"<<std::endl;
+        std::cout<<"TESTING CURRENT BFS: Solving the UV System"<<std::endl;
         // Start solving the system of eqn's (complementary slackness conditions)
         dim3 dimGrid(ceil(1.0*matrixSupplies+matrixDemands-1/blockSize),1,1);
         dim3 dimBlock(blockSize,1,1);
@@ -88,7 +87,7 @@ __host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flow
 
         // Questions ::
         // Diagonal zero - corner case for U-V method
-        std::cout<<"Computing Reduced Costs"<<std::endl;
+        std::cout<<"TESTING CURRENT BFS: Computing Reduced Costs"<<std::endl;
         dim3 dimGrid2(ceil(1.0*matrixDemands/blockSize), ceil(1.0*matrixSupplies/blockSize), 1);
         dim3 dimBlock2(32, 32, 1);
 
@@ -96,6 +95,9 @@ __host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flow
         float * device_reducedCosts_ptr = thrust::raw_pointer_cast(device_reducedCosts.data());
         computeReducedCosts<<< dimGrid2, dimBlock2 >>>(u_vars_ptr, v_vars_ptr, device_costMatrix_ptr, device_reducedCosts_ptr, matrixSupplies, matrixDemands);
         cudaDeviceSynchronize();
+        
+        
+        
         cudaMemcpy(reduced_costs, device_reducedCosts_ptr, matrixDemands*matrixSupplies*sizeof(float), cudaMemcpyDeviceToHost);
         // cudaFree() // Not Required - scope ended for thrust
     }
