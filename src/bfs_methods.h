@@ -21,7 +21,7 @@ __host__ void find_nw_corner_bfs_seq(int * supplies, int * demands, MatrixCell *
 __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell * costMatrix, 
         flowInformation * flows, int matrixSupplies, int matrixDemands);
 
-// Following is TBD
+// Following is TBD >>
 __host__ void find_russel_bfs_parallel(int * supplies, int * demands, MatrixCell * costMatrix, 
         int * flows, int matrixSupplies, int matrixDemands); 
 

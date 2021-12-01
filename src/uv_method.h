@@ -1,4 +1,8 @@
 #include<iostream>
+#include<map>
+#include<vector>
+#include<algorithm>
+
 #include "utils.h"
 
 #include<thrust/device_vector.h>
@@ -23,6 +27,16 @@ struct Variable {
         assigned=true;
         return *this;
     }
+};
+
+struct rowNodes {
+    std::vector<int> child;
+    bool covered;
+};
+
+struct colNodes {
+    std::vector<int> parent;
+    bool covered;
 };
 
 std::ostream& operator << (std::ostream& o, const Variable& x);
