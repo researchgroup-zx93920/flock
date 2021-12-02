@@ -1,5 +1,6 @@
 #include<iostream>
 #include<chrono>
+
 #include "utils.h"
 #include "bfs_methods.h"
 #include "uv_method.h"
@@ -8,6 +9,7 @@ int main(){
     
     // todo: accept fileName as argv
     std::string fileName = "../data/TransportModel_10_10_2000_equalityConstr.dat";
+    // data/TransportModel_10_10_2000_equalityConstr.dat
     int matrixDemands, matrixSupplies, * demands, * supplies;
     MatrixCell * costMatrix;
     flowInformation * flows;
@@ -42,27 +44,33 @@ int main(){
     // 2.1: Finding BFS: Initialize all flows to zero
     //  Note: flowInformation is a struct that stores flow in a COO sparse matrix form
     flows = (flowInformation *) calloc(matrixSupplies+matrixDemands-1, sizeof(flowInformation));
+    // The flows at given cell (i,j) is available at this index in flows
+    std::map<std::pair<int,int>, int> flow_indexes;
 
     // Approach 1: Northwest Corner (Naive BFS - sequential)
+    // --------------------------------------------------------    
     //      Utilize NW Corner method to determine basic feasible solution, (uncomment below)
     
     // auto start = std::chrono::high_resolution_clock::now();
-    // find_nw_corner_bfs_seq(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
+    // find_nw_corner_bfs_seq(supplies, demands, costMatrix, flows, flow_indexes, matrixSupplies, matrixDemands);
     // auto end = std::chrono::high_resolution_clock::now();
     // auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
 	// double solution_time = duration.count();
     // std::cout<<"NW Corner BFS Found in : "<<solution_time<<" secs."<<std::endl;
     
     // Approach 2: Vogel's Approximation - parallel
+    // --------------------------------------------------------
+    //      Utilitze vogel's approximation to determine basic fesible solution using CUDA kernels
+
     auto start = std::chrono::high_resolution_clock::now();
-    find_vogel_bfs_parallel(supplies, demands, costMatrix, flows, matrixSupplies, matrixDemands);
+    find_vogel_bfs_parallel(supplies, demands, costMatrix, flows, flow_indexes, matrixSupplies, matrixDemands);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
 	double solution_time = duration.count();
     std::cout<<"Vogel BFS Found in : "<<solution_time<<" secs."<<std::endl;
 
     // **************************************
-    // 3. Modified Distribution Method (u-v method) - parallel
+    // 3. Modified Distribution Method (u-v method) - parallel (improve the BFS solution)
     // **************************************
 
     // 1. with-the initial flows (as obtained above) determine dual costs for each row and column constraints, 
@@ -70,19 +78,31 @@ int main(){
 
     // Update the reduced costs vector
     float * reduced_costs;
+    reduced_costs = (float *) malloc(sizeof(float)*matrixSupplies*matrixDemands);
+    bool result = false;
+    int iteration_counter = 1;
 
-    for (int i=0; i<1; i++) {
+    while (!result) {
         auto start = std::chrono::high_resolution_clock::now();
-        reduced_costs = (float *) malloc(sizeof(float)*matrixSupplies*matrixDemands);
-        find_reduced_costs(costMatrix, flows, reduced_costs, matrixSupplies, matrixDemands);
+        result = test_and_improve(costMatrix, flows, flow_indexes, reduced_costs, matrixSupplies, matrixDemands);
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
 	    double solution_time = duration.count();
-        std::cout<<"Iteration : "<<i+1<<" of finding reduced costs completed in : "<<solution_time<<" secs."<<std::endl;
+        std::cout<<"Iteration : "<<iteration_counter<<" of finding reduced costs completed in : "<<solution_time<<" secs."<<std::endl;
+        iteration_counter++;
     }
 
     // Finally >>
+    // **************************************
+    // 4. Output the solution
+    // **************************************
     printLocalDebugArray(reduced_costs, matrixSupplies, matrixDemands, "Reduced Costs");
+    
+    for (int i=0; i< matrixDemands+matrixSupplies-1; i++){
+        std::cout<<flows[i]<<std::endl;
+    }
+
+
 
     // In flows we have M+N-1 non-zeros giving m+n-1 equations in m+n variables
     // Solve this equation to find dual and corresponding to each form the reduced costs >>

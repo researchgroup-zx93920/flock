@@ -2,6 +2,7 @@
 #include<map>
 #include<vector>
 #include<algorithm>
+#include<utility>
 
 #include "utils.h"
 
@@ -39,10 +40,11 @@ struct colNodes {
     bool covered;
 };
 
+
 std::ostream& operator << (std::ostream& o, const Variable& x);
 
-__host__ void find_reduced_costs(MatrixCell * costMatrix, flowInformation * flows, float * reduced_costs,
-    int matrixSupplies, int matrixDemands);
+__host__ bool test_and_improve(MatrixCell * costMatrix, flowInformation * flows,
+    std::map<std::pair<int,int>, int> &flow_indexes, float * reduced_costs, int matrixSupplies, int matrixDemands);
 
 __global__ void assign_next(flowInformation * flows, MatrixCell * device_costMatrix, Variable * u_vars, 
     Variable * v_vars, int matrixSupplies, int matrixDemands);
@@ -50,6 +52,5 @@ __global__ void assign_next(flowInformation * flows, MatrixCell * device_costMat
 __global__ void computeReducedCosts(Variable * u_vars, Variable * v_vars, MatrixCell * device_costMatrix, float * reduced_costs, 
     int matrixSupplies, int matrixDemands);
 
-__host__ void pivot();
 
 #endif

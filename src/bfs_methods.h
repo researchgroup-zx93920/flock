@@ -1,5 +1,6 @@
 #include<iostream>
 #include<cstring>
+#include<map>
 
 #include<thrust/device_vector.h>
 #include<thrust/host_vector.h>
@@ -15,14 +16,14 @@
 #ifndef BFS
 #define BFS
 
-__host__ void find_nw_corner_bfs_seq(int * supplies, int * demands, MatrixCell * costMatrix, flowInformation * flows, 
-        int matrixSupplies, int matrixDemands);
+__host__ void find_nw_corner_bfs_seq(int * supplies, int * demands, MatrixCell * costMatrix, flowInformation * flows,
+        std::map<std::pair<int,int>, int> &flow_indexes, int matrixSupplies, int matrixDemands);
 
 __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell * costMatrix, 
-        flowInformation * flows, int matrixSupplies, int matrixDemands);
+        flowInformation * flows, std::map<std::pair<int,int>, int> &flow_indexes, int matrixSupplies, int matrixDemands);
 
 // Following is TBD >>
 __host__ void find_russel_bfs_parallel(int * supplies, int * demands, MatrixCell * costMatrix, 
-        int * flows, int matrixSupplies, int matrixDemands); 
+        int * flows, std::map<std::pair<int,int>, int> &flow_indexes, int matrixSupplies, int matrixDemands); 
 
 #endif

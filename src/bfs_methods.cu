@@ -1,7 +1,7 @@
 #include "bfs_methods.h"
 
 __host__ void find_nw_corner_bfs_seq(int * supplies, int * demands, MatrixCell * costMatrix, flowInformation * flows, 
-        int matrixSupplies, int matrixDemands){
+        std::map<std::pair<int,int>, int> &flow_indexes, int matrixSupplies, int matrixDemands){
 
         std::cout<<"Running Northwest Corner Seq BFS Method"<<std::endl;
 
@@ -17,6 +17,7 @@ __host__ void find_nw_corner_bfs_seq(int * supplies, int * demands, MatrixCell *
                 if (current_demand >= current_supply) {
                         flowInformation _this_flow = {.row = current_row_number, .col = current_col_number, .qty = current_supply};
                         flows[counter] = _this_flow;
+                        flow_indexes.insert(std::make_pair(std::make_pair(current_row_number, current_col_number), counter));
                         current_demand = current_demand -  current_supply;
                         current_row_number++;
                         current_supply = supplies[current_row_number];
@@ -24,6 +25,7 @@ __host__ void find_nw_corner_bfs_seq(int * supplies, int * demands, MatrixCell *
                 else {
                         flowInformation _this_flow = {.row = current_row_number, .col = current_col_number, .qty = current_demand};
                         flows[counter] = _this_flow;
+                        flow_indexes.insert(std::make_pair(std::make_pair(current_row_number, current_col_number), counter));
                         current_supply = current_supply -  current_demand;
                         current_col_number++;
                         current_demand = demands[current_col_number];
@@ -186,7 +188,8 @@ Improvement Idea -
 2. Can we discard Matrix Cell Data Structure after the sorting job is done in step 1?
 */
 __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell * costMatrix, 
-        flowInformation * flows, int matrixSupplies, int matrixDemands) {
+        flowInformation * flows, std::map<std::pair<int,int>, int> &flow_indexes,
+        int matrixSupplies, int matrixDemands) {
         
         // Step 0 :
         std::cout<<"FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures"<<std::endl; 
@@ -351,6 +354,7 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
                         // consume available supply and update demand
                         _this_flow = {.row = flow_row, .col = flow_col, .qty = res_supplies[flow_row]};
                         flows[counter] = _this_flow;
+                        flow_indexes.insert(std::make_pair(std::make_pair(flow_row, flow_col), counter));
                         res_demands[flow_col] -= res_supplies[flow_row];
                         res_supplies[flow_row] = 0;
                         prev_eliminated = flow_row;
@@ -360,6 +364,7 @@ __host__ void find_vogel_bfs_parallel(int * supplies, int * demands, MatrixCell 
                         // satisfy current demand and update supply
                         _this_flow = {.row = flow_row, .col = flow_col, .qty = res_demands[flow_col]};
                         flows[counter] = _this_flow;
+                        flow_indexes.insert(std::make_pair(std::make_pair(flow_row, flow_col), counter));
                         res_supplies[flow_row] -= res_demands[flow_col];
                         res_demands[flow_col] = 0;
                         prev_eliminated = matrixSupplies + flow_col;
@@ -420,6 +425,5 @@ Improvement Idea - Reordering of rows and columns will improve performance
         - Also reorder demand supply accordingly >> Maintain the original indexes to assign flow
 */
 __host__ void find_russel_bfs_parallel(int * supplies, int * demands, MatrixCell * costMatrix, 
-        int * flows, int matrixSupplies, int matrixDemands) {
-
+        int * flows, std::map<std::pair<int,int>, int> &flow_indexes, int matrixSupplies, int matrixDemands) {
         } 
