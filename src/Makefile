@@ -1,2 +1,2 @@
 all:
-	clang++ -std=c++11 *.cpp -o transportMe.o
+	nvcc -std=c++11 *.cu -o transportMe.o
