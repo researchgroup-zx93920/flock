@@ -110,49 +110,11 @@ __host__ bool test_and_improve(MatrixCell * costMatrix, flowInformation * flows,
     std::map<std::pair<int,int>, int> &flow_indexes, float * reduced_costs,
     int matrixSupplies, int matrixDemands){
         
-        std::cout<<"\tTESTING CURRENT BFS: Determining Dual Costs"<<std::endl;
-        // Start U-V vectors
-        thrust::device_vector<Variable> U_vars(matrixSupplies);
-        Variable * u_vars_ptr = thrust::raw_pointer_cast(U_vars.data());
-        thrust::device_vector<Variable> V_vars(matrixDemands);
-        Variable * v_vars_ptr = thrust::raw_pointer_cast(V_vars.data());
-        thrust::device_vector<flowInformation> device_flows(flows, flows + (matrixSupplies+matrixDemands-1));
-        flowInformation * device_flows_ptr = thrust::raw_pointer_cast(device_flows.data());
-        thrust::device_vector<MatrixCell> device_costMatrix(costMatrix, costMatrix + matrixSupplies*matrixDemands);
-        MatrixCell * device_costMatrix_ptr = thrust::raw_pointer_cast(device_costMatrix.data());
-
-        // Make any one as 0
-        Variable default_assign; 
-        default_assign.value = 0.0;
-        default_assign.assigned = true;
-        U_vars[0] = default_assign;
-
-        std::cout<<"\tTESTING CURRENT BFS: Solving the UV System"<<std::endl;
         
-        // Start solving the system of eqn's (complementary slackness conditions)
-        // Solve the system in at most m+n-1 iterations        
-        // assigned cells -> m + n, and m+n-1 linearly independent equations to solve
-        // For each of the m + n - 1 assignements in the assignment tree ->>
-        // C_ij = u_i + v_j
-
-        dim3 dimGrid(ceil(1.0*matrixSupplies+matrixDemands-1/blockSize),1,1);
-        dim3 dimBlock(blockSize,1,1);
-
-        // Solve the system of linear equations in the following kernel >>
-        for (int i=0; i < matrixSupplies+matrixDemands-1;i++ ) {
-            assign_next <<< dimGrid, dimBlock >>> (device_flows_ptr, device_costMatrix_ptr, u_vars_ptr, v_vars_ptr, matrixSupplies, matrixDemands);
-        }
 
         // Questions ::
         // 1. Diagonal zero - corner case for U-V method (Resolution: Recall discussion with Hem, degenerate case)
-        std::cout<<"\tTESTING CURRENT BFS: Computing Reduced Costs"<<std::endl;
-        dim3 dimGrid2(ceil(1.0*matrixDemands/32), ceil(1.0*matrixSupplies/32), 1);
-        dim3 dimBlock2(32, 32, 1); // Refine this based on device query
-
-        thrust::device_vector<float> device_reducedCosts(matrixSupplies*matrixDemands);
-        float * device_reducedCosts_ptr = thrust::raw_pointer_cast(device_reducedCosts.data());
-        computeReducedCosts<<< dimGrid2, dimBlock2 >>>(u_vars_ptr, v_vars_ptr, device_costMatrix_ptr, device_reducedCosts_ptr, matrixSupplies, matrixDemands);
-        cudaDeviceSynchronize();
+        
         cudaMemcpy(reduced_costs, device_reducedCosts_ptr, matrixDemands*matrixSupplies*sizeof(float), cudaMemcpyDeviceToHost);
         
         // Pivoting - sequencial >>
