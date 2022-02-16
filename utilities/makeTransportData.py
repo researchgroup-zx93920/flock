@@ -28,14 +28,15 @@ Use indexing formula - {i}*{No. of demands} + {j}  | Tip: Check the reader funct
 import random
 
 # >>>>>>>>>>>> Set Configuration Here >>>>>>>>>>>>>>
-randomize = False # Creates a new instance on every run
-r_seed = 2000 # related to randomization
+randomize = True # Creates a new instance on every run
+r_seed = 3 # related to randomization
 
 exportEx = "dat" # Export file extension (.dat)
 balancedProblem = True
+assignmnetCase = False
 
-matrix_demands = 100
-matrix_supplies = 100
+matrix_demands = 500
+matrix_supplies = 500
 
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -50,6 +51,8 @@ assert exportEx in ["dat"], "param: exporEx must be in [lp, mps]"
 assert isinstance(balancedProblem, bool)
 assert isinstance(matrix_demands, int), "param: matrix_demands must be a valid integer"
 assert isinstance(matrix_supplies, int), "param: matrix_supplies must be a valid integer"
+if assignmnetCase:
+    assert (matrix_demands == matrix_supplies), "In an assignment problem no. of supplies and demand are equal!"
 
 print(f"Demands = {matrix_demands}")
 print(f"Supplies = {matrix_supplies}")
@@ -69,8 +72,12 @@ for i in range(matrix_supplies):
 
 
 print("Generating Demand and Supplies")
-demands = [random.randint(10,99) for i in range(matrix_demands)]
-supplies = [random.randint(10,99) for j in range(matrix_supplies)]
+if not assignmnetCase:
+    demands = [random.randint(10,99) for i in range(matrix_demands)]
+    supplies = [random.randint(10,99) for j in range(matrix_supplies)]
+else:
+    demands = [1 for i in range(matrix_demands)]
+    supplies = [1 for j in range(matrix_supplies)]
 
 # Balance Demands and Supplies
 def runConsumption(diff, const_diff, augumented):
@@ -104,7 +111,7 @@ if balancedProblem:
     assert sum(demands) == sum(supplies)
 
 print("Exporting File .. ")
-outfile = open(f"TransportModel_{matrix_supplies}_{matrix_demands}_{r_seed}_equalityConstr.{exportEx}", "w+")
+outfile = open(f"../data/TransportModel_{matrix_supplies}_{matrix_demands}_{r_seed}_equalityConstr.{exportEx}", "w+")
 outfile.write(f"{matrix_supplies} {matrix_demands}\n")
 for s in supplies:
     outfile.write(f"{s}\t")
