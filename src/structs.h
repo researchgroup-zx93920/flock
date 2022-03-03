@@ -16,7 +16,7 @@ public:
     std::string filename;
     enum my_algo {cpu_lp_solve, parallel_uv};
     my_algo algo;
-    int numDemands, numSupplies, *demands, *supplies;
+    int numDemands, numSupplies, *demands, *supplies, active_flows;
     float readTime, preprocessTime, solveTime, postprocessTime;
     double totalFlowCost;
     float *costs;

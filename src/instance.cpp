@@ -150,4 +150,7 @@ void make_problem(InputParser input, ProblemInstance &problem)
     }
 
     get_algorithm(input, problem);
+
+    // Set some attributes to default values >>
+    problem.active_flows = problem.numSupplies + problem.numDemands - 1;
 }

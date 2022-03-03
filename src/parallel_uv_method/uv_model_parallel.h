@@ -14,7 +14,7 @@
 1 : Verbose model
 */
 
-#define BFS_METHOD "nwc"
+#define BFS_METHOD "vam"
 /*
 nwc : Northwest Corner - sequential implementation
 vam : vogel's approximation - parallel regret implementation
@@ -93,5 +93,89 @@ private:
 };
 
 // INTERMEDIATE STRUCTS - ONLY CONCERNED WITH CUDA >> 
+
+/*
+Perform DFS on the graph and returns true if any back-edge is found in the graph
+At a thread level this may be inefficient given the data structures used, thus 
+another method exists for the thread specific DFS
+
+__host__ bool modern_DFS(Graph const &graph, int v, std::vector<bool> &discovered, std::vector<int> &loop, int parent)
+{
+
+    discovered[v] = true; // mark the current node as discovered
+ 
+    // do for every edge (v, w)
+    for (int w: graph.adjList[v])
+    {
+        // if `w` is not discovered
+        if (!discovered[w])
+        {
+            if (modern_DFS(graph, w, discovered, loop, v)) {
+                loop.push_back(w);
+                return true;
+            }
+        }
+        // if `w` is discovered, and `w` is not a parent
+        else if (w != parent)
+        {
+            // we found a back-edge (cycle -> v-w is a back edge)
+            loop.push_back(w);
+            return true;
+        }
+    }
+    // No back-edges were found in the graph
+    discovered[v] = false; // Reset
+    return false;
+}
+*/
+
+/* 
+Perform parallel DFS at the thread level using adjacency matrix - this one makes a stack called loop 
+that stores the traversal \n
+Note that:  This is a device function, expected to be light on memory, for well connected graphs, 
+this will be helped thorugh cache, but that needs to checked through experiments.
+
+__device__ bool micro_DFS(int * visited, int * adjMtx, pathEdge * loop, int V, int i, int parent) {
+    
+    atomicAdd(&visited[i], 1); // perform atomic add on visited - i - so that other threads aren't exploring this
+    // visited[i] = 1; // >> sequential testing/debugging
+
+    // For every neighbor of i 
+    for(int j=0; j<V; j++) {
+        if (adjMtx[i*V + j]>0) {
+
+            // If it is not visited by anybody else =>
+            if(visited[j]==0) {
+                // Check if there's a forward edge 
+                pathEdge * _loop = (pathEdge *) malloc(sizeof(pathEdge));
+                _loop->index = j;
+                _loop->next = NULL;
+                if (micro_DFS(visited, adjMtx, V, j, i, _loop)) {
+                    // loop_push
+                    loop->next = _loop;
+                    return true;
+                }
+                else {
+                    free(_loop);
+                    // Jumps to return false; 
+                }
+            }
+            // We found a backward edge
+            else if (j != parent) {
+                // loop_push
+                pathEdge * _loop = (pathEdge *) malloc(sizeof(pathEdge));
+                _loop->index = j;
+                _loop->next = NULL;
+                loop->next = _loop;
+                return true;
+            }
+        }
+    }
+    
+    atomicSub(&visited[i], 1); // Reset visited flag to let other threads explore
+    // visited[i] = 0; // >> sequential testing/debugging
+    return false;
+}
+*/
 
 

@@ -82,90 +82,6 @@ uvModel_parallel::~uvModel_parallel()
 }
 
 /*
-Perform DFS on the graph and returns true if any back-edge is found in the graph
-At a thread level this may be inefficient given the data structures used, thus 
-another method exists for the thread specific DFS
-
-__host__ bool modern_DFS(Graph const &graph, int v, std::vector<bool> &discovered, std::vector<int> &loop, int parent)
-{
-
-    discovered[v] = true; // mark the current node as discovered
- 
-    // do for every edge (v, w)
-    for (int w: graph.adjList[v])
-    {
-        // if `w` is not discovered
-        if (!discovered[w])
-        {
-            if (modern_DFS(graph, w, discovered, loop, v)) {
-                loop.push_back(w);
-                return true;
-            }
-        }
-        // if `w` is discovered, and `w` is not a parent
-        else if (w != parent)
-        {
-            // we found a back-edge (cycle -> v-w is a back edge)
-            loop.push_back(w);
-            return true;
-        }
-    }
-    // No back-edges were found in the graph
-    discovered[v] = false; // Reset
-    return false;
-}
-*/
-
-/* 
-Perform parallel DFS at the thread level using adjacency matrix - this one makes a stack called loop 
-that stores the traversal \n
-Note that:  This is a device function, expected to be light on memory, for well connected graphs, 
-this will be helped thorugh cache, but that needs to checked through experiments.
-
-__device__ bool micro_DFS(int * visited, int * adjMtx, pathEdge * loop, int V, int i, int parent) {
-    
-    atomicAdd(&visited[i], 1); // perform atomic add on visited - i - so that other threads aren't exploring this
-    // visited[i] = 1; // >> sequential testing/debugging
-
-    // For every neighbor of i 
-    for(int j=0; j<V; j++) {
-        if (adjMtx[i*V + j]>0) {
-
-            // If it is not visited by anybody else =>
-            if(visited[j]==0) {
-                // Check if there's a forward edge 
-                pathEdge * _loop = (pathEdge *) malloc(sizeof(pathEdge));
-                _loop->index = j;
-                _loop->next = NULL;
-                if (micro_DFS(visited, adjMtx, V, j, i, _loop)) {
-                    // loop_push
-                    loop->next = _loop;
-                    return true;
-                }
-                else {
-                    free(_loop);
-                    // Jumps to return false; 
-                }
-            }
-            // We found a backward edge
-            else if (j != parent) {
-                // loop_push
-                pathEdge * _loop = (pathEdge *) malloc(sizeof(pathEdge));
-                _loop->index = j;
-                _loop->next = NULL;
-                loop->next = _loop;
-                return true;
-            }
-        }
-    }
-    
-    atomicSub(&visited[i], 1); // Reset visited flag to let other threads explore
-    // visited[i] = 0; // >> sequential testing/debugging
-    return false;
-}
-*/
-
-/*
 Generate initial basic feasible solution using the selected method
 This function populates the feasible_flows attribute of the parent class, that is subject
 to updates by the subsequent improvement techniques
@@ -335,11 +251,12 @@ __global__ void retrieve_final_tree(flowInformation * d_flows_ptr, int * d_adjMt
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
     int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
     int V = numSupplies+numDemands;
-    int gid = row_indx*V + col_indx;
-
+    
     // Upper triangle scope of adj matrix
-    if (col_indx < V && row_indx < V && row_indx <= col_indx) {
+    if (col_indx < V && col_indx >= numSupplies && row_indx < numSupplies) {
         // Check if this is a flow edge - 
+        int gid = row_indx*V + col_indx;
+    
         if (d_adjMtx_ptr[gid] > 0) {
 
             int flow_indx = row_indx*numDemands + (col_indx - numSupplies);
@@ -415,7 +332,7 @@ void uvModel_parallel::execute() {
         // d_reducedCosts_ptr was populated on device
         
         // DEBUG :: 
-        view_uvra();
+        // view_uvra();
 
         // 2.3
         perform_pivot(result);
@@ -425,7 +342,7 @@ void uvModel_parallel::execute() {
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
 	double solution_time = duration.count();
-    std::cout<<"Simplex completed in : "<<solution_time<<" secs. and "<<iteration_counter<<" iterations."<<std::endl;
+    std::cout<<"\tSimplex completed in : "<<solution_time<<" secs. and "<<iteration_counter<<" iterations."<<std::endl;
 
     std::cout<<"PASS 3 :: Clearing the device memory and transfering the necessary data on CPU"<<std::endl;
     // Recreate device flows using the current adjMatrix
@@ -442,14 +359,20 @@ void uvModel_parallel::execute() {
     int grid_size = ceil(1.0*(data->numDemands+data->numSupplies)/blockSize);
     dim3 __gridDim(grid_size, grid_size, 1);
     retrieve_final_tree <<< __gridDim, __blockDim >>> (d_flows_ptr, d_adjMtx_ptr, data->numSupplies, data->numDemands);
-    thrust::remove_if(device_flows.begin(), device_flows.end(), is_zero());
+    
+    // Life is good, well sometimes!
+    thrust::device_vector<flowInformation>::iterator flows_end = thrust::remove_if(
+        device_flows.begin(), device_flows.end(), is_zero());
+    device_flows.resize(flows_end - device_flows.begin());
+    std::cout<<"\tFound "<<device_flows.size()<<" active flows in the final result"<<std::endl;
+    data->active_flows = device_flows.size();
     // Assuming M+N-1 edges still exist 
-    cudaMemcpy(feasible_flows, d_flows_ptr, (data->numSupplies+data->numDemands-1)*sizeof(flowInformation), cudaMemcpyDeviceToHost);
+    cudaMemcpy(feasible_flows, d_flows_ptr, (data->active_flows)*sizeof(flowInformation), cudaMemcpyDeviceToHost);
 }
 
 void uvModel_parallel::create_flows()
 {
-    memcpy(optimal_flows, feasible_flows, (data->numSupplies+data->numDemands-1)*sizeof(flowInformation));
+    memcpy(optimal_flows, feasible_flows, (data->active_flows)*sizeof(flowInformation));
 }
 
 
@@ -504,4 +427,3 @@ void uvModel_parallel::view_uvra()
     
     std::cout<<"*****************************"<<std::endl;
 }
-

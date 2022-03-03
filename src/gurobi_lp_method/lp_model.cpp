@@ -140,6 +140,9 @@ void lpModel::create_flows()
 				}
 			}
 		}
+
+		data->active_flows = _counter;
+	
 	}
 	else {
 		BOOST_LOG_TRIVIAL(error) << "Model is not yet solved";
