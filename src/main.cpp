@@ -60,11 +60,18 @@ int main(int argc, char **argv)
   else if (problem.algo == ProblemInstance::my_algo::parallel_uv)
   {
     uvModel_parallel model = uvModel_parallel(&problem, flows);
+    // model.execute();
     model.execute();
     model.create_flows();
   }
 
   std::cout << "Flows created successfully!" << std::endl;
+
+  for (int i=0; i<(problem.numSupplies + problem.numDemands - 1); i++){
+    std::cout<<flows[i]<<std::endl;
+  }
+
+  
   free(flows);
   std::cout << "Flows freed successfully!" << std::endl;
 }

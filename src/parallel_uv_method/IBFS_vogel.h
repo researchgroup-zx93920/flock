@@ -6,9 +6,6 @@
 #include "../structs.h"
 #include "parallel_structs.h"
 
-#define blockSize 64
-
-
 struct rowgen
 {
         __host__ __device__ int operator()(MatrixCell &x) const

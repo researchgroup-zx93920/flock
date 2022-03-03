@@ -28,7 +28,7 @@ Use indexing formula - {i}*{No. of demands} + {j}  | Tip: Check the reader funct
 import random
 
 # >>>>>>>>>>>> Set Configuration Here >>>>>>>>>>>>>>
-randomize = True # Creates a new instance on every run
+randomize = False # Creates a new instance on every run
 r_seed = 3 # related to randomization
 
 exportEx = "dat" # Export file extension (.dat)

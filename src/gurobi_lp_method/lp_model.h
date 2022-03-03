@@ -23,6 +23,15 @@
 1 : Integer nature of x-variables
 */
 
+#define DISABLE_AUTOGRB 1
+
+/*
+0 : Use gurobi's auto-configuration on parameter choice
+1 : Turn off barrier methods and enforce dual-simplex
+*/
+
+#define GRB_TIMEOUT 3600
+
 // END OF PARAMETERS 
 
 class lpModel

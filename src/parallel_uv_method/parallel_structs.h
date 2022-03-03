@@ -13,7 +13,10 @@
 #include <thrust/transform.h>
 #include <thrust/sort.h>
 #include <thrust/extrema.h>
+#include <thrust/remove.h>
 #include <thrust/execution_policy.h>
+
+#define blockSize 32
 
 #ifndef UV_STRUCTS
 #define UV_STRUCTS
@@ -89,6 +92,11 @@ __host__ __device__ struct Variable {
         assigned=true;
         return *this;
     }
+};
+
+__host__ __device__ struct pathEdge {
+    int index;
+    pathEdge * next;
 };
 
 struct rowNodes {

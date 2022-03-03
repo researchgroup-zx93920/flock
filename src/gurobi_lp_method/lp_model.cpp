@@ -88,7 +88,13 @@ void lpModel::solve()
 {
 	BOOST_LOG_TRIVIAL(debug) << "Starting Solver";
 	auto start = std::chrono::high_resolution_clock::now();
-	model->set(GRB_DoubleParam_TimeLimit, 10);
+	model->set(GRB_DoubleParam_TimeLimit, GRB_TIMEOUT);
+	
+	if (DISABLE_AUTOGRB == 1){
+		// Enforce dual simplex 
+		model->set(GRB_IntParam_Method, 1);
+	}
+
 	model->optimize();
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
