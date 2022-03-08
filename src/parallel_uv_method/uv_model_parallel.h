@@ -14,7 +14,7 @@
 1 : Verbose model
 */
 
-#define BFS_METHOD "vam"
+#define BFS_METHOD "nwc"
 /*
 nwc : Northwest Corner - sequential implementation
 vam : vogel's approximation - parallel regret implementation
@@ -25,9 +25,10 @@ vam : vogel's approximation - parallel regret implementation
 FUTURE USE : switch back between tree and linear-equation methods
 */
 
-#define PIVOTING_STRATEGY "default"
+#define PIVOTING_STRATEGY "sequencial"
 /*
-FUTURE USE : switch back between parallel, racing and barriers
+sequencial : perform pivoting one at a time based on dantzig's rule
+parallel : perform parallel pivoting
 */
 
 // >>>>>>>>>> END OF PARAMETERS // 
@@ -60,17 +61,11 @@ public:
     ProblemInstance * data;
     flowInformation * optimal_flows;
 
-    flowInformation * feasible_flows, * d_flows_ptr; 
+    flowInformation * feasible_flows;  
     // Feasible flow at any point in the algorithm flow
     // Useful for mapping data structs on CPU - GPU interop
     std::map<std::pair<int,int>, int> flow_indexes; 
     // The flows at given cell (i,j) is available at this index in flows
-
-    MatrixCell * costMatrix; // Useful for vogel's 
-    MatrixCell * device_costMatrix_ptr;
-    int * d_adjMtx_ptr;
-    float * d_reducedCosts_ptr, * reduced_costs, * d_costs_ptr, * u_vars_ptr, * v_vars_ptr;
-    int pivot_row, pivot_col;
 
     void execute();
     void get_dual_costs();
@@ -80,7 +75,27 @@ public:
     ~uvModel_parallel();
 
 private:
+
     bool solved;
+    int V;
+
+    flowInformation * d_flows_ptr; // pointer to flow objects on device
+    MatrixCell * costMatrix; // Useful for vogel's 
+    MatrixCell * device_costMatrix_ptr;
+
+    int * d_adjMtx_ptr, * h_adjMtx_ptr; 
+    // Pointers to adjacency matrix of feasible flow tree in device and host respectively
+    
+    float * d_reducedCosts_ptr, * d_costs_ptr, * u_vars_ptr, * v_vars_ptr;
+    // Pointers to vectors relevant to pivoting
+    //  - reduced cost of edges on the device
+    //  - cost of flow through an edge
+    //  - dual costs towards supply constraints
+    //  - dual costs towards demand constraints
+
+    int pivot_row, pivot_col;
+    // Useful for the case of sequencial pivoting
+    
     void generate_initial_BFS();
     void solve_uv();
     void get_reduced_costs();

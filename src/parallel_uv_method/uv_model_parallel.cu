@@ -7,7 +7,7 @@ TODO:
 1. Testing methods for both kinds of DFS (CPU and GPU)
 2. Efficient Data Structure for micro_DFS instead of adjMtx
 3. Can avoid memcpy opertion of device_CostMatrix_ptr between constructor and vogel call
-4. ...
+4. int to Unsigned int
 */
 
 #include "uv_model_parallel.h"
@@ -68,6 +68,7 @@ uvModel_parallel::uvModel_parallel(ProblemInstance *problem, flowInformation *fl
         }
     }
     */
+    V = data->numSupplies+data->numDemands;
     std::cout << "An uv_model_parallel object was successfully created" << std::endl;
 }
 
@@ -115,14 +116,16 @@ void uvModel_parallel::generate_initial_BFS()
     // The array feasible flows at this stage holds the initial basic feasible solution
 }
 
-__global__ void copy_row_shadow_prices(Variable * U_vars, float * u_vars_ptr, int numSupplies) {    
+__global__ void copy_row_shadow_prices(Variable * U_vars, float * u_vars_ptr, int numSupplies) 
+{    
     int gid = blockIdx.x*blockDim.x + threadIdx.x;
     if (gid < numSupplies) {
         u_vars_ptr[gid] = U_vars[gid].value;
     }
 }
 
-__global__ void copy_col_shadow_prices(Variable * V_vars, float * v_vars_ptr, int numDemands) {
+__global__ void copy_col_shadow_prices(Variable * V_vars, float * v_vars_ptr, int numDemands) 
+{
     int gid = blockIdx.x*blockDim.x + threadIdx.x;
     if (gid < numDemands) {
         v_vars_ptr[gid] = V_vars[gid].value;
@@ -190,7 +193,8 @@ void uvModel_parallel::solve_uv()
 Kernel to compute Reduced Costs in the transportation table
 */
 __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, float * d_costs_ptr, float * d_reducedCosts_ptr, 
-    int numSupplies, int numDemands) {
+    int numSupplies, int numDemands) 
+{
 
         int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
         int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
@@ -206,7 +210,8 @@ __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, floa
 Pretty generic method to compute reduced 
 costs provided a cost-matrix and u_vars, v_vars and cost Matrix on device
 */
-void uvModel_parallel::get_reduced_costs() {
+void uvModel_parallel::get_reduced_costs() 
+{
 
     std::cout<<"\t\tComputing Reduced Costs ..."<<std::endl;
     dim3 __dimBlock(blockSize, blockSize, 1); // Refine this based on device query
@@ -218,8 +223,134 @@ void uvModel_parallel::get_reduced_costs() {
 
 }
 
-void uvModel_parallel::perform_pivot(bool &result) {
-    // Void Functionality 
+void stack_push(int * stack, int &stack_top, int vtx)
+{
+    stack_top++;
+    stack[stack_top] = vtx;
+}
+
+int stack_pop(int * stack, int &stack_top)
+{
+    int vtx;
+    vtx = stack[stack_top];
+    stack_top--;
+    return vtx;
+}
+
+/* End of DFS */
+void perform_dfs_sequencial_on_i(int * adjMtx, int * stack, int * depth_tracker, 
+        int * backtracker, int &depth, int starting_vertex, int V)
+{   
+    // Initialized visited flag
+    bool * visited = (bool *) malloc(sizeof(bool)*V);
+    for(int j=0; j<V; j++) {
+        visited[j]=false;
+    }
+
+    int current_vertex, key, stack_top = -1;
+    stack_push(stack, stack_top, starting_vertex);
+
+    while(!(stack_top == -1))
+    {
+        current_vertex = stack_pop(stack, stack_top);
+        // check if current vtx has been already visited in this search
+        if (!visited[current_vertex])
+        {
+            // if not visited: >> 
+            //  - mark this as visited 
+            //  - see if current_vertex is adj to the starting point, 
+            //        if not - queue the vertices that are adjacent to current vertex, increment depth
+            visited[current_vertex]=true;
+
+            // check if starting point is adjacent
+            key = starting_vertex*V + current_vertex;
+            
+            // Do the book-keeping
+            backtracker[depth] = current_vertex;
+            depth_tracker[depth] = stack_top;
+
+            if (adjMtx[key] > 0 && depth > 1)
+            {
+                // Leads back to origin - this completes the cycle - exit the loop
+                break;
+            }
+            else
+            {
+                // Append the ajacent nodes in stack
+                for(int j=0; j < V; j++)
+                {
+                    key = current_vertex*V + j;
+                    // queue neighbors
+                    if(adjMtx[key] > 0)
+                    {
+                        stack_push(stack, stack_top, j);
+                    }
+                }
+                // Increment depth
+                depth++;
+            }
+        }
+        // else - move to next vertex : pop_next, Before that >>
+        // Iterations have explored the childeren and now going up in the recursion tree 
+        // to something that is still pending to be explored -
+        if (stack_top == depth_tracker[depth-1])
+        {
+            depth=(stack_top == -1)?0:depth-1;
+        }
+    }
+}
+
+void uvModel_parallel::perform_pivot(bool &result) 
+{
+    // have all the reduced costs in the d_reducedCosts_ptr on device
+    
+    if (PIVOTING_STRATEGY == "sequencial") {
+        // Find the position of the most negative reduced cost >>
+        int min_index = thrust::min_element(thrust::device, d_reducedCosts_ptr, 
+            d_reducedCosts_ptr + (data->numSupplies*data->numDemands)) - d_reducedCosts_ptr;
+        float * min_reduced_cost = 0;
+        cudaMemcpy(min_reduced_cost, d_reducedCosts_ptr, sizeof(float), cudaMemcpyDeviceToHost);
+        if (!min_reduced_cost < 0) {
+            result = true;
+            return void();
+        }
+        
+        // Found a negative reduced cost >>
+        // pivot row and pivot col are declared private attributes
+        pivot_row =  min_index/data->numDemands;
+        pivot_col = min_index - (pivot_row*data->numDemands);
+        
+        // An incoming edge from vertex = pivot_row to vertex = numSupplies + pivot_col
+        
+        int id;
+        // One side A -> B 
+        id = pivot_row*V + (data->numSupplies + pivot_col);
+        h_adjMtx_ptr[id] = 1;
+        // Other side B -> A
+        id = pivot_row + V*(data->numSupplies + pivot_col);
+        h_adjMtx_ptr[id] = 1;
+
+        int stack[V-1], depth_tracker[V-1], backtracker[V-1];
+        int depth = 0;
+        
+        perform_dfs_sequencial_on_i(h_adjMtx_ptr, stack, depth_tracker, 
+                    backtracker, depth, pivot_row, V);
+        
+        if (depth > 0)
+        {
+            for (int i=0; i <= depth; i++)
+            {
+            std::cout<<"Loop : "<<backtracker[i]<<std::endl;
+            }
+        }
+        else {
+            std::cout<<"No Cycle was detected!"<<std::endl;
+        }
+        exit(0);
+
+    }
+    
+    exit(0);
     result = true;
 }
 
@@ -227,7 +358,8 @@ void uvModel_parallel::perform_pivot(bool &result) {
 Generate a tree on the global memory using the initial set of feasible flows
 */
 __global__ void create_initial_tree(flowInformation * d_flows_ptr, int * d_adjMtx_ptr, 
-    int numSupplies, int numDemands) {
+    int numSupplies, int numDemands) 
+{
     
     int V = numSupplies+numDemands;
     int gid = blockIdx.x*blockDim.x + threadIdx.x;
@@ -246,7 +378,8 @@ __global__ void create_initial_tree(flowInformation * d_flows_ptr, int * d_adjMt
 /*
 Reverse operation of generating a tree from the feasible flows - unordered allocation
 */
-__global__ void retrieve_final_tree(flowInformation * d_flows_ptr, int * d_adjMtx_ptr, int numSupplies, int numDemands) {
+__global__ void retrieve_final_tree(flowInformation * d_flows_ptr, int * d_adjMtx_ptr, int numSupplies, int numDemands) 
+{
 
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
     int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
@@ -270,7 +403,8 @@ __global__ void retrieve_final_tree(flowInformation * d_flows_ptr, int * d_adjMt
     }
 }
 
-void uvModel_parallel::execute() {
+void uvModel_parallel::execute() 
+{
     
     // **************************************
     // Finding BFS >>
@@ -283,7 +417,7 @@ void uvModel_parallel::execute() {
     
     // STEP 1 : Allocate relevant memory and transfer the necessary to GPU Memory >>
     // **************************************
-    std::cout<<"PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
+    std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
 
         // 1.1 Create and Initialize u and v varaibles 
     cudaMalloc((void **) &u_vars_ptr, sizeof(float)*data->numSupplies);
@@ -292,7 +426,6 @@ void uvModel_parallel::execute() {
     std::cout<<"\tGenerated shadow price vectors ..."<<std::endl;
 
         // 1.2 Transfer flows on device and prepare an adjacency matrix >>
-    int V = data->numSupplies+data->numDemands;  // Number of vertices in the tree 
     cudaMalloc((void **) &d_adjMtx_ptr, sizeof(int)*(V*V)); 
     cudaMemset(d_adjMtx_ptr, 0, sizeof(int)*(V*V));
 
@@ -304,6 +437,18 @@ void uvModel_parallel::execute() {
     std::cout<<"\tGenerated initial tree ..."<<std::endl;
     // Now device_flows are useless; All information about graph is now contained within d_adjMatrix on device =>
     cudaFree(d_flows_ptr);
+    
+    // **********************************************************
+    // Pre-Process Operation before pivoting 
+    // **********************************************************
+
+    // In case of sequencial pivoting - one would need a copy of adjMatrix on the host to traverse the graph
+    // IMPORTANT: The sequencial function should ensure that the change made on host must be also made on device
+    if (PIVOTING_STRATEGY == "sequencial") {
+        h_adjMtx_ptr = (int *) malloc(sizeof(int)*(V*V));
+        cudaMemcpy(h_adjMtx_ptr, d_adjMtx_ptr, sizeof(int)*(V*V), cudaMemcpyDeviceToHost);
+    }
+
 
     /* STEP 2 : SIMPLEX IMPROVEMENT 
     // **************************************
@@ -319,7 +464,8 @@ void uvModel_parallel::execute() {
     auto start = std::chrono::high_resolution_clock::now();
 
     // STEP 2 Implemented Here ->
-    std::cout<<"PASS 2 : Simplex => find the dual -> reduced -> pivots -> repeat!"<<std::endl;
+    std::cout<<"SIMPLEX PASS 2 :: find the dual -> reduced -> pivots -> repeat!"<<std::endl;
+    result = false;
     while (!result) {
 
         // 2.1 
@@ -332,7 +478,7 @@ void uvModel_parallel::execute() {
         // d_reducedCosts_ptr was populated on device
         
         // DEBUG :: 
-        // view_uvra();
+        view_uvra();
 
         // 2.3
         perform_pivot(result);
