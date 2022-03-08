@@ -28,15 +28,15 @@ Use indexing formula - {i}*{No. of demands} + {j}  | Tip: Check the reader funct
 import random
 
 # >>>>>>>>>>>> Set Configuration Here >>>>>>>>>>>>>>
-randomize = False # Creates a new instance on every run
-r_seed = 3 # related to randomization
+randomize = True # Creates a new instance on every run
+r_seed = 3000 # related to randomization
 
 exportEx = "dat" # Export file extension (.dat)
 balancedProblem = True
 assignmnetCase = False
 
-matrix_demands = 500
-matrix_supplies = 500
+matrix_demands = 1000
+matrix_supplies = 1000
 
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -67,14 +67,14 @@ print("Creating Cost Matrix variables")
 for i in range(matrix_supplies):
     varRows = []
     for j in range(matrix_demands):
-        varRows.append(random.randint(10,99))
+        varRows.append(random.uniform(100,99999))
     vars.append(varRows)
 
 
 print("Generating Demand and Supplies")
 if not assignmnetCase:
-    demands = [random.randint(10,99) for i in range(matrix_demands)]
-    supplies = [random.randint(10,99) for j in range(matrix_supplies)]
+    demands = [random.randint(1000,9999) for i in range(matrix_demands)]
+    supplies = [random.randint(1000,9999) for j in range(matrix_supplies)]
 else:
     demands = [1 for i in range(matrix_demands)]
     supplies = [1 for j in range(matrix_supplies)]
@@ -102,7 +102,7 @@ if balancedProblem:
         diff = totalD - totalS
         supplies = runConsumption(diff, const_diff,supplies)
         
-    
+
     if totalS > totalD:
         const_diff = totalS - totalD
         diff = totalS - totalD

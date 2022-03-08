@@ -14,7 +14,7 @@
 1 : Verbose model
 */
 
-#define BFS_METHOD "nwc"
+#define BFS_METHOD "vam"
 /*
 nwc : Northwest Corner - sequential implementation
 vam : vogel's approximation - parallel regret implementation
@@ -32,6 +32,8 @@ parallel : perform parallel pivoting
 */
 
 // >>>>>>>>>> END OF PARAMETERS // 
+
+#define epsilon 0.000001
 
 /*
 Algorithm alternative to solve transportation problem
@@ -83,7 +85,7 @@ private:
     MatrixCell * costMatrix; // Useful for vogel's 
     MatrixCell * device_costMatrix_ptr;
 
-    int * d_adjMtx_ptr, * h_adjMtx_ptr; 
+    float * d_adjMtx_ptr, * h_adjMtx_ptr; 
     // Pointers to adjacency matrix of feasible flow tree in device and host respectively
     
     float * d_reducedCosts_ptr, * d_costs_ptr, * u_vars_ptr, * v_vars_ptr;
@@ -92,6 +94,9 @@ private:
     //  - cost of flow through an edge
     //  - dual costs towards supply constraints
     //  - dual costs towards demand constraints
+
+    // Temporary >> 
+    float * h_reduced_costs;
 
     int pivot_row, pivot_col;
     // Useful for the case of sequencial pivoting

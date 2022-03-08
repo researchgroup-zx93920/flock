@@ -1,6 +1,6 @@
 #include "DUAL_tree.h"
 
-__global__ void assign_next(int * d_adjMtx_ptr, float * d_costs_ptr, 
+__global__ void assign_next(float * d_adjMtx_ptr, float * d_costs_ptr, 
     Variable *u_vars, Variable *v_vars, int numSupplies, int numDemands) {
     
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;

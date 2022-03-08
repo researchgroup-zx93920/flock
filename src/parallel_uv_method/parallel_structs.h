@@ -83,7 +83,7 @@ std::ostream& operator << (std::ostream& o, const MatrixCell& x);
 std::ostream& operator << (std::ostream& o, const vogelDifference& x);
 
 __host__ __device__ struct Variable {
-    float value;
+    float value = 0;
     bool assigned = false;
 
     __host__ __device__ Variable& operator=(const float& x)
@@ -93,6 +93,11 @@ __host__ __device__ struct Variable {
         return *this;
     }
 };
+
+__host__ __device__ struct stackNode {
+    int index, depth;
+};
+
 
 __host__ __device__ struct pathEdge {
     int index;
