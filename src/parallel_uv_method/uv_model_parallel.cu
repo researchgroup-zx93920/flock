@@ -349,6 +349,8 @@ void uvModel_parallel::perform_pivot(bool &result)
             pivot_col = min_index - (pivot_row*data->numDemands);
             
             // An incoming edge from vertex = pivot_row to vertex = numSupplies + pivot_col
+            std::cout<<"Pivot Row = "<<pivot_row<<std::endl;
+            std::cout<<"Pivot Col ="<<pivot_col<<std::endl; 
             
             int id;
             int backtracker[V];
@@ -553,7 +555,7 @@ void uvModel_parallel::execute()
     std::cout<<"SIMPLEX PASS 2 :: find the dual -> reduced -> pivots -> repeat!"<<std::endl;
     result = false;
     while (!result) {
-        // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
+        std::cout<<"Iteration :"<<iteration_counter<<std::endl;
 
         // 2.1 
         solve_uv();  
