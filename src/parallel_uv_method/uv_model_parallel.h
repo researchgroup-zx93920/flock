@@ -31,9 +31,10 @@ sequencial : perform pivoting one at a time based on dantzig's rule
 parallel : perform parallel pivoting
 */
 
+#define MAX_ITERATIONS 6
+
 // >>>>>>>>>> END OF PARAMETERS // 
 
-#define epsilon 0.000001
 
 /*
 Algorithm alternative to solve transportation problem
@@ -85,8 +86,17 @@ private:
     MatrixCell * costMatrix; // Useful for vogel's 
     MatrixCell * device_costMatrix_ptr;
 
-    float * d_adjMtx_ptr, * h_adjMtx_ptr; 
+    int * d_adjMtx_ptr, * h_adjMtx_ptr; 
+    float * d_flowMtx_ptr, * h_flowMtx_ptr;
+    /*
+        Adjacency matrix is a upper triangular matrix to store the tree inforamtion
+        !! DOC PENDING !!
+    */
+
     // Pointers to adjacency matrix of feasible flow tree in device and host respectively
+    // Pointer to flowMtx, adjMtx only represents adjaceency, flow matrix contains flow values
+    // Such a separation has been created to resolve degeneracies - 
+    // sometimes zero flows would make life better :D
     
     float * d_reducedCosts_ptr, * d_costs_ptr, * u_vars_ptr, * v_vars_ptr;
     // Pointers to vectors relevant to pivoting

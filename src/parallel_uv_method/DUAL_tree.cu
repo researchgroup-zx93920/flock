@@ -1,6 +1,6 @@
 #include "DUAL_tree.h"
 
-__global__ void assign_next(float * d_adjMtx_ptr, float * d_costs_ptr, 
+__global__ void assign_next(int * d_adjMtx_ptr, float * d_costs_ptr, 
     Variable *u_vars, Variable *v_vars, int numSupplies, int numDemands) {
     
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
@@ -12,7 +12,7 @@ __global__ void assign_next(float * d_adjMtx_ptr, float * d_costs_ptr,
     // Within the scope of the adj matrix
     if (row_indx < numSupplies && col_indx < numDemands) {
         // Check if these are adjacent - (checks in upper triangular matrix, because row < adj-col-index)
-        int indx = row_indx*V + (col_indx + numSupplies); // Adjusted destination vertex ID
+        int indx = TREE_LOOKUP(row_indx, col_indx + numSupplies, V); // Adjusted destination vertex ID
         if (d_adjMtx_ptr[indx] > 0) {
             // Check if any of the u or v has not been assigned and adjacent is assigned - then assign it
             if (u_vars[row_indx].assigned && (!v_vars[col_indx].assigned)) {

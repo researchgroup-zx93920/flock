@@ -17,6 +17,8 @@
 #include <thrust/execution_policy.h>
 
 #define blockSize 32
+#define TREE_LOOKUP(row, col, V) (col>=row?(row*(V-(row*(row+1)/2))+col):(col*(V-(col*(col+1)/2))+row))
+#define epsilon 0.000001
 
 #ifndef UV_STRUCTS
 #define UV_STRUCTS
