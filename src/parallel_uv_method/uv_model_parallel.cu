@@ -270,7 +270,7 @@ void perform_dfs_sequencial_on_i(int * adjMtx, stackNode * stack, int * backtrac
     while(!(stack_top == -1))
     {
         current_vertex = stack_pop(stack, stack_top);
-        
+
         // check if current vtx has been already visited in this search
         if (!visited[current_vertex.index])
         {
@@ -281,8 +281,8 @@ void perform_dfs_sequencial_on_i(int * adjMtx, stackNode * stack, int * backtrac
             visited[current_vertex.index]=true;
 
             // Do the book-keeping
-            backtracker[current_vertex.depth] = current_vertex.index;
             current_depth = current_vertex.depth + 1;
+            backtracker[current_vertex.depth] = current_vertex.index;
 
             // check if target point is adjacent
             key = TREE_LOOKUP(target_vertex, current_vertex.index, V);
@@ -302,7 +302,7 @@ void perform_dfs_sequencial_on_i(int * adjMtx, stackNode * stack, int * backtrac
                     // queue neighbors
                     if(adjMtx[key] > 0)
                     {
-                        stack_push(stack, stack_top, j, depth);
+                        stack_push(stack, stack_top, j, current_depth);
                     }
                 }
             }
@@ -320,8 +320,8 @@ void perform_dfs_sequencial_on_i(int * adjMtx, stackNode * stack, int * backtrac
 /*
 Do a copy from new value to device pointer
 */
-__host__ void modify_flowMtx_on_device(int * d_flowMtx_ptr, int id, float new_value) {
-    cudaMemcpy(d_flowMtx_ptr + id, &new_value, sizeof(float), cudaMemcpyHostToDevice);
+__host__ void modify_flowMtx_on_device(float * d_flowMtx_ptr, int id, float new_value) {
+    cudaMemcpy(&d_flowMtx_ptr[id], &new_value, sizeof(float), cudaMemcpyHostToDevice);
 }
 
 /*
@@ -329,7 +329,7 @@ Replaces the exiting basic flow with entering non basic flow
 Does the necessary adjustments on the variables on device memory
 */
 __host__ void exit_i_and_enter_j(int * d_adjMtx_ptr, float * d_flowMtx_ptr, int exit_src, int exit_dest, 
-        int enter_src, int enter_dest, int min_flow_indx, float flow_value, int V) {
+        int enter_src, int enter_dest, int min_flow_indx, float min_flow, int V) {
             
     int id;
     int null_value = 0;
@@ -337,14 +337,15 @@ __host__ void exit_i_and_enter_j(int * d_adjMtx_ptr, float * d_flowMtx_ptr, int 
 
     // Set value for exiting in d
     id = TREE_LOOKUP(exit_src, exit_dest, V);
-    cudaMemcpy(d_adjMtx_ptr + id, &null_value, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(&d_adjMtx_ptr[id], &null_value, sizeof(int), cudaMemcpyHostToDevice);
 
     // Set value for entering to the appropriate
     id = TREE_LOOKUP(enter_src, enter_dest, V);
-    cudaMemcpy(d_adjMtx_ptr + id, &new_value, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(&d_adjMtx_ptr[id], &new_value, sizeof(int), cudaMemcpyHostToDevice);
 
-    // Replace the flow value
-    cudaMemcpy(d_flowMtx_ptr + min_flow_indx, &flow_value, sizeof(float), cudaMemcpyHostToDevice);
+    // The flow would have become zero - update it again
+    cudaMemcpy(&d_flowMtx_ptr[min_flow_indx], &min_flow, sizeof(float), cudaMemcpyHostToDevice);
+
 }
 
 /* 
@@ -366,9 +367,6 @@ void uvModel_parallel::perform_pivot(bool &result)
     // have all the reduced costs in the d_reducedCosts_ptr on device
     float min_reduced_cost = 0;
     cudaMemcpy(&min_reduced_cost, d_reducedCosts_ptr + min_index, sizeof(float), cudaMemcpyDeviceToHost);
-    
-    std::cout<<"Minimum = "<<min_reduced_cost<<std::endl;
-    std::cout<<"Min-Index = "<<min_index<<std::endl;
 
     if (!(min_reduced_cost >= 0))
     {
@@ -380,8 +378,6 @@ void uvModel_parallel::perform_pivot(bool &result)
             pivot_col = min_index - (pivot_row*data->numDemands);
             
             // An incoming edge from vertex = pivot_row to vertex = numSupplies + pivot_col
-            std::cout<<"Pivot Row = "<<pivot_row<<std::endl;
-            std::cout<<"Pivot Col ="<<pivot_col<<std::endl; 
             
             // *******************************************
             // STEP 2: If not, Traverse tree and find a route
@@ -404,9 +400,11 @@ void uvModel_parallel::perform_pivot(bool &result)
             backtracker[0] = pivot_row;
             depth = 1;
             
-            // Find a loop by performing DFS from pivot_col upto pivot row
+            // Find a loop by performing DFS from pivot_col upto pivot row >>
             perform_dfs_sequencial_on_i(h_adjMtx_ptr, stack, backtracker, visited, depth, 
                 pivot_col+data->numSupplies, pivot_row, V);
+
+            // std::cout<<"Depth = "<<depth<<std::endl;
             
             // If loop not discovered >>
             if (depth <= 1) {
@@ -455,17 +453,6 @@ void uvModel_parallel::perform_pivot(bool &result)
                 }
             }
 
-            // Before 
-            // view_uvra();
-
-            // std::cout<<"min_flow : "<<min_flow<<std::endl;
-            // for (int i=0; i<depth; i++) 
-            // {
-            //     _from = backtracker[i];
-            //     _to = backtracker[i+1];
-            //     std::cout<<"From : "<<_from<<" | To : "<<_to<<std::endl;
-            // }
-
             // Executing the flow adjustment >>
 
             // Skip the first edge (entering edge)
@@ -480,8 +467,7 @@ void uvModel_parallel::perform_pivot(bool &result)
                 id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
                 _flow = j*min_flow;
                 h_flowMtx_ptr[id] += _flow;
-                // Fix the following function >>
-                modify_flowMtx_on_device(d_adjMtx_ptr, id, h_adjMtx_ptr[id]);
+                modify_flowMtx_on_device(d_flowMtx_ptr, id, h_flowMtx_ptr[id]);
                 j *= -1;
             }
 
@@ -499,13 +485,11 @@ void uvModel_parallel::perform_pivot(bool &result)
                 min_from, min_to, 
                 pivot_row, pivot_col+data->numSupplies, 
                 min_flow_id, min_flow, V);
-            
-            // After 
-            // view_uvra();
-
-            // free(backtracker);
-            // free(visited);
-            // free(stack);
+        }
+        else 
+        {
+          std::cout<<"Invalid selection of pivoting strategy"<<std::endl;
+          exit(-1);  
         }
     }
     else 
@@ -593,12 +577,12 @@ void uvModel_parallel::execute()
     std::cout<<"\tGenerated shadow price vectors ..."<<std::endl;
 
         // 1.2 Transfer flows on device and prepare an adjacency and flow matrix >>
-    int _utm_entries = V*(V+1)/2; // Number of entries in upped triangular matrix
+    int _utm_entries = (V*(V+1))/2; // Number of entries in upped triangular matrix 
     cudaMalloc((void **) &d_adjMtx_ptr, sizeof(int)*_utm_entries); 
-    cudaMemset(d_adjMtx_ptr, 0, sizeof(int)*_utm_entries);
+    thrust::fill(thrust::device, d_adjMtx_ptr, d_adjMtx_ptr + _utm_entries, 0);
 
     cudaMalloc((void **) &d_flowMtx_ptr, sizeof(float)*(V-1));
-    cudaMemset(d_flowMtx_ptr, 0, sizeof(float)*(V-1));
+    thrust::fill(thrust::device, d_flowMtx_ptr, d_flowMtx_ptr + (V-1), 0);
 
     cudaMalloc((void **) &d_flows_ptr, sizeof(flowInformation)*(V-1));
     cudaMemcpy(d_flows_ptr, feasible_flows, sizeof(flowInformation)*(V-1), cudaMemcpyHostToDevice);
@@ -631,9 +615,9 @@ void uvModel_parallel::execute()
         LOOP THORUGH - 
             2.1 Use the current tree on device and solve u's and v's
             2.2 Compute Reduced costs
-            2.3.1 If no - negative reduced costs - break the loop
-            2.3.2 If there exist negative reduced costs -
-                Perform a pivot operation
+                2.3.1 If no - negative reduced costs - break the loop
+                2.3.2 If there exist negative reduced costs -
+                    Perform a pivot operation (more details on the corresponding function)
     */
     bool result = false;
     int iteration_counter = 0;
@@ -643,7 +627,7 @@ void uvModel_parallel::execute()
     std::cout<<"SIMPLEX PASS 2 :: find the dual -> reduced -> pivots -> repeat!"<<std::endl;
     result = false;
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
-        std::cout<<"Iteration :"<<iteration_counter<<std::endl;
+        // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
 
         // 2.1 
         solve_uv();  
@@ -655,7 +639,6 @@ void uvModel_parallel::execute()
         // d_reducedCosts_ptr was populated on device
         
         // DEBUG :: 
-        // view_uvra();
 
         // 2.3
         perform_pivot(result);
@@ -675,23 +658,35 @@ void uvModel_parallel::execute()
 
     flowInformation default_flow;
     default_flow.qty = 0;
-    thrust::device_vector<flowInformation> device_flows(data->numSupplies*data->numDemands, default_flow);
-    d_flows_ptr = thrust::raw_pointer_cast(device_flows.data());
+
+    cudaMalloc((void **) &d_flows_ptr, sizeof(flowInformation)*(data->numSupplies*data->numDemands));
+    thrust::fill(thrust::device, d_flows_ptr, d_flows_ptr + (data->numSupplies*data->numDemands), default_flow);
 
     dim3 __blockDim(blockSize, blockSize, 1);
     int grid_size = ceil(1.0*(V)/blockSize); // VxV grid
     dim3 __gridDim(grid_size, grid_size, 1);
     retrieve_final_tree <<< __gridDim, __blockDim >>> (d_flows_ptr, d_adjMtx_ptr, d_flowMtx_ptr, 
         data->numSupplies, data->numDemands);
+    cudaDeviceSynchronize();
     
-    // Life is good, well sometimes!
-    thrust::device_vector<flowInformation>::iterator flows_end = thrust::remove_if(
-        device_flows.begin(), device_flows.end(), is_zero());
-    device_flows.resize(flows_end - device_flows.begin());
-    std::cout<<"\tFound "<<device_flows.size()<<" active flows in the final result"<<std::endl;
-    data->active_flows = device_flows.size();
-    // Assuming M+N-1 edges still exist 
+    // Copy the (flows > 0) back on the host >>
+    auto flow_end = thrust::remove_if(thrust::device,
+        d_flows_ptr, d_flows_ptr + (data->numSupplies*data->numDemands), is_zero());
+    int flow_count = flow_end - d_flows_ptr;
+    std::cout<<"\tFound "<<flow_count<<" active flows in the final result"<<std::endl;
+    data->active_flows = flow_count;
     cudaMemcpy(feasible_flows, d_flows_ptr, (data->active_flows)*sizeof(flowInformation), cudaMemcpyDeviceToHost);
+
+    double objval = 0.0;
+    for (int i=0; i< (data->active_flows); i++){
+        int _row = feasible_flows[i].source;
+        int _col = feasible_flows[i].destination;
+        int _key = _row*data->numDemands + _col;
+        objval += feasible_flows[i].qty*data->costs[_key];
+    }
+    data->totalFlowCost = objval;
+    std::cout<<"Objective Value = "<<objval<<std::endl;
+    
 }
 
 void uvModel_parallel::create_flows()
@@ -743,17 +738,16 @@ void uvModel_parallel::view_uvra()
     float * h_flowMtx;
     int _V = data->numSupplies+data->numDemands;
     
-    h_adjMtx = (int *) malloc((_V*(_V+1)/2)*sizeof(int));
-    cudaMemcpy(h_adjMtx, d_adjMtx_ptr, (_V*(_V+1)/2)*sizeof(int), cudaMemcpyDeviceToHost);
+    h_adjMtx = (int *) malloc(((_V*(_V+1))/2)*sizeof(int));
+    cudaMemcpy(h_adjMtx, d_adjMtx_ptr, ((_V*(_V+1))/2)*sizeof(int), cudaMemcpyDeviceToHost);
 
     h_flowMtx = (float *) malloc((_V-1)*sizeof(float));
     cudaMemcpy(h_flowMtx, d_flowMtx_ptr, (_V-1)*sizeof(float), cudaMemcpyDeviceToHost);
 
     for (int i = 0; i < _V; i++) {
         for (int j = i; j < _V; j++) {
-            if (h_adjMtx[TREE_LOOKUP(i, j, _V)] > 0) {
-                std::cout << "adjMatrix[" << i << "]["<< j << "] = " << h_adjMtx[TREE_LOOKUP(i, j, _V)] << std::endl;
-            }
+                int indx = TREE_LOOKUP(i, j, _V);
+                std::cout << "adjMatrix[" << i << "]["<< j << "] = "<<indx<<" = "<< h_adjMtx[indx]<< std::endl;
         }
     }
 
