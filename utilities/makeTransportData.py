@@ -29,14 +29,14 @@ import random
 
 # >>>>>>>>>>>> Set Configuration Here >>>>>>>>>>>>>>
 randomize = True # Creates a new instance on every run
-r_seed = 3000 # related to randomization
+r_seed = 2000 # related to randomization
 
 exportEx = "dat" # Export file extension (.dat)
 balancedProblem = True
 assignmnetCase = False
 
-matrix_demands = 1000
-matrix_supplies = 1000
+matrix_demands = 100
+matrix_supplies = 100
 
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -67,14 +67,14 @@ print("Creating Cost Matrix variables")
 for i in range(matrix_supplies):
     varRows = []
     for j in range(matrix_demands):
-        varRows.append(random.uniform(100,99999))
+        varRows.append(round(random.uniform(100,999),2))
     vars.append(varRows)
 
 
 print("Generating Demand and Supplies")
 if not assignmnetCase:
-    demands = [random.randint(1000,9999) for i in range(matrix_demands)]
-    supplies = [random.randint(1000,9999) for j in range(matrix_supplies)]
+    demands = [random.randint(10,99) for i in range(matrix_demands)]
+    supplies = [random.randint(10,99) for j in range(matrix_supplies)]
 else:
     demands = [1 for i in range(matrix_demands)]
     supplies = [1 for j in range(matrix_supplies)]

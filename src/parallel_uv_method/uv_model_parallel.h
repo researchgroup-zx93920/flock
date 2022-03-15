@@ -56,6 +56,13 @@ struct is_zero
     }
 };
 
+typedef union  {
+  float floats[2];                 // floats[0] = lowest savings on this loop
+  int ints[2];                     // ints[1] = index -> thread-gid
+  unsigned long long int ulong;    // for atomic update
+} vertex_conflicts;
+
+
 __host__ class uvModel_parallel
 {
 
@@ -108,8 +115,18 @@ private:
     // Temporary >> 
     float * h_reduced_costs;
 
+    // Useful for the case of sequencial pivoting >>
     int pivot_row, pivot_col;
-    // Useful for the case of sequencial pivoting
+    
+    // Useful for parallel pivoting >>
+    int * backtracker, * depth, * loop_min_from, * loop_min_to, * loop_min_id;
+    float * loop_minimum;
+    stackNode * stack;
+    vertex_conflicts * v_conflicts;
+    bool * visited;
+
+    vertex_conflicts _vtx_conflict_default;
+    Variable * U_vars, * V_vars;
     
     void generate_initial_BFS();
     void solve_uv();
