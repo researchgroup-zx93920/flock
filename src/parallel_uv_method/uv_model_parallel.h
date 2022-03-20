@@ -127,7 +127,7 @@ private:
 
     vertex_conflicts _vtx_conflict_default;
     Variable * U_vars, * V_vars;
-    
+
     void generate_initial_BFS();
     void solve_uv();
     void get_reduced_costs();

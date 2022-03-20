@@ -92,7 +92,7 @@ void lpModel::solve()
 	
 	if (DISABLE_AUTOGRB == 1){
 		// Enforce dual simplex 
-		model->set(GRB_IntParam_Method, 1);
+		model->set(GRB_IntParam_Method, 0);
 		model->set(GRB_IntParam_Sifting, 0);
 	}
 
