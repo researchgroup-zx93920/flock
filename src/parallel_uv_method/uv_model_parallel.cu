@@ -112,9 +112,9 @@ void uvModel_parallel::generate_initial_BFS()
     }
 
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     double solution_time = duration.count();
-    std::cout << BFS_METHOD << " BFS Found in : " << solution_time << " secs." << std::endl;
+    std::cout << BFS_METHOD << " BFS Found in : " << solution_time << " millisecs." << std::endl;
     // The array feasible flows at this stage holds the initial basic feasible solution
 }
 
@@ -546,6 +546,51 @@ __global__ void run_flow_adjustments(int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
     }
 }
 
+__host__ void do_flow_adjustment_on_host(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
+        int * d_adjMtx_ptr, float * d_flowMtx_ptr, int * backtracker, float min_flow, int min_from, int min_to, int min_flow_id,
+        int pivot_row, int pivot_col, int depth, int V, int numSupplies, int numDemands) {
+
+    // std::cout<<"Depth : "<<depth<<" : ";
+    // for (int j = 0; j < depth + 1; j++) {
+    //     std::cout<<backtracker[j]<<" ";
+    // }
+    // std::cout<<std::endl;
+    // std::cout<<"Min flow : "<<min_flow<<std::endl;
+    // std::cout<<"Min from : "<<min_from<<std::endl;
+    // std::cout<<"Min to : "<<min_to<<std::endl;
+    // std::cout<<"Min id : "<<min_flow_id<<std::endl;
+    // std::cout<<"Pivot Row : "<<pivot_row<<std::endl;
+    // std::cout<<"Pivot Col : "<<pivot_col<<std::endl;
+
+    int j=-1, _from, _to, id;
+    float _flow;
+    for (int i=1; i<depth; i++) 
+    {
+        _from = backtracker[i];
+        _to = backtracker[i+1];
+        id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
+        _flow = j*min_flow;
+        h_flowMtx_ptr[id] += _flow;
+        modify_flowMtx_on_device(d_flowMtx_ptr, id, h_flowMtx_ptr[id]);
+        j *= -1;
+    }
+
+    // Do the replacment between exiting i - entering j on both host and device
+    // Remove edge
+    id = TREE_LOOKUP(min_from, min_to, V);
+    h_adjMtx_ptr[id] = 0;
+    // Insert edge
+    id = TREE_LOOKUP(pivot_row, pivot_col+ numSupplies, V);
+    h_adjMtx_ptr[id] = min_flow_id + 1;
+    // Update new flow 
+    h_flowMtx_ptr[min_flow_id] = min_flow;
+
+    exit_i_and_enter_j(d_adjMtx_ptr, d_flowMtx_ptr, 
+        min_from, min_to, 
+        pivot_row, pivot_col + numSupplies, 
+        min_flow_id, min_flow, V);
+}
+
 __host__ void execute_pivot_on_host(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
         int * d_adjMtx_ptr, float * d_flowMtx_ptr, int * backtracker, 
         int pivot_row, int pivot_col, int depth, int V, int numSupplies, int numDemands) {
@@ -586,33 +631,9 @@ __host__ void execute_pivot_on_host(int * h_adjMtx_ptr, float * h_flowMtx_ptr,
     // Skip the first edge (entering edge)
     // Exiting Edge will become automatically zero (min_from, min_to)
     // Note - minflow value is zero if there's a degenerate pivot!
-
-    int j=-1;
-    for (int i=1; i<depth; i++) 
-    {
-        _from = backtracker[i];
-        _to = backtracker[i+1];
-        id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
-        _flow = j*min_flow;
-        h_flowMtx_ptr[id] += _flow;
-        modify_flowMtx_on_device(d_flowMtx_ptr, id, h_flowMtx_ptr[id]);
-        j *= -1;
-    }
-
-    // Do the replacment between exiting i - entering j on both host and device
-    // Remove edge
-    id = TREE_LOOKUP(min_from, min_to, V);
-    h_adjMtx_ptr[id] = 0;
-    // Insert edge
-    id = TREE_LOOKUP(pivot_row, pivot_col+ numSupplies, V);
-    h_adjMtx_ptr[id] = min_flow_id + 1;
-    // Update new flow 
-    h_flowMtx_ptr[min_flow_id] = min_flow;
-
-    exit_i_and_enter_j(d_adjMtx_ptr, d_flowMtx_ptr, 
-        min_from, min_to, 
-        pivot_row, pivot_col+ numSupplies, 
-        min_flow_id, min_flow, V);
+    do_flow_adjustment_on_host(h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, backtracker,
+            min_flow, min_from, min_to, min_flow_id,
+            pivot_row, pivot_col, depth, V, numSupplies, numDemands);
 
 }
 
@@ -629,6 +650,8 @@ void uvModel_parallel::perform_pivot(bool &result)
     // STEP 1: Check if already optimal
     // *******************************************
     
+    // view_uvra();
+
     // Find the position of the most negative reduced cost >>
     int min_index = thrust::min_element(thrust::device, d_reducedCosts_ptr, 
             d_reducedCosts_ptr + (data->numSupplies*data->numDemands)) - d_reducedCosts_ptr;
@@ -690,7 +713,11 @@ void uvModel_parallel::perform_pivot(bool &result)
             execute_pivot_on_host(h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, backtracker,
             pivot_row, pivot_col, depth, V, data->numSupplies, data->numDemands);
 
+            free(backtracker);
+            free(stack);
+            free(visited);
         }
+
         else if (PIVOTING_STRATEGY == "parallel") {
             
             /*
@@ -743,7 +770,7 @@ void uvModel_parallel::perform_pivot(bool &result)
             //     int offset = V*i;
             //     if (h_depth[i] > 0){
             //         std::cout<<"Thread - "<<i<<" : Depth : "<<h_depth[i]<<" : ";
-            //         for (int j = 0; j < h_depth[i]; j++) {
+            //         for (int j = 0; j <= h_depth[i]; j++) {
             //             std::cout<<h_backtracker[offset+j]<<" ";
             //         }
             //         std::cout<<std::endl;
@@ -844,11 +871,38 @@ void uvModel_parallel::perform_pivot(bool &result)
                     loop_min_from, loop_min_to, loop_min_id, data->numSupplies, data->numDemands);
                 cudaDeviceSynchronize(); // xxxxxx - Barrier 4 - xxxxxx
 
-                // METHOD 2 : RUN FLOW ADJUSTMENTS IN SEQ (for all independent loops)
+                // METHOD 2 : RUN FLOW ADJUSTMENTS IN SEQ on host (for all independent loops)
+                // int * _h_depth = (int *) malloc(data->numSupplies*data->numDemands * sizeof(int));
+                // int * _h_backtracker = (int *) malloc(sizeof(int)*V);
+                // float min_flow;
+                // int min_from, min_to, min_flow_id;
+                // cudaMemcpy(_h_depth, depth, data->numSupplies*data->numDemands * sizeof(int), cudaMemcpyDeviceToHost);
                 
+                // for (int i=0; i < (data->numSupplies*data->numDemands); i++) {
+                //     if (_h_depth[i] > 0) {
 
+                //         int offset = V*i;
+                //         pivot_row =  i/data->numDemands;
+                //         pivot_col = i - (pivot_row*data->numDemands);
+
+                //         cudaMemcpy(_h_backtracker, &backtracker[offset], (_h_depth[i]+1)*sizeof(int), cudaMemcpyDeviceToHost);
+                //         cudaMemcpy(&min_flow, &loop_minimum[i], sizeof(float), cudaMemcpyDeviceToHost);
+                //         cudaMemcpy(&min_from, &loop_min_from[i], sizeof(int), cudaMemcpyDeviceToHost);
+                //         cudaMemcpy(&min_to, &loop_min_to[i], sizeof(int), cudaMemcpyDeviceToHost);
+                //         cudaMemcpy(&min_flow_id, &loop_min_id[i], sizeof(int), cudaMemcpyDeviceToHost);
+                        
+                //         do_flow_adjustment_on_host(h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, _h_backtracker,
+                //             min_flow, min_from, min_to, min_flow_id,
+                //             pivot_row, pivot_col, _h_depth[i], V, data->numSupplies, data->numDemands);
+                        
+                //         // std::cout<<"Adjusted!"<<std::endl;
+                //    }
+                // }
+                // free(_h_depth);
+                // free(_h_backtracker);
                 
             }
+
             else {
                 std::cout<<"No independent cycles found!"<<std::endl;
             }
@@ -856,7 +910,7 @@ void uvModel_parallel::perform_pivot(bool &result)
         else 
         {
           std::cout<<"Invalid selection of pivoting strategy"<<std::endl;
-          exit(-1);  
+          exit(-1);
         }
     }
     else 
@@ -996,7 +1050,7 @@ void uvModel_parallel::execute()
         cudaMalloc((void **) &v_conflicts, V * sizeof(vertex_conflicts));
         _vtx_conflict_default.floats[0] = FLT_MAX;
         _vtx_conflict_default.ints[1] = -1;
-        std::cout<<"Parallel Pivoting : Allocated Resources on Device"<<std::endl;
+        std::cout<<"\tParallel Pivoting : Allocated Resources on Device"<<std::endl;
     
     }
 
@@ -1040,9 +1094,9 @@ void uvModel_parallel::execute()
     }
 
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	double solution_time = duration.count();
-    std::cout<<"\tSimplex completed in : "<<solution_time<<" secs. and "<<iteration_counter<<" iterations."<<std::endl;
+    std::cout<<"\tSimplex completed in : "<<solution_time<<" millisecs. and "<<iteration_counter<<" iterations."<<std::endl;
 
     std::cout<<"SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU"<<std::endl;
     

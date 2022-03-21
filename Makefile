@@ -10,7 +10,7 @@ GUROBI_HOME=/home/mohitm3/gurobi912/linux64
 LIB_GUROBI=-lgurobi_c++ -lgurobi91
 
 CUDA=/usr/local/cuda
-LIB_CUDA=-lcudart
+LIB_CUDA=-lcudart -lnvToolsExt
 
 flock: ensureDir lpMethod.o parallel_method.o
 	$(CPP) $(SRC)/*.cpp ./bin/*.o -I$(GUROBI_HOME)/include/ -I$(BOOST_INCLUDE_PATH)/ -I$(CUDA)/include/ -L$(GUROBI_HOME)/lib/ -L$(BOOST_LIB_PATH)/lib/ -L$(CUDA)/lib64/ $(LIB_GUROBI) $(LIB_BOOST) $(LIB_CUDA) -o ./bin/flock
