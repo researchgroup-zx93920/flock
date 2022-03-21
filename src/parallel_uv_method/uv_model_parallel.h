@@ -25,7 +25,7 @@ vam : vogel's approximation - parallel regret implementation
 FUTURE USE : switch back between tree and linear-equation methods
 */
 
-#define PIVOTING_STRATEGY "sequencial"
+#define PIVOTING_STRATEGY "parallel"
 /*
 sequencial : perform pivoting one at a time based on dantzig's rule
 parallel : perform parallel pivoting

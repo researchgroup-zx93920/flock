@@ -422,8 +422,10 @@ __device__ unsigned long long int atomicMinAuxillary(unsigned long long int* add
     loc.floats[0] = val1;
     loc.ints[1] = val2;
     loctest.ulong = *address;
-    while (val1  < loctest.floats[0]) 
-      loctest.ulong = atomicCAS(address, loctest.ulong,  loc.ulong);
+    while (val1  < loctest.floats[0] || (val1 == loctest.floats[0] && val2 < loctest.ints[1])) {
+        // condition and tie-braker (bland's rule)
+        loctest.ulong = atomicCAS(address, loctest.ulong,  loc.ulong);
+    } 
     return loctest.ulong;
 }
 
@@ -740,16 +742,24 @@ void uvModel_parallel::perform_pivot(bool &result)
             // for (int i=0; i < num_threads_launching; i++) {
             //     int offset = V*i;
             //     if (h_depth[i] > 0){
-            //         // std::cout<<"Thread - "<<i<<" : Depth : "<<h_depth[i]<<" : ";
-            //         // for (int j = 0; j < h_depth[i]; j++) {
-            //             // std::cout<<h_backtracker[offset+j]<<" ";
-            //         // }
-            //         // std::cout<<std::endl;
-            //         // std::cout<<"\t Loop Minimum = "<<h_loop_minimum[i]<<" From :"<<h_loop_min_from[i]<<" To : "<<h_loop_min_to[i]<<std::endl;
-            //         // std::cout<<"\t Reduced Costs = "<<h_reduced_costs[i]<<std::endl;
+            //         std::cout<<"Thread - "<<i<<" : Depth : "<<h_depth[i]<<" : ";
+            //         for (int j = 0; j < h_depth[i]; j++) {
+            //             std::cout<<h_backtracker[offset+j]<<" ";
+            //         }
+            //         std::cout<<std::endl;
+            //         std::cout<<"\t Loop Minimum = "<<h_loop_minimum[i]<<" From :"<<h_loop_min_from[i]<<" To : "<<h_loop_min_to[i]<<std::endl;
+            //         std::cout<<"\t Reduced Costs = "<<h_reduced_costs[i]<<std::endl;
             //         num_cycles++;
             //     }
             // }
+
+            // free(h_backtracker);
+            // free(h_depth);
+            // free(h_loop_minimum);
+            // free(h_loop_min_from);
+            // free(h_loop_min_to);
+            // free(h_loop_min_id);
+            // free(h_reduced_costs);
 
             // std::cout<<"\n"<<num_cycles<<" cycles were discovered!"<<std::endl;
 
@@ -814,6 +824,11 @@ void uvModel_parallel::perform_pivot(bool &result)
             //        num_cycles2++;
             //    }
             // }
+
+            // free(h_backtracker2);
+            // free(h_depth2);
+            // free(h_loop_minimum2);
+
             // std::cout<<"\n"<<num_cycles2<<" non conflicting cycles were discovered!"<<std::endl;
 
             // *********************** END OF DEBUG UTILITY - 3 *************** //
@@ -825,191 +840,18 @@ void uvModel_parallel::perform_pivot(bool &result)
             if (_conflict_flag > 0) {
                 
                 // METHOD 1 : RUN ADJUSTMENTS IN PARALLEL
-                // run_flow_adjustments <<<__gridDim, __blockDim>>> (d_adjMtx_ptr, d_flowMtx_ptr, depth, backtracker, loop_minimum, 
-                //     loop_min_from, loop_min_to, loop_min_id, data->numSupplies, data->numDemands);
-                // cudaDeviceSynchronize(); // xxxxxx - Barrier 4 - xxxxxx
+                run_flow_adjustments <<<__gridDim, __blockDim>>> (d_adjMtx_ptr, d_flowMtx_ptr, depth, backtracker, loop_minimum, 
+                    loop_min_from, loop_min_to, loop_min_id, data->numSupplies, data->numDemands);
+                cudaDeviceSynchronize(); // xxxxxx - Barrier 4 - xxxxxx
+
+                // METHOD 2 : RUN FLOW ADJUSTMENTS IN SEQ (for all independent loops)
                 
-                // METHOD 2 : RUN ADJUSTMENTS IN SEQ
-                int * h_backtracker = (int *) malloc(sizeof(int)*V);
-                int * h_depth = (int *) malloc(data->numSupplies * data->numDemands * sizeof(int));
-                cudaMemcpy(h_depth, depth, data->numSupplies * data->numDemands * sizeof(int), cudaMemcpyDeviceToHost);
 
-                int min_from, min_to, min_flow_id, _from, _to, id;
-                float min_flow, _flow;
-
-                for (int i=0; i < data->numSupplies * data->numDemands; i++) {
-                    int offset = V*i;
-                    if (h_depth[i] > 0) {
-
-                        pivot_row =  i/data->numDemands;
-                        pivot_col = i - (pivot_row*data->numDemands);
-                        
-                        cudaMemcpy(h_backtracker, &backtracker[offset], sizeof(int)*h_depth[i], cudaMemcpyDeviceToHost);
-                        cudaMemcpy(&min_flow, &loop_minimum[i], sizeof(float), cudaMemcpyDeviceToHost);
-                        cudaMemcpy(&min_from, &loop_min_from[i], sizeof(int), cudaMemcpyDeviceToHost);
-                        cudaMemcpy(&min_to, &loop_min_to[i], sizeof(int), cudaMemcpyDeviceToHost);
-                        cudaMemcpy(&min_flow_id, &loop_min_id[i], sizeof(int), cudaMemcpyDeviceToHost);
-                        
-                        // std::cout<<" Thread : "<<i<<std::endl;
-                        // for (int j = 0; j < h_depth[i]; j++) {
-                        //     std::cout<<h_backtracker[j]<<" ";
-                        // }
-                        // std::cout<<std::endl;
-                        // std::cout<<" Depth : "<<h_depth[i]<<std::endl;
-                        // std::cout<<" min_flow : "<<min_flow<<std::endl;
-                        // std::cout<<" min_flow_from : "<<min_from<<std::endl;
-                        // std::cout<<" min_flow_to : "<<min_to<<std::endl;
-                        // std::cout<<" min_flow_id : "<<min_flow_id<<std::endl;
-
-                        int j=-1;
-                        for (int i=1; i<h_depth[i]; i++) 
-                        {
-                            _from = h_backtracker[i];
-                            _to = h_backtracker[i+1];
-                            id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
-                            _flow = j*min_flow;
-                            h_flowMtx_ptr[id] += _flow;
-                            modify_flowMtx_on_device(d_flowMtx_ptr, id, h_flowMtx_ptr[id]);
-                            j *= -1;
-                        }
-
-                        // Do the replacment between exiting i - entering j on both host and device
-                        // Remove edge
-                        id = TREE_LOOKUP(min_from, min_to, V);
-                        h_adjMtx_ptr[id] = 0;
-                        // Insert edge
-                        id = TREE_LOOKUP(pivot_row, pivot_col+data->numSupplies, V);
-                        h_adjMtx_ptr[id] = min_flow_id + 1;
-                        // Update new flow 
-                        h_flowMtx_ptr[min_flow_id] = min_flow;
-
-                        exit_i_and_enter_j(d_adjMtx_ptr, d_flowMtx_ptr, 
-                            min_from, min_to, 
-                            pivot_row, pivot_col+data->numSupplies, 
-                            min_flow_id, min_flow, V);
-
-                    }
-                }
+                
             }
             else {
-                
-                // std::cout<<"Here!"<<std::endl;
-                // pivot row and pivot col are declared private attributes
-                // pivot row and pivot col are declared private attributes
-                pivot_row =  min_index/data->numDemands;
-                pivot_col = min_index - (pivot_row*data->numDemands);
-            
-                // An incoming edge from vertex = pivot_row to vertex = numSupplies + pivot_col
-            
-                // *******************************************
-                // STEP 2: If not, Traverse tree and find a route
-                // *******************************************
-
-                // BOOK 1: Stores the routes discovered for each thread -
-                int * h_backtracker = (int *) malloc(sizeof(int)*V);
-                
-                // BOOK 2: Stores the runtime stack for DFS running on each thread
-                stackNode * h_stack = (stackNode *) malloc(sizeof(stackNode)*V);
-                
-                // BOOK 3: Keeps a track if any vertex was visited during DFS for each thread
-                bool * h_visited = (bool *) malloc(sizeof(bool)*V);
-                memset(h_visited, 0, V*sizeof(bool));
-
-                // BOOK 4: Stores length of routes discovered for each thread
-                int h_depth;
-
-                // SEQUENCIAL PROCEDURE >>
-                h_backtracker[0] = pivot_row;
-                h_depth = 1;
-                
-                // Find a loop by performing DFS from pivot_col upto pivot row >>
-                perform_dfs_sequencial_on_i(h_adjMtx_ptr, h_stack, h_backtracker, h_visited, &h_depth, 
-                    pivot_col+data->numSupplies, pivot_row, V);
-                
-                // If loop not discovered >>
-                if (h_depth <= 1) {
-                    std::cout<<" !! Error !! : Degenerate pivot cannot be performed, this is probably not a tree but forest!"<<std::endl;
-                    std::cout<<"UNEXPECTED ERROR | Solution IS NOT OPTIMAL!"<<std::endl;
-                    // view_uvra();
-                    // std::cout<<"From : "<<pivot_row<<" | To : "<<pivot_col+data->numSupplies<<std::endl;
-                    result = true;
-                    return;
-                }
-
-                h_backtracker[h_depth] = pivot_row;
-
-                // *******************************************
-                // STEP 3: Performing the pivot operation 
-                    // Step 3.1 - Find the Minimum flow
-                    // Step 3.2 - Adjust the Flow
-                // *******************************************
-                
-                int id, _from = -1, _to = -1, min_flow_id = -1, min_from = -1, min_to = -1;
-                float _flow, min_flow = INT_MAX;
-
-                // ########### STEP 3.1 | Finding the minimum flow >>
-                // Traverse the loop find the minimum flow that could be increased
-                // on the incoming edge >> 
-                for (int i=0; i<h_depth; i++) 
-                {
-                    if (i%2==1) 
-                    {
-                        _from = h_backtracker[i];
-                        _to = h_backtracker[i+1];
-                        id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
-                        _flow = h_flowMtx_ptr[id];
-                        // if (_flow == min_flow){
-                        //     std::cout<<"Tie!"<<std::endl;
-                        //     std::cout<<"Min Flow: "<<min_flow<<std::endl;
-                        //     exit(0);
-                        // }
-                        if (_flow < min_flow) 
-                        {
-                            min_flow = _flow;
-                            min_flow_id = id;
-                            min_from = _from;
-                            min_to = _to;
-                        }
-                    }
-                }
-
-                // ########### STEP 3.2 | Executing the flow adjustment >>
-
-                // Skip the first edge (entering edge)
-                // Exiting Edge will become automatically zero (min_from, min_to)
-                // Note - minflow value is zero if there's a degenerate pivot!
-
-                int j=-1;
-                for (int i=1; i<h_depth; i++) 
-                {
-                    _from = h_backtracker[i];
-                    _to = h_backtracker[i+1];
-                    id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
-                    _flow = j*min_flow;
-                    h_flowMtx_ptr[id] += _flow;
-                    modify_flowMtx_on_device(d_flowMtx_ptr, id, h_flowMtx_ptr[id]);
-                    j *= -1;
-                }
-
-                // Do the replacment between exiting i - entering j on both host and device
-                // Remove edge
-                id = TREE_LOOKUP(min_from, min_to, V);
-                h_adjMtx_ptr[id] = 0;
-                // Insert edge
-                id = TREE_LOOKUP(pivot_row, pivot_col+data->numSupplies, V);
-                h_adjMtx_ptr[id] = min_flow_id + 1;
-                // Update new flow 
-                h_flowMtx_ptr[min_flow_id] = min_flow;
-
-                exit_i_and_enter_j(d_adjMtx_ptr, d_flowMtx_ptr, 
-                    min_from, min_to, 
-                    pivot_row, pivot_col+data->numSupplies, 
-                    min_flow_id, min_flow, V);
-
+                std::cout<<"No independent cycles found!"<<std::endl;
             }
-            
-                // std::cout<<"Parallel pivot step completed!"<<std::endl;
-
         }
         else 
         {
