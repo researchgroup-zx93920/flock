@@ -26,7 +26,7 @@ struct compareCells
 {
         __host__ __device__ bool operator()(const MatrixCell i, const MatrixCell j) const
         {
-                return (i.cost <= j.cost);
+                return (i.cost < j.cost);
         }
 };
 

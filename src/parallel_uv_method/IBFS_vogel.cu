@@ -148,7 +148,7 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
 
         // Step 0 :
         std::cout << "FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures" << std::endl;
-        thrust::device_vector<MatrixCell> device_costMatrix(costMatrix, costMatrix + numSupplies * numDemands);
+        thrust::device_vector<MatrixCell> device_costMatrix(costMatrix, costMatrix + (numSupplies * numDemands));
 
         // Book-keeping Structures on device >>
 
@@ -171,15 +171,15 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
             op1);                                                             // unary func
 
         // mytime = dtime_usec(0);
-        thrust::stable_sort_by_key(
+        thrust::stable_sort_by_key(thrust::device,
             device_costMatrixRowBook.begin(), device_costMatrixRowBook.end(),
             device_rowSegments.begin(),
             compareCells());
+
         thrust::stable_sort_by_key(
             device_rowSegments.begin(), device_rowSegments.end(),
             device_costMatrixRowBook.begin());
 
-        cudaDeviceSynchronize();
         // mytime = dtime_usec(mytime);
         // std::cout << "vectorized sorting time for rows:" << mytime/(float)USECPSEC << "s" << std::endl;
 
@@ -222,8 +222,6 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
 
         cudaDeviceSynchronize();
 
-        // mytime = dtime_usec(mytime);
-        // std::cout << "vectorized sorting time for cols:" << mytime/(float)USECPSEC << "s" << std::endl;
         // std::cout<<"Column Book:"<<std::endl;
 
         // for (size_t i = 0; i < device_costMatrixColBook.size(); i++) {

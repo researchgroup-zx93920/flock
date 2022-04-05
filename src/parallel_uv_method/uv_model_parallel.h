@@ -20,12 +20,13 @@ nwc : Northwest Corner - sequential implementation
 vam : vogel's approximation - parallel regret implementation
 */
 
-#define CALCULATE_DUAL "tree"
+#define CALCULATE_DUAL "lin_solver"
 /*
-FUTURE USE : switch back between tree and linear-equation methods
+tree : traverse the tree in parallel to find values on verties
+lin_solver : solve system of lin_equations
 */
 
-#define PIVOTING_STRATEGY "parallel"
+#define PIVOTING_STRATEGY "sequencial"
 /*
 sequencial : perform pivoting one at a time based on dantzig's rule
 parallel : perform parallel pivoting
@@ -63,7 +64,7 @@ typedef union  {
 } vertex_conflicts;
 
 
-__host__ class uvModel_parallel
+class uvModel_parallel
 {
 
 public:
@@ -111,6 +112,13 @@ private:
     //  - cost of flow through an edge
     //  - dual costs towards supply constraints
     //  - dual costs towards demand constraints
+
+    // Solving system of equations 
+    float u_0 = 0, u_0_coef = 1;
+    int * d_csr_offsets, * d_csr_columns;
+    float * d_csr_values, * d_x, * d_A, * d_b;
+    int64_t nnz;
+    int singularity;
 
     // Temporary >> 
     float * h_reduced_costs;

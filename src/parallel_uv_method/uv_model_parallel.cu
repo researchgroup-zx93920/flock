@@ -150,6 +150,38 @@ __global__ void initialize_V_vars(Variable * V_vars, int numDemands) {
     }
 }
 
+__global__ void initialize_u_v_system(float * d_A, float * d_b, int * d_adjMtx_ptr, 
+    float * d_costs_ptr, int numSupplies, int numDemands) {
+        
+        int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
+        int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
+        int V = numSupplies + numDemands;
+
+        if (row_indx < numSupplies && col_indx < numDemands) {
+            int indx = TREE_LOOKUP(row_indx, col_indx + numSupplies, V); // Adjusted destination vertex ID
+            int flow_indx = d_adjMtx_ptr[indx];
+            if (flow_indx > 0) {
+                // This is a flow
+                d_A[flow_indx * V + row_indx] = 1;
+                d_A[flow_indx * V + numSupplies + col_indx] = 1;
+                d_b[flow_indx] = d_costs_ptr[row_indx*numDemands + col_indx];
+            }
+        }   
+    }
+
+__global__ void retrieve_uv_solution(float * d_x, float * u_vars_ptr, float * v_vars_ptr, int numSupplies, int numDemands) 
+{
+    int gid = blockIdx.x*blockDim.x + threadIdx.x;
+    int V = numSupplies + numDemands;
+    if (gid < V) {
+        if (gid < numSupplies) {
+            u_vars_ptr[gid] = d_x[gid];
+        } 
+        else {
+            v_vars_ptr[gid - numSupplies] = d_x[gid];
+        }
+    }
+}
 /*
 Given a u and v vector on device - computes the dual costs for all the constraints. There could be multiple ways 
 to solve the dual costs for a given problem. Packaged method derive u's and v's and load them onto 
@@ -170,10 +202,11 @@ void uvModel_parallel::solve_uv()
         
         initialize_U_vars<<<ceil(1.0*data->numSupplies/blockSize), blockSize>>>(U_vars, data->numSupplies);
         initialize_V_vars<<<ceil(1.0*data->numDemands/blockSize), blockSize>>>(V_vars, data->numDemands);
-        
+        cudaDeviceSynchronize();
         // Set u[0] = 0 on device >> // This can be done more smartly - low prioirity
         Variable default_variable;
         default_variable.assigned = true;
+        default_variable.value = 0;
         cudaMemcpy(U_vars, &default_variable, sizeof(Variable), cudaMemcpyHostToDevice);
         
         // Perform the assignment
@@ -182,6 +215,10 @@ void uvModel_parallel::solve_uv()
         for (int i=0; i<(data->numSupplies+data->numDemands-1); i++) {
             assign_next<<< __gridDim, __blockDim >>> (d_adjMtx_ptr, d_costs_ptr, 
                 U_vars, V_vars, data->numSupplies, data->numDemands);
+            // cudaError_t err = cudaGetLastError();
+            // if (err != cudaSuccess) {
+            //     std::cout<<"Error: "<<cudaGetErrorString(err)<<std::endl;
+            // }
             cudaDeviceSynchronize(); // There might be some performance degrade here
         }
 
@@ -190,6 +227,103 @@ void uvModel_parallel::solve_uv()
         copy_row_shadow_prices<<<ceil(1.0*data->numSupplies/blockSize), blockSize>>>(U_vars, u_vars_ptr, data->numSupplies);
         copy_row_shadow_prices<<<ceil(1.0*data->numDemands/blockSize), blockSize>>>(V_vars, v_vars_ptr, data->numDemands);
         cudaDeviceSynchronize();
+    }
+    else if (CALCULATE_DUAL=="lin_solver") {
+        /* 
+        Solve a system of linear equations
+        1. Create a dense matrix A and Vector B
+            - Initialize a zero dense matrix A
+            - Invoke a kernel to fill A, B on device  
+            - Set the default allocation
+        2. Solve the sparse system Ax = b
+        */
+
+        thrust::fill(thrust::device, d_A, d_A + (V*V), u_0);
+        thrust::fill(thrust::device, d_b, d_b + V, u_0);
+
+        dim3 __blockDim(blockSize, blockSize, 1); 
+        dim3 __gridDim(ceil(1.0*data->numDemands/blockSize), ceil(1.0*data->numSupplies/blockSize), 1);
+        initialize_u_v_system <<< __gridDim, __blockDim >>> (d_A, d_b, d_adjMtx_ptr, d_costs_ptr, 
+                data->numSupplies, data->numDemands);
+        cudaMemcpy(d_A, &u_0_coef, sizeof(float), cudaMemcpyHostToDevice);
+
+        // ************************************************
+        // DEBUG UTILITY 
+        // ************************************************
+        // float * h_A = (float *) malloc(V*V*sizeof(float));
+        // float * h_b = (float *) malloc(V*sizeof(float));
+        // cudaMemcpy(h_A, d_A, sizeof(float)*V*V, cudaMemcpyDeviceToHost);
+        // cudaMemcpy(h_b, d_b, sizeof(float)*V, cudaMemcpyDeviceToHost);
+        // std::cout<<" Ax = b matrices ===> "<<std::endl;
+        
+        // for (int i=0; i< V; i++) {
+        //     std::cout<<"Row "<<i<<" :";
+        //     for (int j=0; j < V; j++) {
+        //         std::cout<<" "<<h_A[i*V + j];
+        //     }
+        //     std::cout<<" = "<<h_b[i]<<std::endl;
+        // }
+
+        //--------------------------------------------------------------------------
+        // CUSPARSE APIs
+        cusparseHandle_t     handle = NULL;
+        cusparseSpMatDescr_t matB;
+        cusparseDnMatDescr_t matA;
+        void * dBuffer    = NULL;
+        size_t bufferSize = 0;
+
+        CHECK_CUSPARSE( cusparseCreate(&handle) )
+        // Create dense matrix A
+        CHECK_CUSPARSE( cusparseCreateDnMat(&matA, V, V, V, d_A,
+                                        CUDA_R_32F, CUSPARSE_ORDER_ROW) )
+        // Create sparse matrix B in CSR format
+        CHECK_CUSPARSE( cusparseCreateCsr(&matB, V, V, nnz,
+                                      d_csr_offsets, d_csr_columns, d_csr_values,
+                                      CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
+                                      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F) )
+
+        // allocate an external buffer if needed
+        CHECK_CUSPARSE( cusparseDenseToSparse_bufferSize(
+                                        handle, matA, matB,
+                                        CUSPARSE_DENSETOSPARSE_ALG_DEFAULT,
+                                        &bufferSize) )
+        CHECK_CUDA( cudaMalloc(&dBuffer, bufferSize) )
+
+        // // execute Sparse to Dense conversion >> Can Remove this somehow ?
+        CHECK_CUSPARSE( cusparseDenseToSparse_analysis(handle, matA, matB,
+                                            CUSPARSE_DENSETOSPARSE_ALG_DEFAULT,
+                                            dBuffer) )
+
+        // execute Sparse to Dense conversion
+        CHECK_CUSPARSE( cusparseDenseToSparse_convert(handle, matA, matB,
+                                            CUSPARSE_DENSETOSPARSE_ALG_DEFAULT,
+                                            dBuffer) )
+        // destroy matrix/vector descriptors
+        CHECK_CUSPARSE( cusparseDestroyDnMat(matA) )
+        CHECK_CUSPARSE( cusparseDestroySpMat(matB) )
+        CHECK_CUSPARSE( cusparseDestroy(handle) )
+        //--------------------------------------------------------------------------
+
+        // // Core >>		
+        cusolverSpHandle_t solver_handle;
+	    cusolverSpCreate(&solver_handle);
+
+        cusparseMatDescr_t descrA;		
+        cusparseCreateMatDescr(&descrA);
+	    cusparseSetMatType(descrA, CUSPARSE_MATRIX_TYPE_GENERAL);
+	    cusparseSetMatIndexBase(descrA, CUSPARSE_INDEX_BASE_ZERO); 
+
+	    // --- Using LU factorization >>
+	    cusolverSpScsrlsvqr(solver_handle, V, nnz, descrA, d_csr_values, d_csr_offsets, d_csr_columns, 
+                d_b, 0.000001, 0, d_x, &singularity);
+	    // --- Using QR factorization >>
+	    // cusolverSpDcsrlsvqr(solver_handle, V, nnz, descrA, d_Annz, d_A_RowIndices, d_A_ColIndices, d_b, 0.000001, 0, d_x, &singularity);
+
+        dim3 __blockDim2(blockSize, 1, 1);
+        dim3 __gridDim2(ceil(1.0*V/blockSize), 1, 1);
+        retrieve_uv_solution <<< __gridDim2, __blockDim2 >>> (d_x, u_vars_ptr, v_vars_ptr, data->numSupplies, data->numDemands);
+        cudaDeviceSynchronize();
+        cudaFree(dBuffer);
     }
     else 
     {
@@ -203,7 +337,7 @@ void uvModel_parallel::solve_uv()
 Kernel to compute Reduced Costs in the transportation table
 */
 __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, float * d_costs_ptr, float * d_reducedCosts_ptr, 
-    int numSupplies, int numDemands) 
+    int numSupplies, int numDemands)
 {
 
         int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
@@ -659,7 +793,7 @@ void uvModel_parallel::perform_pivot(bool &result)
     float min_reduced_cost = 0;
     cudaMemcpy(&min_reduced_cost, d_reducedCosts_ptr + min_index, sizeof(float), cudaMemcpyDeviceToHost);
 
-    if (!(min_reduced_cost >= 0))
+    if (min_reduced_cost < 0 && std::abs(min_reduced_cost) >= 10e-5)
     {
         // Found a negative reduced cost >>
         if (PIVOTING_STRATEGY == "sequencial") {
@@ -710,6 +844,9 @@ void uvModel_parallel::perform_pivot(bool &result)
             // *******************************************
             // STEP 3: Performing the pivot operation 
             // *******************************************
+            // std::cout<<"Pivot Row : "<<pivot_row<<std::endl;
+            // std::cout<<"Pivot Col : "<<pivot_col<<std::endl;
+
             execute_pivot_on_host(h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, backtracker,
             pivot_row, pivot_col, depth, V, data->numSupplies, data->numDemands);
 
@@ -1023,6 +1160,17 @@ void uvModel_parallel::execute()
         cudaMalloc((void **) &U_vars, sizeof(Variable)*data->numSupplies);
         cudaMalloc((void **) &V_vars, sizeof(Variable)*data->numSupplies);
     }
+    else if (CALCULATE_DUAL=="lin_solver"){
+
+        cudaMalloc((void **) &d_A, sizeof(float)*V*V);
+        cudaMalloc((void **) &d_b, sizeof(float)*V);
+        cudaMalloc((void**) &d_csr_offsets, (V + 1) * sizeof(int));
+        nnz = 2*V - 1;
+        cudaMalloc((void**) &d_csr_columns, nnz * sizeof(int));
+        cudaMalloc((void**) &d_csr_values,  nnz * sizeof(float));
+        cudaMalloc((void **) &d_x, V * sizeof(float));
+
+    }
 
     // In case of sequencial pivoting - one would need a copy of adjMatrix on the host to traverse the graph
     // IMPORTANT: The sequencial function should ensure that the change made on host must be also made on device
@@ -1054,6 +1202,8 @@ void uvModel_parallel::execute()
     
     }
 
+    
+
     /* STEP 2 : SIMPLEX IMPROVEMENT 
     // **************************************
         LOOP THORUGH - 
@@ -1074,7 +1224,8 @@ void uvModel_parallel::execute()
         // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
 
         // 2.1 
-        solve_uv();  
+        solve_uv(); 
+
         // NOTE:: This method cannot be called before this step because of memory allocations above
         // u_vars_ptr and v_vars ptr were populated on device
 
@@ -1082,14 +1233,11 @@ void uvModel_parallel::execute()
         get_reduced_costs();
         // d_reducedCosts_ptr was populated on device
         
-        // DEBUG :: 
+        // Debug : 
         // view_uvra();
 
         // 2.3
         perform_pivot(result);
-
-        // view_uvra();
-
         iteration_counter++;
     }
 

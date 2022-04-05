@@ -6,7 +6,10 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <cuda_runtime_api.h> 
 #include <device_launch_parameters.h>
+#include <cusparse.h>
+#include <cusolverSp.h>
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -19,7 +22,7 @@
 // Profiling
 #include <nvToolsExt.h>
 
-#define blockSize 16
+#define blockSize 8
 #define TREE_LOOKUP(row, col, V) (col>=row?((row*V)-(row*(row+1)/2))+col:((col*V)-(col*(col+1)/2))+row)
 #define epsilon 0.000001
 
@@ -32,7 +35,7 @@ position of the cells after rearragnement in preprocessing step
     - Stores C_ij
 
 */
-__host__ __device__ struct MatrixCell {
+struct MatrixCell {
     int row, col;
     float cost;
 
@@ -79,7 +82,7 @@ idx stores itselves index in difference array
 ileast_1 and ileast2 are indexes 
 of min-2 values (minimum and second minimum)
 */
-__host__ __device__ struct vogelDifference {
+struct vogelDifference {
         int idx, ileast_1, ileast_2;
         float diff;
 };
@@ -87,8 +90,8 @@ __host__ __device__ struct vogelDifference {
 std::ostream& operator << (std::ostream& o, const MatrixCell& x);
 std::ostream& operator << (std::ostream& o, const vogelDifference& x);
 
-__host__ __device__ struct Variable {
-    float value = 0;
+struct Variable {
+    float value = -99999;
     bool assigned = false;
 
     __host__ __device__ Variable& operator=(const float& x)
@@ -99,12 +102,12 @@ __host__ __device__ struct Variable {
     }
 };
 
-__host__ __device__ struct stackNode {
+struct stackNode {
     int index, depth;
 };
 
 
-__host__ __device__ struct pathEdge {
+struct pathEdge {
     int index;
     pathEdge * next;
 };
@@ -145,6 +148,29 @@ public:
         }
     }
 };
+
+// #define CHECK_CUDA(func)                                                       \
+// {                                                                              \
+//     cudaError_t status = func;                                               \
+//     if (status != cudaSuccess) {                                               \
+//         printf("CUDA API failed at line %d with error: %s (%d)\n",             \
+//                __LINE__, cudaGetErrorString(status), status);                  \
+//         return EXIT_FAILURE;                                                   \
+//     }                                                                          \
+// }
+
+// #define CHECK_CUSPARSE(func)                                                   \
+// {                                                                              \
+//     cusparseStatus_t status = func;                                          \
+//     if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
+//         printf("CUSPARSE API failed at line %d with error: %s (%d)\n",         \
+//                __LINE__, cusparseGetErrorString(status), status);              \
+//         return EXIT_FAILURE;                                                   \
+//     }                                                                          \
+// }
+
+#define CHECK_CUDA(func) {func;}
+#define CHECK_CUSPARSE(func) {func;}
 
 std::ostream& operator << (std::ostream& o, const Variable& x);
 
