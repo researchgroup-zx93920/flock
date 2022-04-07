@@ -35,7 +35,7 @@ exportEx = "dat" # Export file extension (.dat)
 balancedProblem = True
 assignmnetCase = False
 
-matrix_demands = 10000
+matrix_demands = 2500
 matrix_supplies = 1000
 
 

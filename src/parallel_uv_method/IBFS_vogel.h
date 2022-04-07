@@ -6,6 +6,7 @@
 #include "../structs.h"
 #include "parallel_structs.h"
 
+// Retrieve row attribute of a Matrix Cell object
 struct rowgen
 {
         __host__ __device__ int operator()(MatrixCell &x) const
@@ -14,6 +15,7 @@ struct rowgen
         }
 };
 
+// Retrieve column attribute of a Matrix Cell object
 struct colgen
 {
         __host__ __device__ int operator()(MatrixCell &x) const
@@ -22,6 +24,7 @@ struct colgen
         }
 };
 
+// Unary method to compare two cells of a cost matrix
 struct compareCells
 {
         __host__ __device__ bool operator()(const MatrixCell i, const MatrixCell j) const
@@ -30,11 +33,12 @@ struct compareCells
         }
 };
 
+// Unary method to compare differences/penalties b/w any pair of row/col 
 struct compareDiff
 {
         __host__ __device__ bool operator()(const vogelDifference i, const vogelDifference j) const
         {
-                return (i.diff <= j.diff);
+                return (i.diff < j.diff);
         }
 };
 

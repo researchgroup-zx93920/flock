@@ -32,7 +32,7 @@ sequencial : perform pivoting one at a time based on dantzig's rule
 parallel : perform parallel pivoting
 */
 
-#define MAX_ITERATIONS 10000
+#define MAX_ITERATIONS 0
 
 // >>>>>>>>>> END OF PARAMETERS // 
 

@@ -22,7 +22,7 @@
 // Profiling
 #include <nvToolsExt.h>
 
-#define blockSize 8
+#define blockSize 16
 #define TREE_LOOKUP(row, col, V) (col>=row?((row*V)-(row*(row+1)/2))+col:((col*V)-(col*(col+1)/2))+row)
 #define epsilon 0.000001
 
@@ -149,25 +149,16 @@ public:
     }
 };
 
-// #define CHECK_CUDA(func)                                                       \
-// {                                                                              \
-//     cudaError_t status = func;                                               \
-//     if (status != cudaSuccess) {                                               \
-//         printf("CUDA API failed at line %d with error: %s (%d)\n",             \
-//                __LINE__, cudaGetErrorString(status), status);                  \
-//         return EXIT_FAILURE;                                                   \
-//     }                                                                          \
-// }
-
-// #define CHECK_CUSPARSE(func)                                                   \
-// {                                                                              \
-//     cusparseStatus_t status = func;                                          \
-//     if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
-//         printf("CUSPARSE API failed at line %d with error: %s (%d)\n",         \
-//                __LINE__, cusparseGetErrorString(status), status);              \
-//         return EXIT_FAILURE;                                                   \
-//     }                                                                          \
-// }
+// Credit : https://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+   if (code != cudaSuccess) 
+   {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
 
 #define CHECK_CUDA(func) {func;}
 #define CHECK_CUSPARSE(func) {func;}

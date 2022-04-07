@@ -161,13 +161,14 @@ __global__ void initialize_u_v_system(float * d_A, float * d_b, int * d_adjMtx_p
             int indx = TREE_LOOKUP(row_indx, col_indx + numSupplies, V); // Adjusted destination vertex ID
             int flow_indx = d_adjMtx_ptr[indx];
             if (flow_indx > 0) {
-                // This is a flow
+                // This is a flow - flow_indx = row_number, u = row_number, v = col_number
                 d_A[flow_indx * V + row_indx] = 1;
                 d_A[flow_indx * V + numSupplies + col_indx] = 1;
                 d_b[flow_indx] = d_costs_ptr[row_indx*numDemands + col_indx];
             }
-        }   
+        }
     }
+
 
 __global__ void retrieve_uv_solution(float * d_x, float * u_vars_ptr, float * v_vars_ptr, int numSupplies, int numDemands) 
 {
@@ -240,12 +241,14 @@ void uvModel_parallel::solve_uv()
 
         thrust::fill(thrust::device, d_A, d_A + (V*V), u_0);
         thrust::fill(thrust::device, d_b, d_b + V, u_0);
+        thrust::fill(thrust::device, d_x, d_x + V, u_0);
 
         dim3 __blockDim(blockSize, blockSize, 1); 
         dim3 __gridDim(ceil(1.0*data->numDemands/blockSize), ceil(1.0*data->numSupplies/blockSize), 1);
         initialize_u_v_system <<< __gridDim, __blockDim >>> (d_A, d_b, d_adjMtx_ptr, d_costs_ptr, 
                 data->numSupplies, data->numDemands);
-        cudaMemcpy(d_A, &u_0_coef, sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(&d_A[0], &u_0_coef, sizeof(float), cudaMemcpyHostToDevice);
+        cudaDeviceSynchronize();
 
         // ************************************************
         // DEBUG UTILITY 
@@ -257,11 +260,16 @@ void uvModel_parallel::solve_uv()
         // std::cout<<" Ax = b matrices ===> "<<std::endl;
         
         // for (int i=0; i< V; i++) {
-        //     std::cout<<"Row "<<i<<" :";
+        //     std::cout<<"[";
         //     for (int j=0; j < V; j++) {
-        //         std::cout<<" "<<h_A[i*V + j];
+        //         std::cout<<" "<<h_A[i*V + j]<<",";
         //     }
-        //     std::cout<<" = "<<h_b[i]<<std::endl;
+        //     // std::cout<<" .. | "
+        //     // for (int j=data->numSupplies; j < data->numSupplies + data->numDemands/3; j++) {
+        //     //     std::cout<<" "<<h_A[i*V + j];
+        //     // }
+        //     std::cout<<"],";
+        //     // std::cout<<" = "<<h_b[i]<<std::endl;
         // }
 
         //--------------------------------------------------------------------------
@@ -304,25 +312,43 @@ void uvModel_parallel::solve_uv()
         CHECK_CUSPARSE( cusparseDestroy(handle) )
         //--------------------------------------------------------------------------
 
-        // // Core >>		
+        // Core >>		
         cusolverSpHandle_t solver_handle;
 	    cusolverSpCreate(&solver_handle);
 
-        cusparseMatDescr_t descrA;		
+        cusparseMatDescr_t descrA;
         cusparseCreateMatDescr(&descrA);
 	    cusparseSetMatType(descrA, CUSPARSE_MATRIX_TYPE_GENERAL);
 	    cusparseSetMatIndexBase(descrA, CUSPARSE_INDEX_BASE_ZERO); 
 
 	    // --- Using LU factorization >>
-	    cusolverSpScsrlsvqr(solver_handle, V, nnz, descrA, d_csr_values, d_csr_offsets, d_csr_columns, 
-                d_b, 0.000001, 0, d_x, &singularity);
+	    cusolverStatus_t _status = cusolverSpScsrlsvqr(solver_handle, V, nnz, descrA, d_csr_values, d_csr_offsets, d_csr_columns, 
+                d_b, 0, 0, d_x, &singularity);
 	    // --- Using QR factorization >>
 	    // cusolverSpDcsrlsvqr(solver_handle, V, nnz, descrA, d_Annz, d_A_RowIndices, d_A_ColIndices, d_b, 0.000001, 0, d_x, &singularity);
-
-        dim3 __blockDim2(blockSize, 1, 1);
-        dim3 __gridDim2(ceil(1.0*V/blockSize), 1, 1);
-        retrieve_uv_solution <<< __gridDim2, __blockDim2 >>> (d_x, u_vars_ptr, v_vars_ptr, data->numSupplies, data->numDemands);
-        cudaDeviceSynchronize();
+        if (_status == CUSOLVER_STATUS_SUCCESS) {
+            if (singularity == -1) {
+                dim3 __blockDim2(blockSize, 1, 1);
+                dim3 __gridDim2(ceil(1.0*V/blockSize), 1, 1);
+                retrieve_uv_solution <<< __gridDim2, __blockDim2 >>> (d_x, u_vars_ptr, v_vars_ptr, data->numSupplies, data->numDemands);
+                cudaDeviceSynchronize();
+            }
+            else {
+                std::cout<<"Matrix A is Non-Singular"<<std::endl;
+                std::cout<<"Singularity = "<<singularity<<std::endl;
+                exit(0);
+                // float * h_x = (float *) malloc(sizeof(float)*V);
+                // cudaMemcpy(h_x, d_x, sizeof(float)*V, cudaMemcpyDeviceToHost);
+                // for (int i=0; i<V; i++) {
+                //     std::cout<< "X [" <<i<<"] = "<<h_x[i]<<std::endl;
+                // }
+            }
+            
+        }
+        else {
+            std::cout<<"Linear-Solver failed with, Status  = "<<_status<<std::endl;
+            exit(0);
+        }
         cudaFree(dBuffer);
     }
     else 
@@ -792,8 +818,8 @@ void uvModel_parallel::perform_pivot(bool &result)
     // have all the reduced costs in the d_reducedCosts_ptr on device
     float min_reduced_cost = 0;
     cudaMemcpy(&min_reduced_cost, d_reducedCosts_ptr + min_index, sizeof(float), cudaMemcpyDeviceToHost);
-
-    if (min_reduced_cost < 0 && std::abs(min_reduced_cost) >= 10e-5)
+    std::cout<<"Min Reduced Cost  = "<<min_reduced_cost<<std::endl;
+    if (min_reduced_cost < 0 && std::abs(min_reduced_cost) > 10e-5)
     {
         // Found a negative reduced cost >>
         if (PIVOTING_STRATEGY == "sequencial") {
@@ -1222,6 +1248,7 @@ void uvModel_parallel::execute()
     result = false;
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
         // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
+        view_uvra();
 
         // 2.1 
         solve_uv(); 
@@ -1234,7 +1261,8 @@ void uvModel_parallel::execute()
         // d_reducedCosts_ptr was populated on device
         
         // Debug : 
-        // view_uvra();
+        view_uvra();
+        exit(0);
 
         // 2.3
         perform_pivot(result);
@@ -1319,12 +1347,12 @@ void uvModel_parallel::view_uvra()
     std::cout<<"Viewing U, V, R and adjMatrix \n *******************************"<<std::endl;
     
     // Print reduced costs
-    float * h_reduced_costs;
-    h_reduced_costs = (float *) malloc(data->numDemands*data->numSupplies*sizeof(float));
-    cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, data->numDemands*data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost);
-    for (int i = 0; i < data->numDemands*data->numSupplies; i++) {
-        std::cout << "ReducedCosts[" << i << "] = " << h_reduced_costs[i] << std::endl;
-    }
+    // float * h_reduced_costs;
+    // h_reduced_costs = (float *) malloc(data->numDemands*data->numSupplies*sizeof(float));
+    // cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, data->numDemands*data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost);
+    // for (int i = 0; i < data->numDemands*data->numSupplies; i++) {
+    //     std::cout << "ReducedCosts[" << i << "] = " << h_reduced_costs[i] << std::endl;
+    // }
 
     std::cout<<"*****************************"<<std::endl;
 
@@ -1369,10 +1397,11 @@ void uvModel_parallel::view_uvra()
     }
 
     std::cout<<"*****************************"<<std::endl;
+    
 
-    for (int i = 0; i < _V-1; i++) {
-        std::cout << "flowMatrix[" << i << "] = " << h_flowMtx[i] << std::endl;
-    }
+    // for (int i = 0; i < _V-1; i++) {
+    //     std::cout << "flowMatrix[" << i << "] = " << h_flowMtx[i] << std::endl;
+    // }
 
     // // Useless later >> 
     // if (depth > 0)

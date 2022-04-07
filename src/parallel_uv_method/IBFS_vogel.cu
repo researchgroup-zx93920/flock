@@ -180,9 +180,6 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
             device_rowSegments.begin(), device_rowSegments.end(),
             device_costMatrixRowBook.begin());
 
-        // mytime = dtime_usec(mytime);
-        // std::cout << "vectorized sorting time for rows:" << mytime/(float)USECPSEC << "s" << std::endl;
-
         // Stable Sort Example >>
 
         // A = [maxtrixCell(1),2,30,2,1,8]
@@ -222,19 +219,17 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
 
         cudaDeviceSynchronize();
 
+        /* ***************************************************
+                DEBUG UTILITY
+        *************************************************** */
         // std::cout<<"Column Book:"<<std::endl;
-
         // for (size_t i = 0; i < device_costMatrixColBook.size(); i++) {
         //         std::cout << "device_costMatrixColBook[" << i << "] = " << device_costMatrixColBook[i] << std::endl;
         // }
-
         // std::cout<<"Row Book:"<<std::endl;
-
         // for (size_t i = 0; i < device_costMatrixRowBook.size(); i++) {
         //         std::cout << "device_costMatrixRowBook[" << i << "] = " << device_costMatrixRowBook[i] << std::endl;
         // }
-
-        // exit(0);
 
         // *********************************
         // Prepare for iterations >>
@@ -273,7 +268,8 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         dim3 dimGrid(ceil(1.0 * currentMinimaVect.size() / blockSize), 1, 1);
 
         initializeDifferencesVector<<<dimGrid, dimBlock>>>(vect, row_book, col_book, numSupplies, numDemands);
-        cudaDeviceSynchronize();
+        gpuErrchk(cudaPeekAtLastError());
+        gpuErrchk(cudaDeviceSynchronize());
 
         // Some more book-keeping -
         float _d = 1.0 * INT_MIN;
@@ -317,9 +313,6 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
 
                 }
 
-                // std::cout<<"Flow Row = "<<flow_row<<std::endl;
-                // std::cout<<"Flow Col = "<<flow_col<<std::endl;
-
                 if (res_demands[flow_col] > res_supplies[flow_row])
                 {       
                         // consume available supply and update demand
@@ -343,25 +336,25 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
                 }
 
                 // Device is informed about the assignment
-                
                 rowColCovered[prev_eliminated] = true;
                 currentMinimaVect[prev_eliminated] = default_diff;
 
                 // Device adopts the assignment
                 updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, numSupplies, numDemands, prev_eliminated);
-                cudaDeviceSynchronize();
+                gpuErrchk(cudaPeekAtLastError());
+                gpuErrchk(cudaDeviceSynchronize());
                 counter++;
 
+                // *****************************
+                // DEBUGGGING UTILITY | Print Current Minima vector at the end of each iteration
+                // *****************************
                 // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
                 //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
                 // }
         }
 
-        // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
-        //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
-        // }
-
-        // // Testing difference update column elimination >>
+        // // Testing difference update on column elimination >>
+        // // We want only row mimimums to be affected
         // std::cout<<"***************************"<<std::endl;
         // prev_eliminated = numSupplies;
         // rowColCovered[prev_eliminated] = true;
@@ -374,7 +367,9 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
         // }
 
-        // // Testing difference update row elimination >>
+        // // Testing difference update on row elimination >>
+        // // We want only column minimums to be affected
+        // std::cout<<"***************************"<<std::endl;
         // prev_eliminated = 0;
         // rowColCovered[prev_eliminated] = true;
         // currentMinimaVect[prev_eliminated] = default_diff;
