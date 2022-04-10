@@ -1145,6 +1145,7 @@ void uvModel_parallel::execute()
     // Finding BFS >>
     // **************************************
     generate_initial_BFS();
+    return;
 
     // **************************************
     // Modified Distribution Method (u-v method) - parallel (improve the BFS solution)

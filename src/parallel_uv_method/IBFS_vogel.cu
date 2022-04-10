@@ -135,7 +135,7 @@ __global__ void updateDifferences(
 /*
 Doc: Pending -
 Improvement Idea -
-1. Reordering of rows and columns will improve performance
+1. Would Reordering of rows and columns will improve performance?
         - First reorder based on cover
         - Reorder based on minimum in prev_eliminated
         - Also reorder demand supply accordingly >> Maintain the original indexes to assign flow
@@ -283,7 +283,7 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         std::cout << "FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment" << std::endl;
         int counter = 0;
         // numSupplies + numDemands - 1
-        while (counter < numSupplies + numDemands - 1)
+        while (counter < (numSupplies + numDemands - 1))
         {
                 /* Procedure:
                 1. Find the max of differences - parallel op
@@ -316,7 +316,7 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
                 if (res_demands[flow_col] > res_supplies[flow_row])
                 {       
                         // consume available supply and update demand
-                        _this_flow = {.source = flow_row, .destination = flow_col, .qty = res_supplies[flow_row]};
+                        _this_flow = {.source = flow_row, .destination = flow_col, .qty = std::max(1.0f*res_supplies[flow_row], epsilon)};
                         feasible_flows[counter] = _this_flow;
                         flow_indexes.insert(std::make_pair(std::make_pair(flow_row, flow_col), counter));
                         res_demands[flow_col] -= res_supplies[flow_row];
@@ -327,7 +327,7 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
                 else
                 {
                         // satisfy current demand and update supply
-                        _this_flow = {.source = flow_row, .destination = flow_col, .qty = res_demands[flow_col]};
+                        _this_flow = {.source = flow_row, .destination = flow_col, .qty = std::max(1.0f*res_demands[flow_col], epsilon)};
                         feasible_flows[counter] = _this_flow;
                         flow_indexes.insert(std::make_pair(std::make_pair(flow_row, flow_col), counter));
                         res_supplies[flow_row] -= res_demands[flow_col];
@@ -346,48 +346,17 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
                 counter++;
 
                 // *****************************
-                // DEBUGGGING UTILITY | Print Current Minima vector at the end of each iteration
+                // !! DEBUGGGING UTILITY !!
+                // Print Current Minima vector and allocations at the end of each iteration
                 // *****************************
+                // std::cout<<"Flow Row : "<<flow_row<<std::endl;
+                // std::cout<<"Flow Col : "<<flow_col<<std::endl;
+                // std::cout<<"Counter : "<<counter<<std::endl;
+                // std::cout<<"Qty Allocated"<<_this_flow.qty<<std::endl;
                 // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
                 //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
                 // }
         }
 
-        // // Testing difference update on column elimination >>
-        // // We want only row mimimums to be affected
-        // std::cout<<"***************************"<<std::endl;
-        // prev_eliminated = numSupplies;
-        // rowColCovered[prev_eliminated] = true;
-        // currentMinimaVect[prev_eliminated] = default_diff;
-
-        // updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, numSupplies, numDemands, prev_eliminated);
-        // cudaDeviceSynchronize();
-
-        // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
-        //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
-        // }
-
-        // // Testing difference update on row elimination >>
-        // // We want only column minimums to be affected
-        // std::cout<<"***************************"<<std::endl;
-        // prev_eliminated = 0;
-        // rowColCovered[prev_eliminated] = true;
-        // currentMinimaVect[prev_eliminated] = default_diff;
-        // std::cout<<"***************************"<<std::endl;
-
-        // updateDifferences<<<dimGrid, dimBlock>>>(vect, row_book, col_book, covered, numSupplies, numDemands, prev_eliminated);
-        // cudaDeviceSynchronize();
-
-        // for (size_t i = 0; i < currentMinimaVect.size(); i++) {
-        //         std::cout << "currentMinimaVect[" << i << "] = " << currentMinimaVect[i] << std::endl;
-        // }
         std::cout << "FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete" << std::endl;
 }
-
-/*
-Doc: Pending -
-Improvement Idea - Reordering of rows and columns will improve performance
-        - First reorder based on cover
-        - Reorder based on minimum in prev_eliminated
-        - Also reorder demand supply accordingly >> Maintain the original indexes to assign flow
-*/

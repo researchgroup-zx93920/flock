@@ -32,7 +32,8 @@ struct flowInformation
     // from source - supply index
     // to destination - demand index
     // move this many units - qty
-    int source, destination, qty;
+    int source, destination;
+    float qty;
 };
 
 std::ostream& operator << (std::ostream& o, const flowInformation& x);

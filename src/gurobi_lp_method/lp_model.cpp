@@ -135,7 +135,7 @@ void lpModel::create_flows()
 				std::map<int, GRBVar>::iterator _iter = x_ij.find(_key);
 				if (_iter->second.get(GRB_DoubleAttr_X) > 0)
 				{
-					flowInformation this_flow = {.source = i, .destination = j, .qty = int(_iter->second.get(GRB_DoubleAttr_X))};
+					flowInformation this_flow = {.source = i, .destination = j, .qty = float(_iter->second.get(GRB_DoubleAttr_X))};
 					optimal_flows[_counter] = this_flow;
 					_counter++;
 				}

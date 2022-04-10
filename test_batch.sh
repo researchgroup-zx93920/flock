@@ -1,5 +1,5 @@
 # Run a bunch of small problems >>
-
+# Progressively gets more complex
 # 100_1 to 100_6 are robust cases testing different number scales
 
 # Simple Problems
@@ -7,7 +7,7 @@
 ./bin/flock -i  ./tests/test_simple2.dat  -a parallel_uv
 ./bin/flock -i  ./tests/test_simple3.dat  -a parallel_uv
 
-# One complication
+# Test Slight complication
 ./bin/flock -i  ./tests/test_simple1_degenerate.dat  -a parallel_uv
 
 # Slight more work
