@@ -55,6 +55,9 @@ void get_algorithm(InputParser input, ProblemInstance &problem)
     else if (user_algo == "parallel_uv"){
         problem.algo = ProblemInstance::my_algo::parallel_uv;
     }
+    else if (user_algo == "vogel_sequencial"){
+        problem.algo = ProblemInstance::my_algo::vogel_sequencial;
+    }
     else
     {
         BOOST_LOG_TRIVIAL(error) << "Invalid Algorithm!";

@@ -2,40 +2,12 @@
 #include <chrono>
 
 #include "../structs.h"
-#include "./parallel_structs.h"
+#include "parallel_structs.h"
+#include "parallel_kernels.h"
 #include "IBFS_vogel.h"
 #include "IBFS_nwc.h"
-#include "DUAL_tree.h"
-
-// PARAMETERS
-#define DETAILED_LOGS 1
-/*
-0 : Silent model
-1 : Verbose model
-*/
-
-#define BFS_METHOD "vam"
-/*
-nwc : Northwest Corner - sequential implementation
-vam : vogel's approximation - parallel regret implementation
-*/
-
-#define CALCULATE_DUAL "lin_solver"
-/*
-tree : traverse the tree in parallel to find values on verties
-lin_solver : solve system of lin_equations
-*/
-
-#define PIVOTING_STRATEGY "sequencial"
-/*
-sequencial : perform pivoting one at a time based on dantzig's rule
-parallel : perform parallel pivoting
-*/
-
-#define MAX_ITERATIONS 0
-
-// >>>>>>>>>> END OF PARAMETERS // 
-
+#include "DUAL_solver.h"
+#include "PIVOT_dfs.h"
 
 /*
 Algorithm alternative to solve transportation problem
@@ -49,21 +21,6 @@ Step 2: Repeat ::
 Step 3: Return M + N - 1 flows 
 */
 
-struct is_zero
-{
-    __host__ __device__ bool operator()(const flowInformation &x)
-    {
-        return (x.qty == 0);
-    }
-};
-
-typedef union  {
-  float floats[2];                 // floats[0] = lowest savings on this loop
-  int ints[2];                     // ints[1] = index -> thread-gid
-  unsigned long long int ulong;    // for atomic update
-} vertex_conflicts;
-
-
 class uvModel_parallel
 {
 
@@ -72,14 +29,12 @@ public:
     ProblemInstance * data;
     flowInformation * optimal_flows;
 
-    flowInformation * feasible_flows;  
-    // Feasible flow at any point in the algorithm flow
-    // Useful for mapping data structs on CPU - GPU interop
+    flowInformation * feasible_flows;  // Feasible flow at any point in the algorithm flow
+                                       // Useful for mapping data structs on CPU - GPU interop
     std::map<std::pair<int,int>, int> flow_indexes; 
     // The flows at given cell (i,j) is available at this index in flows
 
     void execute();
-    void get_dual_costs();
     void create_flows();
 
     uvModel_parallel(ProblemInstance * problem, flowInformation * flows);
@@ -87,72 +42,136 @@ public:
 
 private:
 
+    // Internal Flagging and constants
     bool solved;
     int V;
 
-    flowInformation * d_flows_ptr; // pointer to flow objects on device
-    MatrixCell * costMatrix; // Useful for vogel's 
-    MatrixCell * device_costMatrix_ptr;
-
-    int * d_adjMtx_ptr, * h_adjMtx_ptr; 
-    float * d_flowMtx_ptr, * h_flowMtx_ptr;
-    /*
-        Adjacency matrix is a upper triangular matrix to store the tree inforamtion
-        !! DOC PENDING !!
-    */
-
-    // Pointers to adjacency matrix of feasible flow tree in device and host respectively
-    // Pointer to flowMtx, adjMtx only represents adjaceency, flow matrix contains flow values
-    // Such a separation has been created to resolve degeneracies - 
-    // sometimes zero flows would make life better :D
+    // Containers for data exchange between functions 
+        flowInformation * d_flows_ptr; // pointer to flow variables on device
+        MatrixCell * costMatrix; // Useful for initial basic feasible solution (IBFS)
     
-    float * d_reducedCosts_ptr, * d_costs_ptr, * u_vars_ptr, * v_vars_ptr;
-    // Pointers to vectors relevant to pivoting
+        // Adjacency matrix and flow matrix together represent the feasible tree
+        // Such a separation has been created to resolve degeneracies - 
+        // sometimes zero flows would make life better :D
+
+        // For a simplex iteration, current feasible tree is maintained on both host (h_) and device (d_)
+        int * d_adjMtx_ptr, * h_adjMtx_ptr;  
+        float * d_flowMtx_ptr, * h_flowMtx_ptr;
+        /*
+        IMPORTANT | adjMtx and flowMtx has been designed with special consideration
+
+        Adjacency matrix is a upper triangular matrix to store the tree inforamtion
+        Let's say you're looking at edge (i,j)
+        Now you want to find flow on i,j in the feasible tree
+        Then, note this: 
+        1. (i,j) is a feasible edge if adjMtx(i,j) > 0
+        2. Further, flow on (i,j) = flow[adjMtx(i,j)-1], 
+        In words: entries in  adjMtx point to the position of flow values stored in flowMtx
+        */
+    
+    // ###############################
+    // PREPROCESS and POSTPROCESS
+    // ###############################
+        MatrixCell * device_costMatrix_ptr; 
+
+    // ###############################
+    // DUAL and REDUCED COSTS (test for optimality)
+    // ###############################
+    // Pointers to vectors relevant to optimality tests
     //  - reduced cost of edges on the device
     //  - cost of flow through an edge
     //  - dual costs towards supply constraints
     //  - dual costs towards demand constraints
-
-    // Solving system of equations 
-    float u_0 = 0, u_0_coef = 1;
-    int * d_csr_offsets, * d_csr_columns;
-    float * d_csr_values, * d_x, * d_A, * d_b;
-    int64_t nnz;
-    int singularity;
-
-    // Temporary >> 
-    float * h_reduced_costs;
-
-    // Useful for the case of sequencial pivoting >>
-    int pivot_row, pivot_col;
+        float * d_reducedCosts_ptr, * d_costs_ptr, * u_vars_ptr, * v_vars_ptr;
     
-    // Useful for parallel pivoting >>
-    int * backtracker, * depth, * loop_min_from, * loop_min_to, * loop_min_id;
-    float * loop_minimum;
-    stackNode * stack;
-    vertex_conflicts * v_conflicts;
-    bool * visited;
+        // DUAL :: Solving system of equations 
+        float u_0 = 0, u_0_coef = 1;
+        int * d_csr_offsets, * d_csr_columns;
+        float * d_csr_values, * d_x, * d_A, * d_b;
+        int64_t nnz;
+        int singularity;
 
-    vertex_conflicts _vtx_conflict_default;
-    Variable * U_vars, * V_vars;
+        // DUAL :: Solving using a breadth first traversal on Tree
+        Variable * U_vars, * V_vars;
 
+        // DUAL :: Temporary
+        float * h_reduced_costs;
+
+    // ###############################
+    // SIMPLEX PIVOT | Sequencial and Parallel pivoting strategy
+    // ###############################
+
+        // Useful for the sequencial strategy >>
+        int pivot_row, pivot_col;
+        
+        // Useful for the parallel strategy >>
+        int * backtracker, * depth, * loop_min_from, * loop_min_to, * loop_min_id;
+        float * loop_minimum;
+        stackNode * stack;
+        vertex_conflicts * v_conflicts;
+        bool * visited;
+
+        vertex_conflicts _vtx_conflict_default;
+    
+
+    // ###############################
+    // CLASS METHODS | Names are self explanatory - doc strings are available on the definition
+    // ###############################
     void generate_initial_BFS();
     void solve_uv();
     void get_reduced_costs();
     void perform_pivot(bool &result);
-    // void perform_pivoting_parallel(int * visited_ptr, int * adjMtx_ptr);
     void solve();
 
     // Developer Facility Methods >>
     void view_uvra();
+
 };
 
-// INTERMEDIATE STRUCTS - ONLY CONCERNED WITH CUDA >> 
+// ARCHIVES | were used at some point >> 
 
 /*
 Perform DFS on the graph and returns true if any back-edge is found in the graph
 At a thread level this may be inefficient given the data structures used, thus 
 another method exists for the thread specific DFS
+
+struct rowNodes {
+    std::vector<int> child;
+    bool covered;
+};
+
+struct colNodes {
+    std::vector<int> parent;
+    bool covered;
+};
+
+struct Edge {
+    int left, right;
+};
+
+// A class to represent a graph object
+class Graph
+{
+public:
+ 
+    // a vector of vectors to represent an adjacency list
+    std::vector<std::vector<int>> adjList;
+ 
+    // Graph Constructor
+    Graph(std::vector<Edge> const &edges, int n)
+    {
+        // resize the vector to hold `n` elements of type `vector<int>`
+        adjList.resize(n);
+ 
+        // add edges to the undirected graph
+        for (auto &edge: edges)
+        {
+            adjList[edge.left].push_back(edge.right);
+            adjList[edge.right].push_back(edge.left);
+        }
+    }
+};
+
 
 __host__ bool modern_DFS(Graph const &graph, int v, std::vector<bool> &discovered, std::vector<int> &loop, int parent)
 {

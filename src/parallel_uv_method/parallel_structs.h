@@ -20,14 +20,89 @@
 #include <thrust/execution_policy.h>
 
 // Profiling
-#include <nvToolsExt.h>
-
-#define blockSize 16
-#define TREE_LOOKUP(row, col, V) (col>=row?((row*V)-(row*(row+1)/2))+col:((col*V)-(col*(col+1)/2))+row)
-#define epsilon 0.000001f
+// #include <nvToolsExt.h>
 
 #ifndef UV_STRUCTS
 #define UV_STRUCTS
+
+// PARAMETERS
+#define blockSize 16
+
+// Degeneracy resolve
+#define epsilon 0.000001f
+
+#define DETAILED_LOGS 1
+/*
+0 : Silent model
+1 : Verbose model
+*/
+
+#define BFS_METHOD "vam"
+/*
+nwc : Northwest Corner - sequential implementation
+vam : vogel's approximation - parallel regret implementation
+*/
+
+#define CALCULATE_DUAL "lin_solver"
+/*
+tree : traverse the tree in parallel to find values on verties
+lin_solver : solve system of lin_equations
+*/
+
+#define PIVOTING_STRATEGY "sequencial"
+/*
+sequencial : perform pivoting one at a time based on dantzig's rule
+parallel : perform parallel pivoting
+*/
+
+#define MAX_ITERATIONS 0
+
+// >>>>>>>>>> END OF PARAMETERS // 
+
+#define TREE_LOOKUP(row, col, V) (col>=row?((row*V)-(row*(row+1)/2))+col:((col*V)-(col*(col+1)/2))+row)
+
+// Credit : https://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+   if (code != cudaSuccess) 
+   {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
+
+// Credit: https://github.com/NVIDIA/CUDALibrarySamples/blob/master/cuSOLVER/utils/cusolver_utils.h
+// cusolver API error checking
+#define CUSOLVER_CHECK(err)                                                                        \
+    do {                                                                                           \
+        cusolverStatus_t err_ = (err);                                                             \
+        if (err_ != CUSOLVER_STATUS_SUCCESS) {                                                     \
+            printf("cusolver error %d at %s:%d\n", err_, __FILE__, __LINE__);                      \
+            throw std::runtime_error("cusolver error");                                            \
+        }                                                                                          \
+    } while (0)
+
+// cublas API error checking
+#define CUBLAS_CHECK(err)                                                                          \
+    do {                                                                                           \
+        cublasStatus_t err_ = (err);                                                               \
+        if (err_ != CUBLAS_STATUS_SUCCESS) {                                                       \
+            printf("cublas error %d at %s:%d\n", err_, __FILE__, __LINE__);                        \
+            throw std::runtime_error("cublas error");                                              \
+        }                                                                                          \
+    } while (0)
+
+// cublas API error checking
+#define CUSPARSE_CHECK(err)                                                                        \
+    do {                                                                                           \
+        cusparseStatus_t err_ = (err);                                                             \
+        if (err_ != CUSPARSE_STATUS_SUCCESS) {                                                     \
+            printf("cusparse error %d at %s:%d\n", err_, __FILE__, __LINE__);                      \
+            throw std::runtime_error("cusparse error");                                            \
+        }                                                                                          \
+    } while (0)
+
 /*
 Container for a transportation simplex matrix cell C-ij. It's needed to retrive back the original 
 position of the cells after rearragnement in preprocessing step
@@ -38,41 +113,6 @@ position of the cells after rearragnement in preprocessing step
 struct MatrixCell {
     int row, col;
     float cost;
-
-    // assignment operator >>
-    __host__ __device__ MatrixCell& operator=(const MatrixCell& x)
-    {
-        row=x.row;
-        col=x.col;
-        cost=x.cost;
-        return *this;
-    }
-
-    // equality comparison - doesn't modify so const
-    bool operator==(const MatrixCell& x) const
-    {
-        return cost == x.cost;
-    }
-
-    bool operator<=(const MatrixCell& x) const
-    {
-        return cost <= x.cost;
-    }
-
-    bool operator<(const MatrixCell& x) const
-    {
-        return cost < x.cost;
-    }
-
-    bool operator>=(const MatrixCell& x) const
-    {
-        return cost >= x.cost;
-    }
-
-    bool operator>(const MatrixCell& x) const
-    {
-        return cost > x.cost;
-    }
 };
 
 /*
@@ -86,9 +126,6 @@ struct vogelDifference {
         int idx, ileast_1, ileast_2;
         float diff;
 };
-
-std::ostream& operator << (std::ostream& o, const MatrixCell& x);
-std::ostream& operator << (std::ostream& o, const vogelDifference& x);
 
 struct Variable {
     float value = -99999;
@@ -106,63 +143,28 @@ struct stackNode {
     int index, depth;
 };
 
-
 struct pathEdge {
     int index;
     pathEdge * next;
 };
 
-struct rowNodes {
-    std::vector<int> child;
-    bool covered;
-};
 
-struct colNodes {
-    std::vector<int> parent;
-    bool covered;
-};
+typedef union  {
+  float floats[2];                 // floats[0] = lowest savings on this loop
+  int ints[2];                     // ints[1] = index -> thread-gid
+  unsigned long long int ulong;    // for atomic update
+} vertex_conflicts;
 
-struct Edge {
-    int left, right;
-};
-
-// A class to represent a graph object
-class Graph
+struct is_zero
 {
-public:
- 
-    // a vector of vectors to represent an adjacency list
-    std::vector<std::vector<int>> adjList;
- 
-    // Graph Constructor
-    Graph(std::vector<Edge> const &edges, int n)
+    __host__ __device__ bool operator()(const flowInformation &x)
     {
-        // resize the vector to hold `n` elements of type `vector<int>`
-        adjList.resize(n);
- 
-        // add edges to the undirected graph
-        for (auto &edge: edges)
-        {
-            adjList[edge.left].push_back(edge.right);
-            adjList[edge.right].push_back(edge.left);
-        }
+        return (x.qty == 0);
     }
 };
 
-// Credit : https://stackoverflow.com/questions/14038589/what-is-the-canonical-way-to-check-for-errors-using-the-cuda-runtime-api
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
-{
-   if (code != cudaSuccess) 
-   {
-      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-      if (abort) exit(code);
-   }
-}
-
-#define CHECK_CUDA(func) {func;}
-#define CHECK_CUSPARSE(func) {func;}
-
+std::ostream& operator << (std::ostream& o, const MatrixCell& x);
+std::ostream& operator << (std::ostream& o, const vogelDifference& x);
 std::ostream& operator << (std::ostream& o, const Variable& x);
 
 #endif

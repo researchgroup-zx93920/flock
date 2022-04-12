@@ -14,7 +14,7 @@ class ProblemInstance
 public:
     bool read_mode;
     std::string filename;
-    enum my_algo {cpu_lp_solve, parallel_uv};
+    enum my_algo {cpu_lp_solve, parallel_uv, vogel_sequencial};
     my_algo algo;
     int numDemands, numSupplies, *demands, *supplies, active_flows;
     float readTime, preprocessTime, solveTime, postprocessTime;

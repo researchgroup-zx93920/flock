@@ -12,18 +12,24 @@ LIB_GUROBI=-lgurobi_c++ -lgurobi91
 CUDA=/usr/local/cuda
 LIB_CUDA=-lcudart -lnvToolsExt -lcusparse -lcusolver
 
-flock: ensureDir lpMethod.o parallel_method.o
+all: flock
+
+flock: ensureDir lpMethod.o seq_simplex.o parallel_method.o
 	$(CPP) $(SRC)/*.cpp ./bin/*.o -I$(GUROBI_HOME)/include/ -I$(BOOST_INCLUDE_PATH)/ -I$(CUDA)/include/ -L$(GUROBI_HOME)/lib/ -L$(BOOST_LIB_PATH)/lib/ -L$(CUDA)/lib64/ $(LIB_GUROBI) $(LIB_BOOST) $(LIB_CUDA) -o ./bin/flock
 
 lpMethod.o:
 	$(CPP) -c $(SRC)/gurobi_lp_method/*.cpp -I$(GUROBI_HOME)/include/ -I$(BOOST_INCLUDE_PATH)/ -L$(GUROBI_HOME)/lib/ -L$(BOOST_LIB_PATH)/lib/ $(LIB_GUROBI) $(LIB_BOOST) -o ./bin/lpMethod.o
 
+seq_simplex.o:
+	$(CPP) -c $(SRC)/basic_vogel/*.cpp -I$(BOOST_INCLUDE_PATH)/ -L$(BOOST_LIB_PATH)/lib/ $(LIB_BOOST) -o ./bin/basic_vogel.o
+
 parallel_method.o:
-	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/DUAL_tree.cu -o ./bin/DUAL_tree.o
+	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/uv_model_parallel.cu -o ./bin/uv_model_parallel.o
+	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/DUAL_solver.cu -o ./bin/DUAL_solver.o
+	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/PIVOT_dfs.cu -o ./bin/PIVOT_dfs.o
 	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/IBFS_nwc.cu -o ./bin/IBFS_nwc.o
 	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/IBFS_vogel.cu -o ./bin/IBFS_vogel.o
 	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/parallel_structs.cu -o ./bin/parallel_structs.o
-	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/uv_model_parallel.cu -o ./bin/uv_model_parallel.o
 
 ensureDir:
 	mkdir -p ./bin

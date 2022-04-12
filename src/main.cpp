@@ -63,6 +63,12 @@ int main(int argc, char **argv)
     model.execute();
     model.create_flows();
   }
+  else if (problem.algo == ProblemInstance::my_algo::vogel_sequencial)
+  {
+    VAM_SEQ model = VAM_SEQ(&problem, flows);
+    model.execute();
+    model.create_flows();
+  }
 
   std::cout << "Flows created successfully!" << std::endl;
   problem.active_flows = problem.numSupplies + problem.numDemands - 1;

@@ -98,7 +98,7 @@ void lpModel::solve()
 
 	model->optimize();
 	auto end = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	data->solveTime = duration.count();
 
 	int optim_status = model->get(GRB_IntAttr_Status);

@@ -15,23 +15,6 @@ TODO:
 #include "uv_model_parallel.h"
 
 /*
-Kernel to convert float cost matrix to the MatrixCell objects
-*/
-__global__ void createCostMatrix(MatrixCell *d_costMtx, float * d_costs_ptr, int n_supplies, int n_demands)
-{
-
-    int d = blockIdx.x * blockDim.x + threadIdx.x;
-    int s = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if (s < n_supplies && d < n_demands)
-    {
-        int id = s * n_demands + d;
-        MatrixCell _c = {.row = s, .col = d, .cost = d_costs_ptr[id]};
-        d_costMtx[id] = _c;
-    }
-}
-
-/*
 Constructor - Maintaining consistancy across algorithm modes
 */
 uvModel_parallel::uvModel_parallel(ProblemInstance *problem, flowInformation *flows)
@@ -43,34 +26,30 @@ uvModel_parallel::uvModel_parallel(ProblemInstance *problem, flowInformation *fl
 
     // Allocate memory based on the problem size # >>
     
-        // feasible_flows - holds the edges of the spanning tree
+    // feasible_flows - holds the edges of the spanning tree
     feasible_flows = (flowInformation *) malloc(sizeof(flowInformation) * ((data->numSupplies) + (data->numDemands) - 1));
     
-        // costMatrix - costMatrix in CPU
+    // costMatrix - costMatrix in CPU
     costMatrix = (MatrixCell *) malloc(sizeof(MatrixCell) * (data->numSupplies) * (data->numDemands));
     
     // Creating cost Matrix Cells objects =>
     //  Following process - prepare costMatrix cells using a small GPU function and copy back to CPU
-    cudaMalloc((void **) &d_costs_ptr, sizeof(float) * (data->numSupplies) * (data->numDemands));
-    cudaMalloc((void **) &device_costMatrix_ptr, sizeof(MatrixCell) * (data->numSupplies) * (data->numDemands));
-    cudaMemcpy(d_costs_ptr, data->costs, sizeof(float) * (data->numSupplies) * (data->numDemands), cudaMemcpyHostToDevice);
+    gpuErrchk(cudaMalloc((void **) &d_costs_ptr, sizeof(float) * (data->numSupplies) * (data->numDemands)));
+    gpuErrchk(cudaMalloc((void **) &device_costMatrix_ptr, sizeof(MatrixCell) * (data->numSupplies) * (data->numDemands)));
+    gpuErrchk(cudaMemcpy(d_costs_ptr, data->costs, sizeof(float) * (data->numSupplies) * (data->numDemands), cudaMemcpyHostToDevice));
 
     dim3 _dimBlock(blockSize,blockSize,1);
     dim3 _dimGrid(ceil(1.0*data->numDemands/blockSize), ceil(1.0*data->numSupplies/blockSize), 1);
     createCostMatrix<<<_dimGrid, _dimBlock>>>(device_costMatrix_ptr, d_costs_ptr, data->numSupplies, data->numDemands);
-    cudaDeviceSynchronize();
-    cudaMemcpy(costMatrix, device_costMatrix_ptr, sizeof(MatrixCell) * (data->numSupplies) * (data->numDemands), cudaMemcpyDeviceToHost);
-    /*
-    for (int i = 0; i < data->numSupplies; i++)
-    {
-        for (int j = 0; j < data->numDemands; j++)
-        {
-            int _key = i * data->numDemands + j;
-            std::cout<<costMatrix[_key]<<std::endl;
-        }
-    }
-    */
+    gpuErrchk(cudaPeekAtLastError());
+    gpuErrchk(cudaDeviceSynchronize());
+
+    gpuErrchk(cudaMemcpy(costMatrix, device_costMatrix_ptr, sizeof(MatrixCell) * (data->numSupplies) * (data->numDemands), cudaMemcpyDeviceToHost));
+    // Why we copy it back to host? because NWC and Vogel can interchangably use this struct
+    
+    // !! Setup Constants !!
     V = data->numSupplies+data->numDemands;
+    
     std::cout << "An uv_model_parallel object was successfully created" << std::endl;
 }
 
@@ -82,6 +61,10 @@ uvModel_parallel::~uvModel_parallel()
     // On thrust layer - replace by thrust eqv. of free
     // free(costMatrix);
     // free(feasible_flows);
+
+    // FREE GPU MEMORY CREATED IN INITIALIZATION
+    gpuErrchk(cudaFree(d_costs_ptr));
+    gpuErrchk(cudaFree(device_costMatrix_ptr));
 }
 
 /*
@@ -91,7 +74,6 @@ to updates by the subsequent improvement techniques
 */
 void uvModel_parallel::generate_initial_BFS()
 {
-
     // Data is available on the class objects - Call one of the IBFS methods on these
     auto start = std::chrono::high_resolution_clock::now();
     if (BFS_METHOD == "nwc")
@@ -118,71 +100,6 @@ void uvModel_parallel::generate_initial_BFS()
     // The array feasible flows at this stage holds the initial basic feasible solution
 }
 
-__global__ void copy_row_shadow_prices(Variable * U_vars, float * u_vars_ptr, int numSupplies) 
-{    
-    int gid = blockIdx.x*blockDim.x + threadIdx.x;
-    if (gid < numSupplies) {
-        u_vars_ptr[gid] = U_vars[gid].value;
-    }
-}
-
-__global__ void copy_col_shadow_prices(Variable * V_vars, float * v_vars_ptr, int numDemands) 
-{
-    int gid = blockIdx.x*blockDim.x + threadIdx.x;
-    if (gid < numDemands) {
-        v_vars_ptr[gid] = V_vars[gid].value;
-    }
-}
-
-__global__ void initialize_U_vars(Variable * U_vars, int numSupplies) {
-    int gid = blockIdx.x*blockDim.x + threadIdx.x;
-    Variable default_var;
-    if (gid < numSupplies) {
-        U_vars[gid] = default_var;
-    }
-}
-
-__global__ void initialize_V_vars(Variable * V_vars, int numDemands) {
-    int gid = blockIdx.x*blockDim.x + threadIdx.x;
-    Variable default_var;
-    if (gid < numDemands) {
-        V_vars[gid] = default_var;
-    }
-}
-
-__global__ void initialize_u_v_system(float * d_A, float * d_b, int * d_adjMtx_ptr, 
-    float * d_costs_ptr, int numSupplies, int numDemands) {
-        
-        int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
-        int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
-        int V = numSupplies + numDemands;
-
-        if (row_indx < numSupplies && col_indx < numDemands) {
-            int indx = TREE_LOOKUP(row_indx, col_indx + numSupplies, V); // Adjusted destination vertex ID
-            int flow_indx = d_adjMtx_ptr[indx];
-            if (flow_indx > 0) {
-                // This is a flow - flow_indx = row_number, u = row_number, v = col_number
-                d_A[flow_indx * V + row_indx] = 1;
-                d_A[flow_indx * V + numSupplies + col_indx] = 1;
-                d_b[flow_indx] = d_costs_ptr[row_indx*numDemands + col_indx];
-            }
-        }
-    }
-
-
-__global__ void retrieve_uv_solution(float * d_x, float * u_vars_ptr, float * v_vars_ptr, int numSupplies, int numDemands) 
-{
-    int gid = blockIdx.x*blockDim.x + threadIdx.x;
-    int V = numSupplies + numDemands;
-    if (gid < V) {
-        if (gid < numSupplies) {
-            u_vars_ptr[gid] = d_x[gid];
-        } 
-        else {
-            v_vars_ptr[gid - numSupplies] = d_x[gid];
-        }
-    }
-}
 /*
 Given a u and v vector on device - computes the dual costs for all the constraints. There could be multiple ways 
 to solve the dual costs for a given problem. Packaged method derive u's and v's and load them onto 
@@ -195,186 +112,52 @@ void uvModel_parallel::solve_uv()
     /* 
     solve_uv method - Need to populate u_vars_ptr and v_vars_ptr attributes of this class 
     This is an internal function can't be API'ed - Executes successfully in a specific situation
+    These are special kernels - all are classified in DUAL_solver.h module
     */
 
-    // Initialize u and v and then solve them using the adj matrix provided
     if (CALCULATE_DUAL=="tree") 
     {
-        
-        initialize_U_vars<<<ceil(1.0*data->numSupplies/blockSize), blockSize>>>(U_vars, data->numSupplies);
-        initialize_V_vars<<<ceil(1.0*data->numDemands/blockSize), blockSize>>>(V_vars, data->numDemands);
-        cudaDeviceSynchronize();
-        // Set u[0] = 0 on device >> // This can be done more smartly - low prioirity
-        Variable default_variable;
-        default_variable.assigned = true;
-        default_variable.value = 0;
-        cudaMemcpy(U_vars, &default_variable, sizeof(Variable), cudaMemcpyHostToDevice);
-        
-        // Perform the assignment
-        dim3 __blockDim(blockSize, blockSize, 1); 
-        dim3 __gridDim(ceil(1.0*data->numDemands/blockSize), ceil(1.0*data->numSupplies/blockSize), 1);
-        for (int i=0; i<(data->numSupplies+data->numDemands-1); i++) {
-            assign_next<<< __gridDim, __blockDim >>> (d_adjMtx_ptr, d_costs_ptr, 
-                U_vars, V_vars, data->numSupplies, data->numDemands);
-            // cudaError_t err = cudaGetLastError();
-            // if (err != cudaSuccess) {
-            //     std::cout<<"Error: "<<cudaGetErrorString(err)<<std::endl;
-            // }
-            cudaDeviceSynchronize(); // There might be some performance degrade here
-        }
-
-        // Once done - copy the final values to u_vars_ptr and v_vars_ptr and free device memory
-        // This one dumps the unnecessary data associated with equation solve
-        copy_row_shadow_prices<<<ceil(1.0*data->numSupplies/blockSize), blockSize>>>(U_vars, u_vars_ptr, data->numSupplies);
-        copy_row_shadow_prices<<<ceil(1.0*data->numDemands/blockSize), blockSize>>>(V_vars, v_vars_ptr, data->numDemands);
-        cudaDeviceSynchronize();
+        /* 
+        Initialize u and v and then solve them through 
+        Breadth first search using the adj matrix provided
+        */
+        find_dual_using_tree(u_vars_ptr, v_vars_ptr, d_adjMtx_ptr, d_costs_ptr, U_vars, V_vars, data->numSupplies, data->numDemands);
     }
-    else if (CALCULATE_DUAL=="lin_solver") {
+    else if (CALCULATE_DUAL=="sparse_linear_solver") {
+        /* 
+        Solve a system of linear equations
+        1. Create a sparse matrix A and Vector B
+            - Invoke a kernel to fill A_csr, B on device  
+            - Set the default allocation
+        2. Solve the sparse system A_csr * x = b // cuSparse solver
+        */
+        find_dual_using_sparse_solver(u_vars_ptr, v_vars_ptr, d_costs_ptr, d_adjMtx_ptr,
+            d_csr_values, d_csr_columns, d_csr_offsets, d_x, d_b, 
+            data->numSupplies, data->numDemands);
+    }
+
+    else if (CALCULATE_DUAL=="dense_linear_solver") {
         /* 
         Solve a system of linear equations
         1. Create a dense matrix A and Vector B
             - Initialize a zero dense matrix A
             - Invoke a kernel to fill A, B on device  
             - Set the default allocation
-        2. Solve the sparse system Ax = b
+        2. Solve the dense system Ax = b  // cuBlas solver
         */
-
-        thrust::fill(thrust::device, d_A, d_A + (V*V), u_0);
-        thrust::fill(thrust::device, d_b, d_b + V, u_0);
-        thrust::fill(thrust::device, d_x, d_x + V, u_0);
-
-        dim3 __blockDim(blockSize, blockSize, 1); 
-        dim3 __gridDim(ceil(1.0*data->numDemands/blockSize), ceil(1.0*data->numSupplies/blockSize), 1);
-        initialize_u_v_system <<< __gridDim, __blockDim >>> (d_A, d_b, d_adjMtx_ptr, d_costs_ptr, 
-                data->numSupplies, data->numDemands);
-        cudaMemcpy(&d_A[0], &u_0_coef, sizeof(float), cudaMemcpyHostToDevice);
-        cudaDeviceSynchronize();
-
-        // ************************************************
-        // DEBUG UTILITY 
-        // ************************************************
-        // float * h_A = (float *) malloc(V*V*sizeof(float));
-        // float * h_b = (float *) malloc(V*sizeof(float));
-        // cudaMemcpy(h_A, d_A, sizeof(float)*V*V, cudaMemcpyDeviceToHost);
-        // cudaMemcpy(h_b, d_b, sizeof(float)*V, cudaMemcpyDeviceToHost);
-        // std::cout<<" Ax = b matrices ===> "<<std::endl;
-        
-        // for (int i=0; i< V; i++) {
-        //     std::cout<<"[";
-        //     for (int j=0; j < V; j++) {
-        //         std::cout<<" "<<h_A[i*V + j]<<",";
-        //     }
-        //     // std::cout<<" .. | "
-        //     // for (int j=data->numSupplies; j < data->numSupplies + data->numDemands/3; j++) {
-        //     //     std::cout<<" "<<h_A[i*V + j];
-        //     // }
-        //     std::cout<<"],";
-        //     // std::cout<<" = "<<h_b[i]<<std::endl;
-        // }
-
-        //--------------------------------------------------------------------------
-        // CUSPARSE APIs
-        cusparseHandle_t     handle = NULL;
-        cusparseSpMatDescr_t matB;
-        cusparseDnMatDescr_t matA;
-        void * dBuffer    = NULL;
-        size_t bufferSize = 0;
-
-        CHECK_CUSPARSE( cusparseCreate(&handle) )
-        // Create dense matrix A
-        CHECK_CUSPARSE( cusparseCreateDnMat(&matA, V, V, V, d_A,
-                                        CUDA_R_32F, CUSPARSE_ORDER_ROW) )
-        // Create sparse matrix B in CSR format
-        CHECK_CUSPARSE( cusparseCreateCsr(&matB, V, V, nnz,
-                                      d_csr_offsets, d_csr_columns, d_csr_values,
-                                      CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I,
-                                      CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F) )
-
-        // allocate an external buffer if needed
-        CHECK_CUSPARSE( cusparseDenseToSparse_bufferSize(
-                                        handle, matA, matB,
-                                        CUSPARSE_DENSETOSPARSE_ALG_DEFAULT,
-                                        &bufferSize) )
-        CHECK_CUDA( cudaMalloc(&dBuffer, bufferSize) )
-
-        // // execute Sparse to Dense conversion >> Can Remove this somehow ?
-        CHECK_CUSPARSE( cusparseDenseToSparse_analysis(handle, matA, matB,
-                                            CUSPARSE_DENSETOSPARSE_ALG_DEFAULT,
-                                            dBuffer) )
-
-        // execute Sparse to Dense conversion
-        CHECK_CUSPARSE( cusparseDenseToSparse_convert(handle, matA, matB,
-                                            CUSPARSE_DENSETOSPARSE_ALG_DEFAULT,
-                                            dBuffer) )
-        // destroy matrix/vector descriptors
-        CHECK_CUSPARSE( cusparseDestroyDnMat(matA) )
-        CHECK_CUSPARSE( cusparseDestroySpMat(matB) )
-        CHECK_CUSPARSE( cusparseDestroy(handle) )
-        //--------------------------------------------------------------------------
-
-        // Core >>		
-        cusolverSpHandle_t solver_handle;
-	    cusolverSpCreate(&solver_handle);
-
-        cusparseMatDescr_t descrA;
-        cusparseCreateMatDescr(&descrA);
-	    cusparseSetMatType(descrA, CUSPARSE_MATRIX_TYPE_GENERAL);
-	    cusparseSetMatIndexBase(descrA, CUSPARSE_INDEX_BASE_ZERO); 
-
-	    // --- Using LU factorization >>
-	    cusolverStatus_t _status = cusolverSpScsrlsvqr(solver_handle, V, nnz, descrA, d_csr_values, d_csr_offsets, d_csr_columns, 
-                d_b, 0, 0, d_x, &singularity);
-	    // --- Using QR factorization >>
-	    // cusolverSpDcsrlsvqr(solver_handle, V, nnz, descrA, d_Annz, d_A_RowIndices, d_A_ColIndices, d_b, 0.000001, 0, d_x, &singularity);
-        if (_status == CUSOLVER_STATUS_SUCCESS) {
-            if (singularity == -1) {
-                dim3 __blockDim2(blockSize, 1, 1);
-                dim3 __gridDim2(ceil(1.0*V/blockSize), 1, 1);
-                retrieve_uv_solution <<< __gridDim2, __blockDim2 >>> (d_x, u_vars_ptr, v_vars_ptr, data->numSupplies, data->numDemands);
-                cudaDeviceSynchronize();
-            }
-            else {
-                std::cout<<"Matrix A is Non-Singular"<<std::endl;
-                std::cout<<"Singularity = "<<singularity<<std::endl;
-                exit(0);
-                // float * h_x = (float *) malloc(sizeof(float)*V);
-                // cudaMemcpy(h_x, d_x, sizeof(float)*V, cudaMemcpyDeviceToHost);
-                // for (int i=0; i<V; i++) {
-                //     std::cout<< "X [" <<i<<"] = "<<h_x[i]<<std::endl;
-                // }
-            }
-            
-        }
-        else {
-            std::cout<<"Linear-Solver failed with, Status  = "<<_status<<std::endl;
-            exit(0);
-        }
-        cudaFree(dBuffer);
+        // YET TO BE IMPLEMENTED >> 
+        find_dual_using_dense_solver(u_vars_ptr, v_vars_ptr, d_costs_ptr, d_adjMtx_ptr,
+            d_A, d_x, d_b, data->numSupplies, data->numDemands);
     }
-    else 
-    {
+
+    else {
+    
         std::cout<<"Invalid method of dual calculation!"<<std::endl;
         std::exit(-1); 
+
     }
-
 }
 
-/*
-Kernel to compute Reduced Costs in the transportation table
-*/
-__global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, float * d_costs_ptr, float * d_reducedCosts_ptr, 
-    int numSupplies, int numDemands)
-{
-
-        int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
-        int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
-
-        if (row_indx < numSupplies && col_indx < numDemands) {
-            // r =  C_ij - (u_i + v_j);
-            float r = d_costs_ptr[row_indx*numDemands+col_indx] - u_vars_ptr[row_indx] - v_vars_ptr[col_indx];
-            d_reducedCosts_ptr[row_indx*numDemands+col_indx] = r;
-        }
-}
 
 /*
 Pretty generic method to compute reduced 
@@ -382,420 +165,14 @@ costs provided a cost-matrix and u_vars, v_vars and cost Matrix on device
 */
 void uvModel_parallel::get_reduced_costs() 
 {
-    // std::cout<<"\t\tComputing Reduced Costs ..."<<std::endl;
     dim3 __dimBlock(blockSize, blockSize, 1); // Refine this based on device query
     dim3 __dimGrid(ceil(1.0*data->numDemands/blockSize), ceil(1.0*data->numSupplies/blockSize), 1);
     computeReducedCosts<<< __dimGrid, __dimBlock >>>(u_vars_ptr, v_vars_ptr, d_costs_ptr, d_reducedCosts_ptr, 
         data->numSupplies, data->numDemands);
-    cudaDeviceSynchronize();
-    // std::cout<<"\t\tComputing Reduced Costs - complete!"<<std::endl;
+    gpuErrchk(cudaPeekAtLastError());
+    gpuErrchk(cudaDeviceSynchronize());
 }
 
-/*
-Push a node in the provided stack
-*/
-__host__ __device__ void stack_push(stackNode * stack, int &stack_top, int vtx, int depth)
-{
-    stack_top++;
-    stackNode node = {.index = vtx, .depth = depth};
-    stack[stack_top] = node;
-}
-
-/*
-Pop a node from the provided stack
-*/
-__host__ __device__ stackNode stack_pop(stackNode * stack, int &stack_top)
-{
-    stackNode vtx;
-    vtx = stack[stack_top];
-    stack_top--;
-    return vtx;
-}
-
-/*
-Perform depth first search looking for route to execute the pivot
-*/
-__host__ __device__ void perform_dfs_sequencial_on_i(int * adjMtx, stackNode * stack, int * backtracker, bool * visited, 
-        int * depth, int starting_vertex, int target_vertex, int V)
-{   
-    
-    int key, current_depth = 1, stack_top = -1;
-    stackNode current_vertex;
-    stack_push(stack, stack_top, starting_vertex, current_depth);
-
-    while(!(stack_top == -1))
-    {
-        current_vertex = stack_pop(stack, stack_top);
-
-        // check if current vtx has been already visited in this search
-        if (!visited[current_vertex.index])
-        {
-            // if not visited: >> 
-            //  - mark this as visited 
-            //  - see if current_vertex is adj to the starting point, 
-            //        if not - queue the vertices that are adjacent to current vertex, increment depth
-            visited[current_vertex.index]=true;
-
-            // Do the book-keeping
-            current_depth = current_vertex.depth + 1;
-            backtracker[current_vertex.depth] = current_vertex.index;
-
-            // check if target point is adjacent
-            key = TREE_LOOKUP(target_vertex, current_vertex.index, V);
-            if (adjMtx[key] > 0 && current_depth > 1)
-            {
-                // Leads back to origin - this completes the cycle - exit the loop
-                // std::cout<<"Loop Breaks"<<std::endl;
-                *depth = current_depth;
-                break;
-            }
-            else
-            {
-                // Append the ajacent nodes in stack
-                for(int j=0; j < V; j++)
-                {
-                    key = TREE_LOOKUP(current_vertex.index, j, V);
-                    // queue neighbors
-                    if(adjMtx[key] > 0)
-                    {
-                        stack_push(stack, stack_top, j, current_depth);
-                    }
-                }
-            }
-        }
-        // else - move to next vertex : pop_next, Before that >>
-        // Iterations have explored the childeren and now going up in the recursion tree 
-        // to something that is still pending to be explored -
-        if (stack_top == -1)
-        {
-            *depth=1;
-        }
-    }
-}
-
-/*
-Do a copy from new value to device pointer
-*/
-__host__ void modify_flowMtx_on_device(float * d_flowMtx_ptr, int id, float new_value) {
-    cudaMemcpy(&d_flowMtx_ptr[id], &new_value, sizeof(float), cudaMemcpyHostToDevice);
-}
-
-/*
-Replaces the exiting basic flow with entering non basic flow
-Does the necessary adjustments on the variables on device memory
-*/
-__host__ void exit_i_and_enter_j(int * d_adjMtx_ptr, float * d_flowMtx_ptr, int exit_src, int exit_dest, 
-        int enter_src, int enter_dest, int min_flow_indx, float min_flow, int V) {
-            
-    int id;
-    int null_value = 0;
-    int new_value = min_flow_indx + 1;
-
-    // Set value for exiting in d
-    id = TREE_LOOKUP(exit_src, exit_dest, V);
-    cudaMemcpy(&d_adjMtx_ptr[id], &null_value, sizeof(int), cudaMemcpyHostToDevice);
-
-    // Set value for entering to the appropriate
-    id = TREE_LOOKUP(enter_src, enter_dest, V);
-    cudaMemcpy(&d_adjMtx_ptr[id], &new_value, sizeof(int), cudaMemcpyHostToDevice);
-
-    // The flow would have become zero - update it again
-    cudaMemcpy(&d_flowMtx_ptr[min_flow_indx], &min_flow, sizeof(float), cudaMemcpyHostToDevice);
-
-}
-
-/*
-Parallel version of DFS on Device
-*/
-__global__ void find_loops_and_savings(float * d_reducedCosts_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
-        stackNode * stack, bool * visited, int * backtracker, int * depth, float * loop_minimum,
-        int * loop_min_from, int * loop_min_to, int * loop_min_id,
-        int numSupplies, int numDemands) {
-
-    int local_row = blockIdx.y*blockDim.y + threadIdx.y;
-    int local_col = blockIdx.x*blockDim.x + threadIdx.x;
-    int local_id = local_row*numDemands + local_col;
-    int V = numSupplies + numDemands;
-    int offset = V * local_id;
-
-    if (local_row < numSupplies && local_col < numDemands) {
-        float r = d_reducedCosts_ptr[local_id];    
-        // Check if this reduced cost is negative
-        if (r < 0) {
-            
-            int _depth = 1;
-            backtracker[offset + 0] = local_row;
-            // then pivot row is - local_row
-            // and  pivot col is - local_col
-            perform_dfs_sequencial_on_i(d_adjMtx_ptr, &stack[offset], &backtracker[offset], 
-                &visited[offset], &_depth, numSupplies + local_col, local_row, V);
-            
-            if (!(_depth <= 1)) {
-                
-                // A loop was found - complete the book-keeping
-                backtracker[offset + _depth] = local_row;
-
-                // Traverse the loop find the minimum flow that could be increased
-                // on the incoming edge >>
-                int id, _from = -1, _to = -1, _min_flow_id = -1, _min_from = -1, _min_to = -1;
-                float _flow, min_flow = FLT_MAX;
-
-                for (int i=0; i<_depth; i++) 
-                {
-                    if (i%2==1)
-                    {
-                        _from = backtracker[offset+i];
-                        _to = backtracker[offset+i+1];
-                        id = d_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
-                        _flow = d_flowMtx_ptr[id];
-                        
-                        if (_flow < min_flow) 
-                        {
-                            min_flow = _flow;
-                            _min_flow_id = id;
-                            _min_from = _from;
-                            _min_to = _to;
-                        }
-                    }
-                }
-
-                // Update depth and savings for referncing in subsequent kernel //
-                depth[local_id] = _depth;
-                loop_minimum[local_id] = min_flow;
-                loop_min_from[local_id] = _min_from;
-                loop_min_to[local_id] = _min_to;
-                loop_min_id[local_id] = _min_flow_id;
-            }
-            // Otherwise depth[local_id] = 0 (remains default)
-        }
-    }
-}
-
-/*
-The Novel Conflict Selector >>
-Reference: https://stackoverflow.com/questions/17411493/how-can-i-implement-a-custom-atomic-function-involving-several-variables 
-*/
-
-__device__ unsigned long long int atomicMinAuxillary(unsigned long long int* address, float val1, int val2)
-{
-    vertex_conflicts loc, loctest;
-    loc.floats[0] = val1;
-    loc.ints[1] = val2;
-    loctest.ulong = *address;
-    while (val1  < loctest.floats[0] || (val1 == loctest.floats[0] && val2 < loctest.ints[1])) {
-        // condition and tie-braker (bland's rule)
-        loctest.ulong = atomicCAS(address, loctest.ulong,  loc.ulong);
-    } 
-    return loctest.ulong;
-}
-
-/*
-Resolve conflicts | Step 1 : Search for vertices that fall under conflicting loops
-*/
-__global__ void resolve_conflicts_step_1(int * depth, int * backtracker, float * loop_minimum, float * d_reducedCosts_ptr, 
-        vertex_conflicts * v_conflicts, int numSupplies, int numDemands) {
-            
-    int local_row = blockIdx.y*blockDim.y + threadIdx.y;
-    int local_col = blockIdx.x*blockDim.x + threadIdx.x;
-    int local_id = local_row*numDemands + local_col;
-    int V = numSupplies + numDemands;
-    int offset = V * local_id;
-    
-    if (local_row < numSupplies && local_col < numDemands) {
-        // Check if this is a cell along which pivoting is performing
-        int _depth = depth[local_id];
-        // Real loops exists on this edge (cell) -
-        if (_depth > 0) {
-
-            // Find Savings
-            float r = d_reducedCosts_ptr[local_id];
-            // If this loop is pivoted then this is the savings you get
-            float _savings = r*loop_minimum[local_id]; 
-            int _vtx;
-
-            for (int i=0; i<_depth; i++) {
-                _vtx = backtracker[offset+i];
-                // Atomically make the comparison and assign
-                /* Essentially the following is performed in an atomic sense
-                if (_savings < v_savings[_vtx]) {
-                    v_savings[_vtx] = _savings;
-                    v_owner[_vtx] = local_id;
-                } 
-                */   
-                atomicMinAuxillary(&(v_conflicts[_vtx].ulong), _savings, local_id);
-            }
-        }
-    }
-}
-
-/*
-Resolve conflicts | Step 2 : Kill threads => discard the loops => Set depth = 0
-*/
-__global__ void resolve_conflicts_step_2(int * depth, int * backtracker, vertex_conflicts * v_conflicts, int numSupplies, int numDemands) {
-            
-    int local_row = blockIdx.y*blockDim.y + threadIdx.y;
-    int local_col = blockIdx.x*blockDim.x + threadIdx.x;
-    int local_id = local_row*numDemands + local_col;
-    int V = numSupplies + numDemands;
-    int offset = V * local_id;
-    
-    if (local_row < numSupplies && local_col < numDemands) {
-        // Check if this is a cell along which pivoting is performing
-        int _depth = depth[local_id];
-        // Real loops exists on this edge (cell) -
-        if (_depth > 0) {
-            // Check continuity along all vertices in loop if v_owner is this thread itself >>
-            bool _continuity = true;
-            int _vtx, i=0;
-            while (i < _depth && _continuity) {
-                _vtx = backtracker[offset+i];
-                _continuity = (_continuity && (v_conflicts[_vtx].ints[1] == local_id));
-                i++;
-            }
-            if (!_continuity) { // Kill this thread in this case
-                depth[local_id] = 0;
-            }
-        }
-    }
-}
-
-/*
-Kernel to execute the flow adjustments in parallel >>
-*/
-__global__ void run_flow_adjustments(int * d_adjMtx_ptr, float * d_flowMtx_ptr, int * depth, 
-            int * backtracker, float * loop_minimum,
-            int * loop_min_from, int * loop_min_to, int * loop_min_id,
-            int numSupplies, int numDemands) {
-            
-    int local_row = blockIdx.y*blockDim.y + threadIdx.y;
-    int local_col = blockIdx.x*blockDim.x + threadIdx.x;
-    int local_id = local_row*numDemands + local_col;
-    int V = numSupplies + numDemands;
-    int offset = V * local_id;
-    
-    if (local_row < numSupplies && local_col < numDemands) {
-        // Check if this is a cell along which pivoting is performing
-        int _depth = depth[local_id];
-        // Real loops exists on this edge (cell) -
-        if (_depth > 0) {
-
-            int _from, _to, id, j=-1, min_from = loop_min_from[local_id], 
-                min_to = loop_min_to[local_id], min_flow_id = loop_min_id[local_id];
-            float _flow, _min_flow = loop_minimum[local_id];
-
-            for (int i=1; i<_depth; i++) 
-            {
-                _from = backtracker[offset+i];
-                _to = backtracker[offset+i+1];
-                id = d_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
-                _flow = j*_min_flow;
-                d_flowMtx_ptr[id] += _flow;
-                j *= -1;
-            }
-
-            // Do the replacment between exiting i - entering j on both host and device
-            // Remove edge
-            id = TREE_LOOKUP(min_from, min_to, V);
-            d_adjMtx_ptr[id] = 0;
-            // Insert edge
-            id = TREE_LOOKUP(local_row, local_col+numSupplies, V);
-            d_adjMtx_ptr[id] = min_flow_id + 1;
-            // Update new flow 
-            d_flowMtx_ptr[min_flow_id] = _min_flow;
-        }
-    }
-}
-
-__host__ void do_flow_adjustment_on_host(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
-        int * d_adjMtx_ptr, float * d_flowMtx_ptr, int * backtracker, float min_flow, int min_from, int min_to, int min_flow_id,
-        int pivot_row, int pivot_col, int depth, int V, int numSupplies, int numDemands) {
-
-    // std::cout<<"Depth : "<<depth<<" : ";
-    // for (int j = 0; j < depth + 1; j++) {
-    //     std::cout<<backtracker[j]<<" ";
-    // }
-    // std::cout<<std::endl;
-    // std::cout<<"Min flow : "<<min_flow<<std::endl;
-    // std::cout<<"Min from : "<<min_from<<std::endl;
-    // std::cout<<"Min to : "<<min_to<<std::endl;
-    // std::cout<<"Min id : "<<min_flow_id<<std::endl;
-    // std::cout<<"Pivot Row : "<<pivot_row<<std::endl;
-    // std::cout<<"Pivot Col : "<<pivot_col<<std::endl;
-
-    int j=-1, _from, _to, id;
-    float _flow;
-    for (int i=1; i<depth; i++) 
-    {
-        _from = backtracker[i];
-        _to = backtracker[i+1];
-        id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
-        _flow = j*min_flow;
-        h_flowMtx_ptr[id] += _flow;
-        modify_flowMtx_on_device(d_flowMtx_ptr, id, h_flowMtx_ptr[id]);
-        j *= -1;
-    }
-
-    // Do the replacment between exiting i - entering j on both host and device
-    // Remove edge
-    id = TREE_LOOKUP(min_from, min_to, V);
-    h_adjMtx_ptr[id] = 0;
-    // Insert edge
-    id = TREE_LOOKUP(pivot_row, pivot_col+ numSupplies, V);
-    h_adjMtx_ptr[id] = min_flow_id + 1;
-    // Update new flow 
-    h_flowMtx_ptr[min_flow_id] = min_flow;
-
-    exit_i_and_enter_j(d_adjMtx_ptr, d_flowMtx_ptr, 
-        min_from, min_to, 
-        pivot_row, pivot_col + numSupplies, 
-        min_flow_id, min_flow, V);
-}
-
-__host__ void execute_pivot_on_host(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
-        int * d_adjMtx_ptr, float * d_flowMtx_ptr, int * backtracker, 
-        int pivot_row, int pivot_col, int depth, int V, int numSupplies, int numDemands) {
-
-    // *******************************************
-    // STEP: Performing the pivot operation 
-        // Step 1 - Find the Minimum flow
-        // Step 2 - Adjust the Flow
-    // *******************************************
-            
-    int id, _from = -1, _to = -1, min_flow_id = -1, min_from = -1, min_to = -1;
-    float _flow, min_flow = INT_MAX;
-
-    // ########### STEP 1 | Finding the minimum flow >>
-    // Traverse the loop find the minimum flow that could be increased
-    // on the incoming edge >> 
-    for (int i=0; i<depth; i++) 
-    {
-        if (i%2==1) 
-        {
-            _from = backtracker[i];
-            _to = backtracker[i+1];
-            id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
-            _flow = h_flowMtx_ptr[id];
-            
-            if (_flow < min_flow) 
-            {
-                min_flow = _flow;
-                min_flow_id = id;
-                min_from = _from;
-                min_to = _to;
-            }
-        }
-    }
-
-    // ########### STEP 2 | Executing the flow adjustment >>
-
-    // Skip the first edge (entering edge)
-    // Exiting Edge will become automatically zero (min_from, min_to)
-    // Note - minflow value is zero if there's a degenerate pivot!
-    do_flow_adjustment_on_host(h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, backtracker,
-            min_flow, min_from, min_to, min_flow_id,
-            pivot_row, pivot_col, depth, V, numSupplies, numDemands);
-
-}
 
 /* 
 Pivoting Operation in Trnasport Simplex. A pivot is complete in following 3 Steps
@@ -809,272 +186,36 @@ void uvModel_parallel::perform_pivot(bool &result)
     // *******************************************
     // STEP 1: Check if already optimal
     // *******************************************
-    
-    // view_uvra();
 
     // Find the position of the most negative reduced cost >>
     int min_index = thrust::min_element(thrust::device, d_reducedCosts_ptr, 
             d_reducedCosts_ptr + (data->numSupplies*data->numDemands)) - d_reducedCosts_ptr;
     // have all the reduced costs in the d_reducedCosts_ptr on device
     float min_reduced_cost = 0;
-    cudaMemcpy(&min_reduced_cost, d_reducedCosts_ptr + min_index, sizeof(float), cudaMemcpyDeviceToHost);
+    gpuErrchk(cudaMemcpy(&min_reduced_cost, d_reducedCosts_ptr + min_index, sizeof(float), cudaMemcpyDeviceToHost));
     std::cout<<"Min Reduced Cost  = "<<min_reduced_cost<<std::endl;
     if (min_reduced_cost < 0 && std::abs(min_reduced_cost) > 10e-5)
     {
         // Found a negative reduced cost >>
-        if (PIVOTING_STRATEGY == "sequencial") {
-        
+        if (PIVOTING_STRATEGY == "sequencial") 
+        {
             // pivot row and pivot col are declared private attributes
             pivot_row =  min_index/data->numDemands;
             pivot_col = min_index - (pivot_row*data->numDemands);
-            
-            // An incoming edge from vertex = pivot_row to vertex = numSupplies + pivot_col
-            
-            // *******************************************
-            // STEP 2: If not, Traverse tree and find a route
-            // *******************************************
-
-            // BOOK 1: Stores the routes discovered for each thread -
-            int * backtracker = (int *) malloc(sizeof(int)*V);
-            
-            // BOOK 2: Stores the runtime stack for DFS running on each thread
-            stackNode * stack = (stackNode *) malloc(sizeof(stackNode)*V);
-            
-            // BOOK 3: Keeps a track if any vertex was visited during DFS for each thread
-            bool * visited = (bool *) malloc(sizeof(bool)*V);
-            memset(visited, 0, V*sizeof(bool));
-
-            // BOOK 4: Stores length of routes discovered for each thread
-            int depth;
-
-            // SEQUENCIAL PROCEDURE >>
-            backtracker[0] = pivot_row;
-            depth = 1;
-            
-            // Find a loop by performing DFS from pivot_col upto pivot row >>
-            perform_dfs_sequencial_on_i(h_adjMtx_ptr, stack, backtracker, visited, &depth, 
-                pivot_col+data->numSupplies, pivot_row, V);
-            
-            // If loop not discovered >>
-            if (depth <= 1) {
-                std::cout<<" !! Error !! : Degenerate pivot cannot be performed, this is probably not a tree but forest!"<<std::endl;
-                std::cout<<"Solution IS NOT OPTIMAL!"<<std::endl;
-                // view_uvra();
-                // std::cout<<"From : "<<pivot_row<<" | To : "<<pivot_col+data->numSupplies<<std::endl;
-                result = true;
-                return;
-            }
-
-            backtracker[depth] = pivot_row;
-
-            // *******************************************
-            // STEP 3: Performing the pivot operation 
-            // *******************************************
-            // std::cout<<"Pivot Row : "<<pivot_row<<std::endl;
-            // std::cout<<"Pivot Col : "<<pivot_col<<std::endl;
-
-            execute_pivot_on_host(h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, backtracker,
-            pivot_row, pivot_col, depth, V, data->numSupplies, data->numDemands);
-
-            free(backtracker);
-            free(stack);
-            free(visited);
+            std::cout<<"Sequencial Pivoting"<<std::endl;
         }
 
-        else if (PIVOTING_STRATEGY == "parallel") {
-            
-            /*
-            Strategy is to execute multiple pivots at the same time
-            Resolve conflicts through a barrier
-            
-            KERNEL 1: Go to all the cells with negative reduced costs -> find the pivots -> evaluate savings
-            KERNEL 2: 
-            */
-
-            dim3 __blockDim(blockSize, blockSize, 1);
-            dim3 __gridDim(ceil(1.0*data->numDemands/blockSize), ceil(1.0*data->numSupplies/blockSize), 1);
-    
-            thrust::fill(thrust::device, depth, depth + data->numSupplies*data->numDemands, 0);
-            thrust::fill(thrust::device, visited, visited + (V * data->numSupplies*data->numDemands), false);
-
-            find_loops_and_savings <<<__gridDim, __blockDim>>> (d_reducedCosts_ptr, d_adjMtx_ptr, d_flowMtx_ptr, // Lookups 
-                    stack, visited, backtracker,  // Intermediates
-                    depth, loop_minimum,  // Outputs
-                    loop_min_from, loop_min_to, loop_min_id, // Book-keeping sake
-                    data->numSupplies, data->numDemands); // Params
-            cudaDeviceSynchronize(); // xxxxxx - Barrier 1 - xxxxxx
-            
-            // *********************** DEBUG UTILITY - 1 *************** //
-            // Fetch and view dicsovered cycles 
-            // Function: Copy depth, backtrack from device and print
-            
-            // std::cout<<"DEBUG UTIITY - 1 | Viewing Discovered Loops"<<std::endl;
-            // int num_threads_launching = data->numSupplies*data->numDemands;
-
-            // int * h_backtracker = (int *) malloc(num_threads_launching * V * sizeof(int));
-            // int * h_depth = (int *) malloc(num_threads_launching * sizeof(int));
-            // float * h_loop_minimum = (float *) malloc(num_threads_launching * sizeof(float));
-            // int * h_loop_min_from = (int *) malloc(num_threads_launching * sizeof(int));
-            // int * h_loop_min_to = (int *) malloc(num_threads_launching * sizeof(int));
-            // int * h_loop_min_id = (int *) malloc(num_threads_launching * sizeof(int));
-            // h_reduced_costs = (float *) malloc(num_threads_launching * sizeof(float));
-
-            // int num_cycles = 0;
-            
-            // cudaMemcpy(h_backtracker, backtracker, num_threads_launching * V * sizeof(int), cudaMemcpyDeviceToHost);
-            // cudaMemcpy(h_depth, depth, num_threads_launching * sizeof(int), cudaMemcpyDeviceToHost);
-            // cudaMemcpy(h_loop_minimum, loop_minimum, num_threads_launching * sizeof(float), cudaMemcpyDeviceToHost);
-            // cudaMemcpy(h_loop_min_from, loop_min_from, num_threads_launching * sizeof(int), cudaMemcpyDeviceToHost);
-            // cudaMemcpy(h_loop_min_to, loop_min_to, num_threads_launching * sizeof(int), cudaMemcpyDeviceToHost);
-            // cudaMemcpy(h_loop_min_id, loop_min_id, num_threads_launching * sizeof(int), cudaMemcpyDeviceToHost);
-            // cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, num_threads_launching * sizeof(float), cudaMemcpyDeviceToHost);
-
-            // for (int i=0; i < num_threads_launching; i++) {
-            //     int offset = V*i;
-            //     if (h_depth[i] > 0){
-            //         std::cout<<"Thread - "<<i<<" : Depth : "<<h_depth[i]<<" : ";
-            //         for (int j = 0; j <= h_depth[i]; j++) {
-            //             std::cout<<h_backtracker[offset+j]<<" ";
-            //         }
-            //         std::cout<<std::endl;
-            //         std::cout<<"\t Loop Minimum = "<<h_loop_minimum[i]<<" From :"<<h_loop_min_from[i]<<" To : "<<h_loop_min_to[i]<<std::endl;
-            //         std::cout<<"\t Reduced Costs = "<<h_reduced_costs[i]<<std::endl;
-            //         num_cycles++;
-            //     }
-            // }
-
-            // free(h_backtracker);
-            // free(h_depth);
-            // free(h_loop_minimum);
-            // free(h_loop_min_from);
-            // free(h_loop_min_to);
-            // free(h_loop_min_id);
-            // free(h_reduced_costs);
-
-            // std::cout<<"\n"<<num_cycles<<" cycles were discovered!"<<std::endl;
-
-            // *********************** END OF DEBUG UTILITY - 1 *************** //
-
-            // std::cout<<"Parallel Pivoiting : Discovered Loops!"<<std::endl;
-
-            // Resolve Conflicts >>
-
-            thrust::fill(thrust::device, v_conflicts, v_conflicts + V, _vtx_conflict_default);
-
-            // std::cout<<"Parallel Pivoiting : Resolving Conflicts | Running Step 1 (Discover conflicts) ..."<<std::endl;
-            
-            resolve_conflicts_step_1 <<<__gridDim, __blockDim>>> (depth, backtracker, loop_minimum, d_reducedCosts_ptr, 
-                    v_conflicts, data->numSupplies, data->numDemands);
-            cudaDeviceSynchronize(); // xxxxxx - Barrier 2 - xxxxxx
-            
-            // *********************** DEBUG UTILITY - 2 *************** //
-            // Fetch and view v_owner and v_savings 
-            // Function: Copy arrays from device and print
-            
-            // std::cout<<"DEBUG UTIITY - 2 | Viewing Loop Owners"<<std::endl;
-
-            // vertex_conflicts * h_v_savings = (vertex_conflicts *) malloc(V * sizeof(vertex_conflicts));
-            // cudaMemcpy(h_v_savings, v_conflicts,  V * sizeof(vertex_conflicts), cudaMemcpyDeviceToHost);
-
-            // for (int i=0; i < V; i++) {
-            //     std::cout << "Vertex - " << i << " by Thread : " << h_v_savings[i].ints[1]<< std::endl;
-            // }
-
-            // *********************** END OF DEBUG UTILITY - 2 *************** //
-            
-            // std::cout<<"Parallel Pivoiting : Completed Step 1 | Running Step 2 (Resolve Conflicts) ..."<<std::endl;
-            
-            resolve_conflicts_step_2 <<<__gridDim, __blockDim>>> (depth, backtracker, v_conflicts, data->numSupplies, data->numDemands);
-            cudaDeviceSynchronize(); // xxxxxx - Barrier 3 - xxxxxx
-
-            // // *********************** DEBUG UTILITY - 3 *************** //
-            // // Fetch and view the loops that do not conflict and maximize savings 
-            
-            // std::cout<<"DEBUG UTIITY - 3 | Viewing Non-Conflicting loops"<<std::endl;
-
-            // int num_threads_launching2 = data->numSupplies*data->numDemands;
-            // int * h_backtracker2 = (int *) malloc(num_threads_launching2 * V * sizeof(int));
-            // int * h_depth2 = (int *) malloc(num_threads_launching2 * sizeof(int));
-            // float * h_loop_minimum2 = (float *) malloc(num_threads_launching2 * sizeof(float));
-            // int num_cycles2 = 0;
-            
-            // cudaMemcpy(h_backtracker2, backtracker, num_threads_launching2 * V * sizeof(int), cudaMemcpyDeviceToHost);
-            // cudaMemcpy(h_depth2, depth, num_threads_launching2 * sizeof(int), cudaMemcpyDeviceToHost);
-            // cudaMemcpy(h_loop_minimum2, loop_minimum, num_threads_launching2 * sizeof(float), cudaMemcpyDeviceToHost);
-
-            // for (int i=0; i < num_threads_launching2; i++) {
-            //     int offset2 = V*i;
-            //    if (h_depth2[i] > 0){
-            //         std::cout<<"Thread - "<<i<<" : Depth : "<<h_depth2[i]<<" : ";
-            //         for (int j = 0; j < h_depth2[i]; j++) {
-            //             std::cout<<h_backtracker2[offset2+j]<<" ";
-            //         }
-            //         std::cout<<std::endl;
-            //         std::cout<<"\t Loop Minimum = "<<h_loop_minimum2[i]<<std::endl;
-            //        num_cycles2++;
-            //    }
-            // }
-
-            // free(h_backtracker2);
-            // free(h_depth2);
-            // free(h_loop_minimum2);
-
-            // std::cout<<"\n"<<num_cycles2<<" non conflicting cycles were discovered!"<<std::endl;
-
-            // *********************** END OF DEBUG UTILITY - 3 *************** //
-
-            // std::cout<<"Parallel Pivoiting : Conflicts Resolved | Running flow adjustments ..."<<std::endl;
-            
-            // Check if any conflicting pivots exist
-            int _conflict_flag = thrust::reduce(thrust::device, depth, depth + data->numSupplies*data->numDemands, 0);
-            if (_conflict_flag > 0) {
-                
-                // METHOD 1 : RUN ADJUSTMENTS IN PARALLEL
-                run_flow_adjustments <<<__gridDim, __blockDim>>> (d_adjMtx_ptr, d_flowMtx_ptr, depth, backtracker, loop_minimum, 
-                    loop_min_from, loop_min_to, loop_min_id, data->numSupplies, data->numDemands);
-                cudaDeviceSynchronize(); // xxxxxx - Barrier 4 - xxxxxx
-
-                // METHOD 2 : RUN FLOW ADJUSTMENTS IN SEQ on host (for all independent loops)
-                // int * _h_depth = (int *) malloc(data->numSupplies*data->numDemands * sizeof(int));
-                // int * _h_backtracker = (int *) malloc(sizeof(int)*V);
-                // float min_flow;
-                // int min_from, min_to, min_flow_id;
-                // cudaMemcpy(_h_depth, depth, data->numSupplies*data->numDemands * sizeof(int), cudaMemcpyDeviceToHost);
-                
-                // for (int i=0; i < (data->numSupplies*data->numDemands); i++) {
-                //     if (_h_depth[i] > 0) {
-
-                //         int offset = V*i;
-                //         pivot_row =  i/data->numDemands;
-                //         pivot_col = i - (pivot_row*data->numDemands);
-
-                //         cudaMemcpy(_h_backtracker, &backtracker[offset], (_h_depth[i]+1)*sizeof(int), cudaMemcpyDeviceToHost);
-                //         cudaMemcpy(&min_flow, &loop_minimum[i], sizeof(float), cudaMemcpyDeviceToHost);
-                //         cudaMemcpy(&min_from, &loop_min_from[i], sizeof(int), cudaMemcpyDeviceToHost);
-                //         cudaMemcpy(&min_to, &loop_min_to[i], sizeof(int), cudaMemcpyDeviceToHost);
-                //         cudaMemcpy(&min_flow_id, &loop_min_id[i], sizeof(int), cudaMemcpyDeviceToHost);
-                        
-                //         do_flow_adjustment_on_host(h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, _h_backtracker,
-                //             min_flow, min_from, min_to, min_flow_id,
-                //             pivot_row, pivot_col, _h_depth[i], V, data->numSupplies, data->numDemands);
-                        
-                //         // std::cout<<"Adjusted!"<<std::endl;
-                //    }
-                // }
-                // free(_h_depth);
-                // free(_h_backtracker);
-                
-            }
-
-            else {
-                std::cout<<"No independent cycles found!"<<std::endl;
-            }
+        else if (PIVOTING_STRATEGY == "parallel") 
+        {
+            std::cout<<" Parallel Pivoting!" <<std::endl;
         }
+            
         else 
         {
-          std::cout<<"Invalid selection of pivoting strategy"<<std::endl;
-          exit(-1);
+            std::cout<<"Invalid selection of pivoting strategy"<<std::endl;
+            exit(-1);
         }
+
     }
     else 
     {
@@ -1083,86 +224,33 @@ void uvModel_parallel::perform_pivot(bool &result)
     }
 }
 
-/*
-Generate a tree on the global memory using the initial set of feasible flows
-*/
-__global__ void create_initial_tree(flowInformation * d_flows_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr,
-    int numSupplies, int numDemands)
-{
-    
-    int V = numSupplies+numDemands;
-    int gid = blockIdx.x*blockDim.x + threadIdx.x;
-
-    if (gid < V - 1) {
-    
-        flowInformation _this_flow = d_flows_ptr[gid];
-        int row = _this_flow.source;
-        int column =  _this_flow.destination;
-        int idx = TREE_LOOKUP(row, numSupplies+column, V); // Index in adjacency matrix
-        float _qty = 1.0*_this_flow.qty;
-        if (_qty==0){
-            // Handling degeneracy - Flow purturbation
-            _qty=epsilon;
-        }
-        d_flowMtx_ptr[gid] = _qty;
-        d_adjMtx_ptr[idx] = gid+1;
-    }
-}
-
-/*
-Reverse operation of generating a tree from the feasible flows - unordered allocation
-*/
-__global__ void retrieve_final_tree(flowInformation * d_flows_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr,
-        int numSupplies, int numDemands) 
-{
-
-    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
-    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
-    int V = numSupplies+numDemands;
-    
-    // Upper triangle scope of adj matrix
-    if (col_indx < V && col_indx >= numSupplies && row_indx < numSupplies) {
-        
-        // Check if this is a flow edge - 
-        int gid = TREE_LOOKUP(row_indx, col_indx, V);
-        int flow_id = d_adjMtx_ptr[gid];
-        if (flow_id > 0) {
-
-            flowInformation _this_flow;
-            _this_flow.qty = round(d_flowMtx_ptr[flow_id - 1]);
-            _this_flow.source = row_indx;
-            _this_flow.destination = col_indx - numSupplies;
-            d_flows_ptr[flow_id - 1] = _this_flow;
-
-        }
-    }
-}
-
 void uvModel_parallel::execute() 
 {
-    
+    // SIMPLEX ALGORITHM >>
+
     // **************************************
-    // Finding BFS >>
+    // STEP 1: Finding BFS
     // **************************************
     generate_initial_BFS();
-    return;
 
     // **************************************
-    // Modified Distribution Method (u-v method) - parallel (improve the BFS solution)
+    // STEP 2: Modified Distribution Method (u-v method) - parallel/hybrid (improve the BFS solution)
     // **************************************
     
-    // STEP 1 : Allocate relevant memory and transfer the necessary to GPU Memory >>
-    // **************************************
-    std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
+        // STEP 2.0 : Allocate relevant memory and transfer the necessary data to GPU Memory >>
+        //            Perform Pre-Process Operation before pivoting
+        // **************************************
+        std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
 
-        // 1.1 Create and Initialize u and v varaibles 
-    cudaMalloc((void **) &u_vars_ptr, sizeof(float)*data->numSupplies);
-    cudaMalloc((void **) &v_vars_ptr, sizeof(float)*data->numDemands);
-    cudaMalloc((void **) &d_reducedCosts_ptr, sizeof(float)*data->numSupplies*data->numDemands);
-    std::cout<<"\tGenerated shadow price vectors ..."<<std::endl;
-
-        // 1.2 Transfer flows on device and prepare an adjacency and flow matrix >>
-    int _utm_entries = (V*(V+1))/2; // Number of entries in upped triangular matrix 
+        // Follow DUAL_solver for the following
+        initialize_device_DUAL(u_vars_ptr, v_vars_ptr, U_vars, V_vars, d_csr_values, d_csr_columns, d_csr_offsets,
+            d_A, d_b, d_x, nnz, data->numSupplies, data->numDemands);
+        // Container for reduced costs
+        gpuErrchk(cudaMalloc((void **) &d_reducedCosts_ptr, sizeof(float)*data->numSupplies*data->numDemands));
+        // Follow PIVOTING_dfs for the following
+        
+    // 1.2 Transfer flows on device and prepare an adjacency and flow matrix >>
+    int _utm_entries = (V*(V+1))/2; // Number of entries in upper triangular matrix 
     cudaMalloc((void **) &d_adjMtx_ptr, sizeof(int)*_utm_entries); 
     thrust::fill(thrust::device, d_adjMtx_ptr, d_adjMtx_ptr + _utm_entries, 0);
 
@@ -1179,26 +267,6 @@ void uvModel_parallel::execute()
     // Now device_flows are useless; All information about graph is now contained within d_adjMatrix, d_flowMatrix on device =>
     cudaFree(d_flows_ptr);
     
-    // **********************************************************
-    // Pre-Process Operation before pivoting 
-    // **********************************************************
-    // Initialize empty u and v equations using the Variable Data Type >>
-    if (CALCULATE_DUAL=="tree") {
-        cudaMalloc((void **) &U_vars, sizeof(Variable)*data->numSupplies);
-        cudaMalloc((void **) &V_vars, sizeof(Variable)*data->numSupplies);
-    }
-    else if (CALCULATE_DUAL=="lin_solver"){
-
-        cudaMalloc((void **) &d_A, sizeof(float)*V*V);
-        cudaMalloc((void **) &d_b, sizeof(float)*V);
-        cudaMalloc((void**) &d_csr_offsets, (V + 1) * sizeof(int));
-        nnz = 2*V - 1;
-        cudaMalloc((void**) &d_csr_columns, nnz * sizeof(int));
-        cudaMalloc((void**) &d_csr_values,  nnz * sizeof(float));
-        cudaMalloc((void **) &d_x, V * sizeof(float));
-
-    }
-
     // In case of sequencial pivoting - one would need a copy of adjMatrix on the host to traverse the graph
     // IMPORTANT: The sequencial function should ensure that the change made on host must be also made on device
     // if (PIVOTING_STRATEGY == "sequencial") {
@@ -1229,8 +297,6 @@ void uvModel_parallel::execute()
     
     }
 
-    
-
     /* STEP 2 : SIMPLEX IMPROVEMENT 
     // **************************************
         LOOP THORUGH - 
@@ -1260,10 +326,6 @@ void uvModel_parallel::execute()
         // 2.2 
         get_reduced_costs();
         // d_reducedCosts_ptr was populated on device
-        
-        // Debug : 
-        view_uvra();
-        exit(0);
 
         // 2.3
         perform_pivot(result);
@@ -1277,15 +339,15 @@ void uvModel_parallel::execute()
 
     std::cout<<"SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU"<<std::endl;
     
-    // Recreate device flows using the current adjMatrix
-    if (CALCULATE_DUAL=="tree") {
-        cudaFree(U_vars);
-        cudaFree(V_vars);
-    }
-    
-    cudaFree(u_vars_ptr);
-    cudaFree(v_vars_ptr);
+    // ****************************
+    // TERMINATION
+    // **************************** 
+    terminate_DUAL(u_vars_ptr, v_vars_ptr, U_vars, V_vars, 
+        d_csr_values, d_csr_columns, d_csr_offsets, d_A, d_b, d_x);
     cudaFree(d_reducedCosts_ptr);
+
+    
+    
 
     if (PIVOTING_STRATEGY == "parallel")
      {
@@ -1300,6 +362,7 @@ void uvModel_parallel::execute()
         cudaFree(loop_min_to);
     }
 
+    // Recreate device flows using the current adjMatrix
     flowInformation default_flow;
     default_flow.qty = 0;
 
@@ -1346,16 +409,6 @@ void uvModel_parallel::view_uvra()
 {
 
     std::cout<<"Viewing U, V, R and adjMatrix \n *******************************"<<std::endl;
-    
-    // Print reduced costs
-    // float * h_reduced_costs;
-    // h_reduced_costs = (float *) malloc(data->numDemands*data->numSupplies*sizeof(float));
-    // cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, data->numDemands*data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost);
-    // for (int i = 0; i < data->numDemands*data->numSupplies; i++) {
-    //     std::cout << "ReducedCosts[" << i << "] = " << h_reduced_costs[i] << std::endl;
-    // }
-
-    std::cout<<"*****************************"<<std::endl;
 
     // Print U >>
     float * u_vector;
@@ -1373,6 +426,16 @@ void uvModel_parallel::view_uvra()
     cudaMemcpy(v_vector, v_vars_ptr, data->numDemands*sizeof(float), cudaMemcpyDeviceToHost);
     for (int i = 0; i < data->numDemands; i++) {
         std::cout << "V[" << i << "] = " << v_vector[i] << std::endl;
+    }
+
+    std::cout<<"*****************************"<<std::endl;
+
+    // Print reduced costs
+    float * h_reduced_costs;
+    h_reduced_costs = (float *) malloc(data->numDemands*data->numSupplies*sizeof(float));
+    cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, data->numDemands*data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost);
+    for (int i = 0; i < data->numDemands*data->numSupplies; i++) {
+        std::cout << "ReducedCosts[" << i << "] = " << h_reduced_costs[i] << std::endl;
     }
 
     std::cout<<"*****************************"<<std::endl;
@@ -1399,10 +462,10 @@ void uvModel_parallel::view_uvra()
 
     std::cout<<"*****************************"<<std::endl;
     
+    for (int i = 0; i < _V-1; i++) {
+        std::cout << "flowMatrix[" << i << "] = " << h_flowMtx[i] << std::endl;
+    }
 
-    // for (int i = 0; i < _V-1; i++) {
-    //     std::cout << "flowMatrix[" << i << "] = " << h_flowMtx[i] << std::endl;
-    // }
 
     // // Useless later >> 
     // if (depth > 0)
