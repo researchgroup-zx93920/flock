@@ -134,6 +134,37 @@ __host__ void create_IBF_tree_on_host_device(flowInformation * feasible_flows,
     gpuErrchk(cudaMemcpy(*h_flowMtx_ptr, *d_flowMtx_ptr, sizeof(float)*(V-1), cudaMemcpyDeviceToHost));
 }
 
+/*
+Given a feasible tree on device, load a feasible solution to transportation problem on the host
+*/
+__host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
+    int &active_flows, int numSupplies, int numDemands)
+{
+    // Recreate device flows using the current adjMatrix
+    flowInformation default_flow;
+    default_flow.qty = 0;
+
+    flowInformation * d_flows_ptr;
+    gpuErrchk(cudaMalloc((void **) &d_flows_ptr, sizeof(flowInformation)*(numSupplies*numDemands)));
+    thrust::fill(thrust::device, d_flows_ptr, d_flows_ptr + (numSupplies*numDemands), default_flow);
+
+    dim3 __blockDim(blockSize, blockSize, 1);
+    int grid_size = ceil(1.0*(numSupplies+numDemands)/blockSize); // VxV threads
+    dim3 __gridDim(grid_size, grid_size, 1);
+    retrieve_final_tree <<< __gridDim, __blockDim >>> (d_flows_ptr, d_adjMtx_ptr, d_flowMtx_ptr, numSupplies, numDemands);
+    gpuErrchk(cudaPeekAtLastError());
+    gpuErrchk(cudaDeviceSynchronize());
+    
+    // Copy the (flows > 0) back on the host >>
+    auto flow_end = thrust::remove_if(thrust::device,
+        d_flows_ptr, d_flows_ptr + (numSupplies*numDemands), is_zero());
+    int flow_count = flow_end - d_flows_ptr;
+    // Update active flows in result 
+    active_flows = flow_count;
+    gpuErrchk(cudaMemcpy(feasible_flows, d_flows_ptr, (flow_count)*sizeof(flowInformation), cudaMemcpyDeviceToHost));
+
+}
+
 
 // ##################################################
 // SOLVING DUAL >>

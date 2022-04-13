@@ -45,7 +45,7 @@ nwc : Northwest Corner - sequential implementation
 vam : vogel's approximation - parallel regret implementation
 */
 
-#define CALCULATE_DUAL "sparse_linear_solver"
+#define CALCULATE_DUAL "tree"
 /*
 tree : traverse the tree in parallel to find values on verties
 sparse_linear_solver : solve system of lin_equations (sparse linear algebra :: cusparse)

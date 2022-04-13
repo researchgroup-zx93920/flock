@@ -36,6 +36,8 @@ public:
     void execute();
     void create_flows();
 
+    double deviceCommunicationTime;
+
     uvModel_parallel(ProblemInstance * problem, flowInformation * flows);
     ~uvModel_parallel();
 
@@ -121,7 +123,9 @@ private:
     void solve();
 
     // Developer Facility Methods >>
-    void view_uvra();
+    void view_uv();
+    void view_reduced_costs();
+    void view_tree();
 
 };
 

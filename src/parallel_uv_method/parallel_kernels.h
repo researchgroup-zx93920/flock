@@ -31,6 +31,13 @@ __global__ void create_initial_tree(flowInformation * d_flows_ptr, int * d_adjMt
 __global__ void retrieve_final_tree(flowInformation * d_flows_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr,
         int numSupplies, int numDemands);
 
+__host__ void create_IBF_tree_on_host_device(flowInformation * feasible_flows,
+    int ** d_adjMtx_ptr, int ** h_adjMtx_ptr, float ** d_flowMtx_ptr, float ** h_flowMtx_ptr, 
+    int numSupplies, int numDemands);
+
+__host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
+    int &active_flows, int numSupplies, int numDemands);
+
 // ##################################################
 // SOLVING DUAL >>
 // ##################################################

@@ -134,6 +134,8 @@ void readCosts(ProblemInstance &problem)
 void make_problem(InputParser input, ProblemInstance &problem)
 {
 
+    auto start = std::chrono::high_resolution_clock::now();
+    
     get_input_mode_and_filename(input, problem);
     // does filePath actually exist?
     if (boost::filesystem::exists(problem.filename))
@@ -154,6 +156,9 @@ void make_problem(InputParser input, ProblemInstance &problem)
 
     get_algorithm(input, problem);
 
-    // Set some attributes to default values >>
-    problem.active_flows = problem.numSupplies + problem.numDemands - 1;
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    problem.readTime += duration.count();
+    problem.active_flows = problem.numSupplies + problem.numDemands - 1; 
+
 }

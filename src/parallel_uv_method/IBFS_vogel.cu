@@ -217,8 +217,6 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
             device_colSegments.begin(), device_colSegments.end(),
             device_costMatrixColBook.begin());
 
-        cudaDeviceSynchronize();
-
         /* ***************************************************
                 DEBUG UTILITY
         *************************************************** */

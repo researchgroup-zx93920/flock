@@ -87,7 +87,7 @@ void lpModel::get_dual_costs()
 void lpModel::solve()
 {
 	BOOST_LOG_TRIVIAL(debug) << "Starting Solver";
-	auto start = std::chrono::high_resolution_clock::now();
+	
 	model->set(GRB_DoubleParam_TimeLimit, GRB_TIMEOUT);
 	
 	if (DISABLE_AUTOGRB == 1){
@@ -97,9 +97,6 @@ void lpModel::solve()
 	}
 
 	model->optimize();
-	auto end = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	data->solveTime = duration.count();
 
 	int optim_status = model->get(GRB_IntAttr_Status);
 	if (optim_status == 9)
@@ -126,6 +123,8 @@ void lpModel::create_flows()
 	if (solved)
 	{	
 		BOOST_LOG_TRIVIAL(debug) << "verified model = solved";
+		auto start = std::chrono::high_resolution_clock::now();
+		
 		int _counter = 0;
 		for (int i = 0; i < data->numSupplies; i++)
 		{
@@ -142,20 +141,40 @@ void lpModel::create_flows()
 			}
 		}
 
+		auto end = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		data->postprocessTime += duration.count();
 		data->active_flows = _counter;
 	
 	}
-	else {
+	else 
+	{
 		BOOST_LOG_TRIVIAL(error) << "Model is not yet solved";
 	}
+
 }
 
 void lpModel::execute()
 {
 	BOOST_LOG_TRIVIAL(info) << "Executing LP Model ... ";
+
+	auto start = std::chrono::high_resolution_clock::now();
+
 	create_variables();
 	add_constraints();
 	add_objective();
+
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	data->preprocessTime += duration.count();
+	
+	start = std::chrono::high_resolution_clock::now();
+	
 	solve();
+
+	end = std::chrono::high_resolution_clock::now();
+	duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	data->solveTime += duration.count();
+
 	BOOST_LOG_TRIVIAL(debug) << "LP Model was successfully solved!";
 }
