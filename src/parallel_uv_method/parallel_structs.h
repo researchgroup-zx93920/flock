@@ -19,6 +19,8 @@
 #include <thrust/remove.h>
 #include <thrust/execution_policy.h>
 
+#include "../structs.h"
+
 // Profiling
 // #include <nvToolsExt.h>
 
@@ -43,10 +45,11 @@ nwc : Northwest Corner - sequential implementation
 vam : vogel's approximation - parallel regret implementation
 */
 
-#define CALCULATE_DUAL "lin_solver"
+#define CALCULATE_DUAL "sparse_linear_solver"
 /*
 tree : traverse the tree in parallel to find values on verties
-lin_solver : solve system of lin_equations
+sparse_linear_solver : solve system of lin_equations (sparse linear algebra :: cusparse)
+dense_linear_solver : solve system of lin_equations (dense linear algebra :: cublas)
 */
 
 #define PIVOTING_STRATEGY "sequencial"
@@ -55,7 +58,7 @@ sequencial : perform pivoting one at a time based on dantzig's rule
 parallel : perform parallel pivoting
 */
 
-#define MAX_ITERATIONS 0
+#define MAX_ITERATIONS 1
 
 // >>>>>>>>>> END OF PARAMETERS // 
 

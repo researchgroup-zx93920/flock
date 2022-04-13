@@ -6,15 +6,14 @@ and all of this will suddenly make sense
 
 #include <iostream>
 
-#include "../structs.h"
 #include "parallel_structs.h"
 #include "parallel_kernels.h"
 
 // ALLOCATE and DE-ALLOCATE RESOURCES
-__host__ void initialize_device_DUAL(float * u_vars_ptr, float * v_vars_ptr, 
-        Variable * U_vars, Variable * V_vars, 
-        float * d_csr_values, int * d_csr_columns, int * d_csr_offsets,
-        float * d_A, float * d_b, float * d_x, int &nnz, int numSupplies, int numDemands);
+__host__ void initialize_device_DUAL(float ** u_vars_ptr, float ** v_vars_ptr, 
+        Variable ** U_vars, Variable ** V_vars, 
+        float ** d_csr_values, int ** d_csr_columns, int ** d_csr_offsets,
+        float ** d_A, float ** d_b, float ** d_x, int64_t &nnz, int numSupplies, int numDemands);
 
 __host__ void terminate_DUAL(float * u_vars_ptr, float * v_vars_ptr, 
         Variable * U_vars, Variable * V_vars, 
@@ -32,7 +31,7 @@ __host__ void find_dual_using_tree(float * u_vars_ptr, float * v_vars_ptr,
 __host__ void find_dual_using_sparse_solver(float * u_vars_ptr, float * v_vars_ptr, 
         float * d_costs_ptr, int * d_adjMtx_ptr,
         float * d_csr_values, int * d_csr_columns, int * d_csr_offsets, float * d_x, float * d_b, 
-        int numSupplies, int numDemands);
+        int64_t nnz, int numSupplies, int numDemands);
 
 __host__ void find_dual_using_dense_solver(float * u_vars_ptr, float * v_vars_ptr, 
         float * d_costs_ptr, int * d_adjMtx_ptr,

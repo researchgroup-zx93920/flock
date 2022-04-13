@@ -1,13 +1,12 @@
 #include <iostream>
 #include <chrono>
 
-#include "../structs.h"
 #include "parallel_structs.h"
 #include "parallel_kernels.h"
 #include "IBFS_vogel.h"
 #include "IBFS_nwc.h"
 #include "DUAL_solver.h"
-#include "PIVOT_dfs.h"
+// #include "PIVOT_dfs.h"
 
 /*
 Algorithm alternative to solve transportation problem
@@ -47,7 +46,6 @@ private:
     int V;
 
     // Containers for data exchange between functions 
-        flowInformation * d_flows_ptr; // pointer to flow variables on device
         MatrixCell * costMatrix; // Useful for initial basic feasible solution (IBFS)
     
         // Adjacency matrix and flow matrix together represent the feasible tree
@@ -89,7 +87,6 @@ private:
         int * d_csr_offsets, * d_csr_columns;
         float * d_csr_values, * d_x, * d_A, * d_b;
         int64_t nnz;
-        int singularity;
 
         // DUAL :: Solving using a breadth first traversal on Tree
         Variable * U_vars, * V_vars;

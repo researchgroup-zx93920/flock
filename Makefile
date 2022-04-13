@@ -26,9 +26,10 @@ seq_simplex.o:
 parallel_method.o:
 	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/uv_model_parallel.cu -o ./bin/uv_model_parallel.o
 	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/DUAL_solver.cu -o ./bin/DUAL_solver.o
-	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/PIVOT_dfs.cu -o ./bin/PIVOT_dfs.o
+	# $(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/PIVOT_dfs.cu -o ./bin/PIVOT_dfs.o
 	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/IBFS_nwc.cu -o ./bin/IBFS_nwc.o
 	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/IBFS_vogel.cu -o ./bin/IBFS_vogel.o
+	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/parallel_kernels.cu -o ./bin/parallel_kernels.o
 	$(CUDA_COMPILER) -c $(SRC)/parallel_uv_method/parallel_structs.cu -o ./bin/parallel_structs.o
 
 ensureDir:

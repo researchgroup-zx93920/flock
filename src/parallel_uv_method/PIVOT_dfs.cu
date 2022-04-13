@@ -1,5 +1,43 @@
 #include "PIVOT_dfs.h"
 
+
+__host__ void Initialize_pivoting() {
+    if (PIVOTING_STRATEGY == "parallel") {
+
+        // Allocate appropriate resources >>
+        int num_threads_launching = data->numSupplies*data->numDemands;
+        cudaMalloc((void **) &backtracker, num_threads_launching * V * sizeof(int));
+        cudaMalloc((void **) &depth, num_threads_launching * sizeof(int));
+        cudaMalloc((void **) &loop_minimum, num_threads_launching * sizeof(float));
+        cudaMalloc((void **) &loop_min_from, num_threads_launching * sizeof(int));
+        cudaMalloc((void **) &loop_min_to, num_threads_launching * sizeof(int));
+        cudaMalloc((void **) &loop_min_id, num_threads_launching * sizeof(int));
+        cudaMalloc((void **) &stack, num_threads_launching * V * sizeof(stackNode));
+        cudaMalloc((void **) &visited, num_threads_launching * V * sizeof(bool));
+        cudaMalloc((void **) &v_conflicts, V * sizeof(vertex_conflicts));
+        _vtx_conflict_default.floats[0] = FLT_MAX;
+        _vtx_conflict_default.ints[1] = -1;
+        std::cout<<"\tParallel Pivoting : Allocated Resources on Device"<<std::endl;
+    
+    }
+
+}
+
+__host__ void terminate_PIVOT() {
+    if (PIVOTING_STRATEGY == "parallel")
+     {
+        // Free up space >>
+        cudaFree(stack);
+        cudaFree(visited);
+        cudaFree(v_conflicts);
+        cudaFree(backtracker);
+        cudaFree(depth);
+        cudaFree(loop_minimum);
+        cudaFree(loop_min_from);
+        cudaFree(loop_min_to);
+    }
+}
+
 /*
 Push a node in the provided stack
 */

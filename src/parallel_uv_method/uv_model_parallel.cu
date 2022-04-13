@@ -132,7 +132,7 @@ void uvModel_parallel::solve_uv()
         2. Solve the sparse system A_csr * x = b // cuSparse solver
         */
         find_dual_using_sparse_solver(u_vars_ptr, v_vars_ptr, d_costs_ptr, d_adjMtx_ptr,
-            d_csr_values, d_csr_columns, d_csr_offsets, d_x, d_b, 
+            d_csr_values, d_csr_columns, d_csr_offsets, d_x, d_b, nnz,
             data->numSupplies, data->numDemands);
     }
 
@@ -224,6 +224,9 @@ void uvModel_parallel::perform_pivot(bool &result)
     }
 }
 
+
+
+
 void uvModel_parallel::execute() 
 {
     // SIMPLEX ALGORITHM >>
@@ -233,140 +236,93 @@ void uvModel_parallel::execute()
     // **************************************
     generate_initial_BFS();
 
-    // **************************************
-    // STEP 2: Modified Distribution Method (u-v method) - parallel/hybrid (improve the BFS solution)
-    // **************************************
+    /* **************************************
+    STEP 2: Modified Distribution Method (u-v method) - parallel/hybrid (improve the BFS solution)
+    **************************************
+    LOOP THORUGH - 
+        2.1 Use the current tree on device and solve u's and v's
+        2.2 Compute Reduced costs
+            2.3.1 If no - negative reduced costs - break the loop
+            2.3.2 If there exist negative reduced costs -
+                Perform a pivot operation (more details on the corresponding function) */
     
-        // STEP 2.0 : Allocate relevant memory and transfer the necessary data to GPU Memory >>
+        
+        // **************************************
+        // INITIALIZE STEP 2 : Allocate relevant memory and transfer the necessary data to GPU Memory >>
         //            Perform Pre-Process Operation before pivoting
         // **************************************
         std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
 
         // Follow DUAL_solver for the following
-        initialize_device_DUAL(u_vars_ptr, v_vars_ptr, U_vars, V_vars, d_csr_values, d_csr_columns, d_csr_offsets,
-            d_A, d_b, d_x, nnz, data->numSupplies, data->numDemands);
+        initialize_device_DUAL(&u_vars_ptr, &v_vars_ptr, &U_vars, &V_vars, &d_csr_values, &d_csr_columns, &d_csr_offsets,
+            &d_A, &d_b, &d_x, nnz, data->numSupplies, data->numDemands);
+        std::cout<<"\tSuccessfully allocated Resources for DUAL ..."<<std::endl;
+
         // Container for reduced costs
         gpuErrchk(cudaMalloc((void **) &d_reducedCosts_ptr, sizeof(float)*data->numSupplies*data->numDemands));
+        std::cout<<"\tSuccessfully allocated Resources for Reduced costs ..."<<std::endl;
+
+        // Create tree structure on host device (for pivoting)
+        create_IBF_tree_on_host_device(feasible_flows, 
+            &d_adjMtx_ptr, &h_adjMtx_ptr, &d_flowMtx_ptr, &h_flowMtx_ptr, 
+            data->numSupplies, data->numDemands);
+        std::cout<<"\tGenerated initial tree (on host & device) ..."<<std::endl;
         // Follow PIVOTING_dfs for the following
+        // initialize_pivoting();
+
+        bool result = false;
+        int iteration_counter = 0;
         
-    // 1.2 Transfer flows on device and prepare an adjacency and flow matrix >>
-    int _utm_entries = (V*(V+1))/2; // Number of entries in upper triangular matrix 
-    cudaMalloc((void **) &d_adjMtx_ptr, sizeof(int)*_utm_entries); 
-    thrust::fill(thrust::device, d_adjMtx_ptr, d_adjMtx_ptr + _utm_entries, 0);
+        // **************************************
+        // LOOP STEP 2 : SIMPLEX PROCEDURE
+        // **************************************
+        std::cout<<"SIMPLEX PASS 2 :: find the dual -> reduced -> pivots -> repeat!"<<std::endl;
+        result = false;
+        
+        auto start = std::chrono::high_resolution_clock::now();
+        while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
-    cudaMalloc((void **) &d_flowMtx_ptr, sizeof(float)*(V-1));
-    thrust::fill(thrust::device, d_flowMtx_ptr, d_flowMtx_ptr + (V-1), 0);
+            std::cout<<"Iteration :"<<iteration_counter<<std::endl;
 
-    cudaMalloc((void **) &d_flows_ptr, sizeof(flowInformation)*(V-1));
-    cudaMemcpy(d_flows_ptr, feasible_flows, sizeof(flowInformation)*(V-1), cudaMemcpyHostToDevice);
+            // 2.1 
+            solve_uv();
 
-        // 1.3 Small kernel to parallely create a tree using the flows
-    create_initial_tree <<< ceil(1.0*(V-1)/blockSize), blockSize >>> (d_flows_ptr, d_adjMtx_ptr, d_flowMtx_ptr, 
-                            data->numSupplies, data->numDemands);
-    std::cout<<"\tGenerated initial tree ..."<<std::endl;
-    // Now device_flows are useless; All information about graph is now contained within d_adjMatrix, d_flowMatrix on device =>
-    cudaFree(d_flows_ptr);
-    
-    // In case of sequencial pivoting - one would need a copy of adjMatrix on the host to traverse the graph
-    // IMPORTANT: The sequencial function should ensure that the change made on host must be also made on device
-    // if (PIVOTING_STRATEGY == "sequencial") {
-    
-    h_adjMtx_ptr = (int *) malloc(sizeof(int)*(_utm_entries));
-    cudaMemcpy(h_adjMtx_ptr, d_adjMtx_ptr, sizeof(int)*(_utm_entries), cudaMemcpyDeviceToHost);
-    
-    h_flowMtx_ptr = (float *) malloc(sizeof(float)*(V-1));
-    cudaMemcpy(h_flowMtx_ptr, d_flowMtx_ptr, sizeof(float)*(V-1), cudaMemcpyDeviceToHost);
-    
-    // }
-    if (PIVOTING_STRATEGY == "parallel") {
+            // NOTE:: This method cannot be called before this step because of memory allocations above
+            // u_vars_ptr and v_vars ptr were populated on device
 
-        // Allocate appropriate resources >>
-        int num_threads_launching = data->numSupplies*data->numDemands;
-        cudaMalloc((void **) &backtracker, num_threads_launching * V * sizeof(int));
-        cudaMalloc((void **) &depth, num_threads_launching * sizeof(int));
-        cudaMalloc((void **) &loop_minimum, num_threads_launching * sizeof(float));
-        cudaMalloc((void **) &loop_min_from, num_threads_launching * sizeof(int));
-        cudaMalloc((void **) &loop_min_to, num_threads_launching * sizeof(int));
-        cudaMalloc((void **) &loop_min_id, num_threads_launching * sizeof(int));
-        cudaMalloc((void **) &stack, num_threads_launching * V * sizeof(stackNode));
-        cudaMalloc((void **) &visited, num_threads_launching * V * sizeof(bool));
-        cudaMalloc((void **) &v_conflicts, V * sizeof(vertex_conflicts));
-        _vtx_conflict_default.floats[0] = FLT_MAX;
-        _vtx_conflict_default.ints[1] = -1;
-        std::cout<<"\tParallel Pivoting : Allocated Resources on Device"<<std::endl;
-    
-    }
+            // 2.2 
+            get_reduced_costs();
+            // d_reducedCosts_ptr was populated on device
+            
+            // view_uvra();
 
-    /* STEP 2 : SIMPLEX IMPROVEMENT 
-    // **************************************
-        LOOP THORUGH - 
-            2.1 Use the current tree on device and solve u's and v's
-            2.2 Compute Reduced costs
-                2.3.1 If no - negative reduced costs - break the loop
-                2.3.2 If there exist negative reduced costs -
-                    Perform a pivot operation (more details on the corresponding function)
-    */
-    bool result = false;
-    int iteration_counter = 0;
-    auto start = std::chrono::high_resolution_clock::now();
+            // 2.3
+            perform_pivot(result);
+            iteration_counter++;
+        }
 
-    // STEP 2 Implemented Here ->
-    std::cout<<"SIMPLEX PASS 2 :: find the dual -> reduced -> pivots -> repeat!"<<std::endl;
-    result = false;
-    while ((!result) && iteration_counter < MAX_ITERATIONS) {
-        // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
-        view_uvra();
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        double solution_time = duration.count();
+        std::cout<<"\tSimplex completed in : "<<solution_time<<" millisecs. and "<<iteration_counter<<" iterations."<<std::endl;
 
-        // 2.1 
-        solve_uv(); 
+        std::cout<<"SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU"<<std::endl;
+        
+        // ****************************
+        // TERMINATION
+        // **************************** 
+        terminate_DUAL(u_vars_ptr, v_vars_ptr, U_vars, V_vars, 
+            d_csr_values, d_csr_columns, d_csr_offsets, d_A, d_b, d_x);
+        // terminate_PIVOT();
+        cudaFree(d_reducedCosts_ptr);
 
-        // NOTE:: This method cannot be called before this step because of memory allocations above
-        // u_vars_ptr and v_vars ptr were populated on device
-
-        // 2.2 
-        get_reduced_costs();
-        // d_reducedCosts_ptr was populated on device
-
-        // 2.3
-        perform_pivot(result);
-        iteration_counter++;
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	double solution_time = duration.count();
-    std::cout<<"\tSimplex completed in : "<<solution_time<<" millisecs. and "<<iteration_counter<<" iterations."<<std::endl;
-
-    std::cout<<"SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU"<<std::endl;
-    
-    // ****************************
-    // TERMINATION
-    // **************************** 
-    terminate_DUAL(u_vars_ptr, v_vars_ptr, U_vars, V_vars, 
-        d_csr_values, d_csr_columns, d_csr_offsets, d_A, d_b, d_x);
-    cudaFree(d_reducedCosts_ptr);
-
-    
-    
-
-    if (PIVOTING_STRATEGY == "parallel")
-     {
-        // Free up space >>
-        cudaFree(stack);
-        cudaFree(visited);
-        cudaFree(v_conflicts);
-        cudaFree(backtracker);
-        cudaFree(depth);
-        cudaFree(loop_minimum);
-        cudaFree(loop_min_from);
-        cudaFree(loop_min_to);
-    }
 
     // Recreate device flows using the current adjMatrix
     flowInformation default_flow;
     default_flow.qty = 0;
 
-    cudaMalloc((void **) &d_flows_ptr, sizeof(flowInformation)*(data->numSupplies*data->numDemands));
+    flowInformation * d_flows_ptr;
+    gpuErrchk(cudaMalloc((void **) &d_flows_ptr, sizeof(flowInformation)*(data->numSupplies*data->numDemands)));
     thrust::fill(thrust::device, d_flows_ptr, d_flows_ptr + (data->numSupplies*data->numDemands), default_flow);
 
     dim3 __blockDim(blockSize, blockSize, 1);
@@ -374,7 +330,8 @@ void uvModel_parallel::execute()
     dim3 __gridDim(grid_size, grid_size, 1);
     retrieve_final_tree <<< __gridDim, __blockDim >>> (d_flows_ptr, d_adjMtx_ptr, d_flowMtx_ptr, 
         data->numSupplies, data->numDemands);
-    cudaDeviceSynchronize();
+    gpuErrchk(cudaPeekAtLastError());
+    gpuErrchk(cudaDeviceSynchronize());
     
     // Copy the (flows > 0) back on the host >>
     auto flow_end = thrust::remove_if(thrust::device,
@@ -382,7 +339,7 @@ void uvModel_parallel::execute()
     int flow_count = flow_end - d_flows_ptr;
     std::cout<<"\tFound "<<flow_count<<" active flows in the final result"<<std::endl;
     data->active_flows = flow_count;
-    cudaMemcpy(feasible_flows, d_flows_ptr, (data->active_flows)*sizeof(flowInformation), cudaMemcpyDeviceToHost);
+    gpuErrchk(cudaMemcpy(feasible_flows, d_flows_ptr, (data->active_flows)*sizeof(flowInformation), cudaMemcpyDeviceToHost));
 
     double objval = 0.0;
     for (int i=0; i< (data->active_flows); i++){
@@ -413,7 +370,7 @@ void uvModel_parallel::view_uvra()
     // Print U >>
     float * u_vector;
     u_vector = (float *) malloc(data->numSupplies*sizeof(float));
-    cudaMemcpy(u_vector, u_vars_ptr, data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost);
+    gpuErrchk(cudaMemcpy(u_vector, u_vars_ptr, data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost));
     for (int i = 0; i < data->numSupplies; i++) {
         std::cout << "U[" << i << "] = " << u_vector[i] << std::endl;
     }
@@ -423,7 +380,7 @@ void uvModel_parallel::view_uvra()
     // Print V >>
     float * v_vector;
     v_vector = (float *) malloc(data->numDemands*sizeof(float));
-    cudaMemcpy(v_vector, v_vars_ptr, data->numDemands*sizeof(float), cudaMemcpyDeviceToHost);
+    gpuErrchk(cudaMemcpy(v_vector, v_vars_ptr, data->numDemands*sizeof(float), cudaMemcpyDeviceToHost));
     for (int i = 0; i < data->numDemands; i++) {
         std::cout << "V[" << i << "] = " << v_vector[i] << std::endl;
     }
@@ -433,7 +390,7 @@ void uvModel_parallel::view_uvra()
     // Print reduced costs
     float * h_reduced_costs;
     h_reduced_costs = (float *) malloc(data->numDemands*data->numSupplies*sizeof(float));
-    cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, data->numDemands*data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost);
+    gpuErrchk(cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, data->numDemands*data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost));
     for (int i = 0; i < data->numDemands*data->numSupplies; i++) {
         std::cout << "ReducedCosts[" << i << "] = " << h_reduced_costs[i] << std::endl;
     }
@@ -446,10 +403,10 @@ void uvModel_parallel::view_uvra()
     int _V = data->numSupplies+data->numDemands;
     
     h_adjMtx = (int *) malloc(((_V*(_V+1))/2)*sizeof(int));
-    cudaMemcpy(h_adjMtx, d_adjMtx_ptr, ((_V*(_V+1))/2)*sizeof(int), cudaMemcpyDeviceToHost);
+    gpuErrchk(cudaMemcpy(h_adjMtx, d_adjMtx_ptr, ((_V*(_V+1))/2)*sizeof(int), cudaMemcpyDeviceToHost));
 
     h_flowMtx = (float *) malloc((_V-1)*sizeof(float));
-    cudaMemcpy(h_flowMtx, d_flowMtx_ptr, (_V-1)*sizeof(float), cudaMemcpyDeviceToHost);
+    gpuErrchk(cudaMemcpy(h_flowMtx, d_flowMtx_ptr, (_V-1)*sizeof(float), cudaMemcpyDeviceToHost));
 
     for (int i = 0; i < _V; i++) {
         for (int j = i; j < _V; j++) {

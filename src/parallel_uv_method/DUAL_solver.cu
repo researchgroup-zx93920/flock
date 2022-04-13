@@ -1,22 +1,22 @@
 #include "DUAL_solver.h"
 
 
-__host__ void initilize_device_DUAL(float * u_vars_ptr, float * v_vars_ptr, 
-        Variable * U_vars, Variable * V_vars, 
-        float * d_csr_values, int * d_csr_columns, int * d_csr_offsets,
-        float * d_A, float * d_b, float * d_x, int &nnz, int numSupplies, int numDemands) {
+__host__ void initialize_device_DUAL(float ** u_vars_ptr, float ** v_vars_ptr, 
+        Variable ** U_vars, Variable ** V_vars, 
+        float ** d_csr_values, int ** d_csr_columns, int ** d_csr_offsets,
+        float ** d_A, float ** d_b, float ** d_x, int64_t &nnz, int numSupplies, int numDemands) {
     
     int V = numSupplies + numDemands;
     // Create and Initialize u and v variables 
     // To be allocated regardless 
-    gpuErrchk(cudaMalloc((void **) &u_vars_ptr, sizeof(float)*numSupplies));
-    gpuErrchk(cudaMalloc((void **) &v_vars_ptr, sizeof(float)*numDemands));
+    gpuErrchk(cudaMalloc((void **) u_vars_ptr, sizeof(float)*numSupplies));
+    gpuErrchk(cudaMalloc((void **) v_vars_ptr, sizeof(float)*numDemands));
 
     if (CALCULATE_DUAL=="tree") {
 
         //  empty u and v equations using the Variable Data Type >>
-        gpuErrchk(cudaMalloc((void **) &U_vars, sizeof(Variable)*numSupplies));
-        gpuErrchk(cudaMalloc((void **) &V_vars, sizeof(Variable)*numDemands));
+        gpuErrchk(cudaMalloc((void **) U_vars, sizeof(Variable)*numSupplies));
+        gpuErrchk(cudaMalloc((void **) V_vars, sizeof(Variable)*numDemands));
     }
 
     else if (CALCULATE_DUAL=="sparse_linear_solver") {
@@ -28,35 +28,33 @@ __host__ void initilize_device_DUAL(float * u_vars_ptr, float * v_vars_ptr,
         nnz = 2*V - 1;
 
         // Values are coefs of u and v, which are always one only position and b-vector changes with iterations, So
-        gpuErrchk(cudaMalloc((void**) &d_csr_values,  nnz * sizeof(float)));
-        thrust::fill(thrust::device, d_csr_values, d_csr_values + nnz, 1.0);
+        gpuErrchk(cudaMalloc((void**) d_csr_values,  nnz * sizeof(float)));
+        thrust::fill(thrust::device, *d_csr_values, (*d_csr_values) + nnz, 1.0);
 
         // U_0 is always set to zero - meaning first element is always 0,0 in csr
-        gpuErrchk(cudaMalloc((void**) &d_csr_columns, nnz * sizeof(int)));
-        gpuErrchk(cudaMemcpy(&d_csr_columns[0], &U_0, sizeof(int), cudaMemcpyHostToDevice));
+        gpuErrchk(cudaMalloc((void**) d_csr_columns, nnz * sizeof(int)));
+        gpuErrchk(cudaMemcpy(*d_csr_columns, &U_0, sizeof(int), cudaMemcpyHostToDevice));
 
         // The row pointers also remain constant {0,1,3,5, ... , 2V-1}, Custom Filler kernel below
-        gpuErrchk(cudaMalloc((void**) &d_csr_offsets, (V + 1) * sizeof(int)));
-        fill_csr_offset <<< ceil(1.0*(V+1)/blockSize), blockSize >>> (d_csr_offsets, V+1);
+        gpuErrchk(cudaMalloc((void**) d_csr_offsets, (V + 1) * sizeof(int)));
+        fill_csr_offset <<< ceil(1.0*(V+1)/blockSize), blockSize >>> (*d_csr_offsets, V+1);
         gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
 
-        gpuErrchk(cudaMalloc((void **) &d_b, sizeof(float)*V));
-        gpuErrchk(cudaMemcpy(&d_b[0], &U_0_value, sizeof(float), cudaMemcpyHostToDevice));
+        gpuErrchk(cudaMalloc((void **) d_b, sizeof(float)*V));
+        gpuErrchk(cudaMemcpy(*d_b, &U_0_value, sizeof(float), cudaMemcpyHostToDevice));
         
         // d_x is only allocated here - it is to be populated by API's
-        gpuErrchk(cudaMalloc((void **) &d_x, V * sizeof(float)));
+        gpuErrchk(cudaMalloc((void **) d_x, V * sizeof(float)));
     }
 
     else if (CALCULATE_DUAL=="dense_linear_solver") {
 
         // Allocate memory to store the dense linear system
-        gpuErrchk(cudaMalloc((void **) &d_A, sizeof(float)*V*V));
-        gpuErrchk(cudaMalloc((void **) &d_b, sizeof(float)*V));
-        gpuErrchk(cudaMalloc((void **) &d_x, V * sizeof(float)));
+        gpuErrchk(cudaMalloc((void **) d_A, sizeof(float)*V*V));
+        gpuErrchk(cudaMalloc((void **) d_b, sizeof(float)*V));
+        gpuErrchk(cudaMalloc((void **) d_x, V * sizeof(float)));
     }
-
-    std::cout<<"Successfully allocated Resources for DUAL ..."<<std::endl;
 }
 
 __host__ void terminate_DUAL(float * u_vars_ptr, float * v_vars_ptr, 
@@ -136,16 +134,44 @@ __host__ void find_dual_using_tree(float * u_vars_ptr, float * v_vars_ptr,
 __host__ void find_dual_using_sparse_solver(float * u_vars_ptr, float * v_vars_ptr, 
         float * d_costs_ptr, int * d_adjMtx_ptr,
         float * d_csr_values, int * d_csr_columns, int * d_csr_offsets, float * d_x, float * d_b, 
-        int numSupplies, int numDemands)
+        int64_t nnz, int numSupplies, int numDemands)
 {
-        
+        int V = numSupplies + numDemands;
+
         // Nice thing is that csr values and offsets remain static over the iterations
         dim3 __blockDim(blockSize, blockSize, 1); 
-        dim3 __gridDim(ceil(1.0*>numDemands/blockSize), ceil(1.0*numSupplies/blockSize), 1);
+        dim3 __gridDim(ceil(1.0*numDemands/blockSize), ceil(1.0*numSupplies/blockSize), 1);
         initialize_sparse_u_v_system <<< __gridDim, __blockDim >>> (d_csr_columns, d_b, d_adjMtx_ptr, d_costs_ptr, 
                 numSupplies, numDemands);
         gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
+
+
+        /* *********************
+        DEBUG UTILITY :: Print the csr matrix for u-v system
+         ************************/
+        // float * h_csr_values = (float *) malloc(sizeof(float)*nnz);
+        // int * h_csr_columns = (int *) malloc(sizeof(int)*nnz);
+        // int * h_csr_offsets = (int *) malloc(sizeof(int)*(V+1));
+        // gpuErrchk(cudaMemcpy(h_csr_values, d_csr_values, sizeof(float)*nnz, cudaMemcpyDeviceToHost));
+        // gpuErrchk(cudaMemcpy(h_csr_columns, d_csr_columns, sizeof(int)*nnz, cudaMemcpyDeviceToHost));
+        // gpuErrchk(cudaMemcpy(h_csr_offsets, d_csr_offsets, sizeof(int)*(V+1), cudaMemcpyDeviceToHost));
+        // std::cout<<"CSR Values = [";
+        // for (int i =0; i< nnz; i++){
+        //         std::cout<<h_csr_values[i]<<", ";
+        // }
+        // std::cout<<"]"<<std::endl;
+        // std::cout<<"CSR Columns = [";
+        // for (int i =0; i< nnz; i++){
+        //         std::cout<<h_csr_columns[i]<<", ";
+        // }
+        // std::cout<<"]"<<std::endl;
+        // std::cout<<"CSR Offsets = [";
+        // for (int i =0; i < V+1; i++){
+        //         std::cout<<h_csr_offsets[i]<<", ";
+        // }
+        // std::cout<<"]"<<std::endl;
+        /* ********** END OF UTILITY ************* */
 
         // Core >>		
         cusolverSpHandle_t solver_handle;
@@ -160,7 +186,7 @@ __host__ void find_dual_using_sparse_solver(float * u_vars_ptr, float * v_vars_p
 
 	CUSOLVER_CHECK(cusolverSpScsrlsvqr(solver_handle, V, nnz, descrA, 
                                         d_csr_values, d_csr_offsets, d_csr_columns, d_b, 
-                                        10e-6, 0, d_x, &singularity))
+                                        10e-6, 0, d_x, &singularity));
 
         if (singularity == -1) {
 
@@ -173,8 +199,8 @@ __host__ void find_dual_using_sparse_solver(float * u_vars_ptr, float * v_vars_p
         
         else {
         
-                std::cout<<"!! Unexpected ERROR :: Matrix A is singular !!"<<std::endl;
-                std::cout<<"Return singularity = "<<singularity<<std::endl;
+                std::cout<<" ========== !! Unexpected ERROR :: Matrix A is singular !!"<<std::endl;
+                std::cout<<" ========== Return singularity = "<<singularity<<std::endl;
                 exit(0);
                 // float * h_x = (float *) malloc(sizeof(float)*V);
                 // cudaMemcpy(h_x, d_x, sizeof(float)*V, cudaMemcpyDeviceToHost);
@@ -190,13 +216,13 @@ __host__ void find_dual_using_dense_solver(float * u_vars_ptr, float * v_vars_pt
         float * d_A, float * d_x, float * d_b, 
         int numSupplies, int numDemands) 
 {
-
-        thrust::fill(thrust::device, d_A, d_A + (V * V), 0.0);
-        thrust::fill(thrust::device, d_b, d_b + (V), 0.0);
+        int V = numSupplies + numDemands;
+        thrust::fill(thrust::device, d_A, d_A + (V * V), 0.0f);
+        thrust::fill(thrust::device, d_b, d_b + (V), 0.0f);
 
         // Nice thing is that csr values and offsets remain static over the iterations
         dim3 __blockDim(blockSize, blockSize, 1); 
-        dim3 __gridDim(ceil(1.0*>numDemands/blockSize), ceil(1.0*numSupplies/blockSize), 1);
+        dim3 __gridDim(ceil(1.0*numDemands/blockSize), ceil(1.0*numSupplies/blockSize), 1);
         initialize_dense_u_v_system <<< __gridDim, __blockDim >>> (d_A, d_b, d_adjMtx_ptr, d_costs_ptr, 
                 numSupplies, numDemands);
         gpuErrchk(cudaPeekAtLastError());
