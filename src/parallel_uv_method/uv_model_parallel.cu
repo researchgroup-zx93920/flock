@@ -49,7 +49,19 @@ uvModel_parallel::uvModel_parallel(ProblemInstance *problem, flowInformation *fl
     
     // !! Setup Constants !!
     V = data->numSupplies+data->numDemands;
-    
+
+    // Initialize model statistics >>
+    deviceCommunicationTime = 0.0;
+    uv_time = 0.0; 
+    reduced_cost_time = 0.0; 
+    pivot_time = 0.0;
+    dfs_time = 0.0;
+    resolve_time = 0.0;
+    adjustment_time = 0.0;
+    totalIterations = 0;
+    objVal = 0.0;
+    totalIterations = 0;
+    totalSolveTime = 0.0;
     std::cout << "An uv_model_parallel object was successfully created" << std::endl;
 }
 
@@ -204,7 +216,9 @@ void uvModel_parallel::perform_pivot(bool &result)
             pivot_col = min_index - (pivot_row*data->numDemands);
             perform_a_sequencial_pivot(backtracker, stack, visited, 
                 h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr,
-                result, pivot_row, pivot_col, data->numSupplies, data->numDemands);
+                result, pivot_row, pivot_col, 
+                dfs_time, resolve_time, adjustment_time,
+                data->numSupplies, data->numDemands);
         }
 
         else if (PIVOTING_STRATEGY == "parallel") 
@@ -212,6 +226,7 @@ void uvModel_parallel::perform_pivot(bool &result)
             perform_a_parallel_pivot(backtracker, stack, visited,
                 h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, 
                 result,  d_reducedCosts_ptr, depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, v_conflicts,
+                dfs_time, resolve_time, adjustment_time,
                 data->numSupplies, data->numDemands);
         }
             
@@ -230,8 +245,6 @@ void uvModel_parallel::perform_pivot(bool &result)
 }
 
 
-
-
 void uvModel_parallel::execute() 
 {
     // SIMPLEX ALGORITHM >>
@@ -248,7 +261,7 @@ void uvModel_parallel::execute()
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     double solution_time = duration.count();
     std::cout << BFS_METHOD << " BFS Found in : " << solution_time << " millisecs." << std::endl;
-    data->solveTime += solution_time;
+    totalSolveTime += solution_time;
     
     /* **************************************
     STEP 2: Modified Distribution Method (u-v method) - parallel/hybrid (improve the BFS solution)
@@ -298,18 +311,33 @@ void uvModel_parallel::execute()
     // LOOP STEP 2 : SIMPLEX PROCEDURE
     // **************************************
     std::cout<<"SIMPLEX PASS 2 :: find the dual -> reduced -> pivots -> repeat!"<<std::endl;
-    
+    auto iter_start = std::chrono::high_resolution_clock::now();
+    auto iter_end = std::chrono::high_resolution_clock::now();
+    auto iter_duration = std::chrono::duration_cast<std::chrono::milliseconds>(iter_end - iter_start);
+
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
         // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
 
         // 2.1 
+        iter_start = std::chrono::high_resolution_clock::now();
+        
         solve_uv();
         // u_vars_ptr and v_vars ptr were populated on device
 
+        iter_end = std::chrono::high_resolution_clock::now();
+        iter_duration = std::chrono::duration_cast<std::chrono::milliseconds>(iter_end - iter_start);
+        uv_time += iter_duration.count();
+
         // 2.2 
+        iter_start = std::chrono::high_resolution_clock::now();
+        
         get_reduced_costs();
         // d_reducedCosts_ptr was populated on device
+
+        iter_end = std::chrono::high_resolution_clock::now();
+        iter_duration = std::chrono::duration_cast<std::chrono::milliseconds>(iter_end - iter_start);
+        reduced_cost_time += iter_duration.count();
         
         // DEBUG ::
         // view_uv();
@@ -317,9 +345,15 @@ void uvModel_parallel::execute()
         // view_tree();
 
         // 2.3
+        iter_start = std::chrono::high_resolution_clock::now();
+        
         perform_pivot(result);
-        iteration_counter++;
+        
+        iter_end = std::chrono::high_resolution_clock::now();
+        iter_duration = std::chrono::duration_cast<std::chrono::milliseconds>(iter_end - iter_start);
+        pivot_time += iter_duration.count();
 
+        iteration_counter++;
     }
 
     std::cout<<"SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU"<<std::endl;
@@ -343,13 +377,14 @@ void uvModel_parallel::execute()
     retrieve_solution_on_current_tree(feasible_flows, d_adjMtx_ptr, d_flowMtx_ptr, 
         data->active_flows, data->numSupplies, data->numDemands);
 
-    std::cout<<"\tFound "<<data->active_flows<<" active flows in the final result"<<std::endl;
+    std::cout<<"Found "<<data->active_flows<<" active flows in the final result"<<std::endl;
 
     end = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     solution_time = duration.count();
     std::cout<<" ============ Simplex completed in : "<<solution_time<<" millisecs. and "<<iteration_counter<<" iterations."<<std::endl;
-    data->solveTime += solution_time;
+    totalSolveTime += solution_time;
+    totalIterations = iteration_counter;
 
     double objval = 0.0;
     for (int i=0; i< (data->active_flows); i++){
@@ -358,7 +393,10 @@ void uvModel_parallel::execute()
         int _key = _row*data->numDemands + _col;
         objval += feasible_flows[i].qty*data->costs[_key];
     }
-    data->totalFlowCost = objval;
+    objVal = objval;
+    data->totalFlowCost = objVal;
+    data->solveTime = totalSolveTime;
+
     std::cout<<" ============ Current Objective Value = "<<objval<<std::endl;
 }
 

@@ -11,6 +11,11 @@ lpModel::lpModel(ProblemInstance *problem, flowInformation *flows)
 	optimal_flows = flows; // Might require a malloc
 						   // construction provision - perform some-more future things here :
 	BOOST_LOG_TRIVIAL(debug) << "An LP model object was successfully created";
+	
+	// Initialize statistics
+	objVal = 0.0;
+    totalIterations = 0;
+    totalSolveTime = 0.0;
 }
 
 lpModel::~lpModel()
@@ -111,6 +116,9 @@ void lpModel::solve()
 		// fetch solution >>
 		BOOST_LOG_TRIVIAL(debug) << "Solver Success! Optimal value: " << model->get(GRB_DoubleAttr_ObjVal) << std::endl;
 		solved = true;
+		objVal = model->get(GRB_DoubleAttr_ObjVal);
+		data->totalFlowCost = objVal;
+		totalIterations = int(model->get(GRB_DoubleAttr_IterCount));
 	}
 }
 
@@ -163,18 +171,12 @@ void lpModel::execute()
 	create_variables();
 	add_constraints();
 	add_objective();
+	solve();
 
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	data->preprocessTime += duration.count();
-	
-	start = std::chrono::high_resolution_clock::now();
-	
-	solve();
-
-	end = std::chrono::high_resolution_clock::now();
-	duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	data->solveTime += duration.count();
+	totalSolveTime = data->solveTime;
 
 	BOOST_LOG_TRIVIAL(debug) << "LP Model was successfully solved!";
 }

@@ -17,8 +17,11 @@ public:
     enum my_algo {cpu_lp_solve, parallel_uv, vogel_sequencial};
     my_algo algo;
     int numDemands, numSupplies, *demands, *supplies, active_flows;
+    
+    // Statistics >>
     double readTime, preprocessTime, solveTime, postprocessTime;
     double totalFlowCost;
+    
     float *costs;
 
     void allocate_memory();

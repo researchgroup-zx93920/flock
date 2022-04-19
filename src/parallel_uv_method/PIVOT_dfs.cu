@@ -279,10 +279,15 @@ __host__ void execute_pivot_on_host(int * h_adjMtx_ptr, float * h_flowMtx_ptr,
 
 __host__ void perform_a_sequencial_pivot(int * backtracker, stackNode * stack, bool * visited,
     int * h_adjMtx_ptr, float * h_flowMtx_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr,
-    bool &result, int pivot_row, int pivot_col, int numSupplies, int numDemands) {
+    bool &result, int pivot_row, int pivot_col, 
+    double &dfs_time, double &resolve_time, double &adjustment_time,
+    int numSupplies, int numDemands) {
     
     // std::cout<<"Pivot Row : "<<pivot_row<<std::endl;
     // std::cout<<"Pivot Col : "<<pivot_col<<std::endl;
+    auto _pivot_start = std::chrono::high_resolution_clock::now();
+    auto _pivot_end = std::chrono::high_resolution_clock::now();
+    auto _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
     // *******************************************
     // STEP: Traverse tree and find a cycle
     // *******************************************
@@ -293,10 +298,19 @@ __host__ void perform_a_sequencial_pivot(int * backtracker, stackNode * stack, b
 
     // Find a path by performing DFS from pivot_col reaching pivot row to complete cycle >>
     // SEQUENCIAL PROCEDURE to find An incoming edge to vertex = pivot_row from vertex = numSupplies + pivot_col        
+    _pivot_start = std::chrono::high_resolution_clock::now();
+
     perform_dfs_sequencial_on_i(h_adjMtx_ptr, stack, backtracker, visited, &_depth, 
         pivot_col+numSupplies, pivot_row, V);
-            
+    
+    _pivot_end = std::chrono::high_resolution_clock::now();
+    _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    dfs_time += _pivot_duration.count();
+
+
     // If loop not discovered >>
+    _pivot_start = std::chrono::high_resolution_clock::now();
+
     if (_depth <= 1) {
         
         std::cout<<" !! Error !! : Pivot cannot be performed, this is probably not a tree but forest!"<<std::endl;
@@ -314,6 +328,9 @@ __host__ void perform_a_sequencial_pivot(int * backtracker, stackNode * stack, b
         execute_pivot_on_host(h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, backtracker,
             pivot_row, pivot_col, _depth, V, numSupplies, numDemands);
     }
+    _pivot_end = std::chrono::high_resolution_clock::now();
+    _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    adjustment_time += _pivot_duration.count();
 }
 
 /*
@@ -637,8 +654,13 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     int * h_adjMtx_ptr, float * h_flowMtx_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
     bool &result, float * d_reducedCosts_ptr, int * depth, 
     float * loop_minimum, int * loop_min_from, int * loop_min_to, int * loop_min_id, 
-    vertex_conflicts * v_conflicts, int numSupplies, int numDemands) {
-
+    vertex_conflicts * v_conflicts,
+    double &dfs_time, double &resolve_time, double &adjustment_time,
+    int numSupplies, int numDemands) {
+    
+    auto _pivot_start = std::chrono::high_resolution_clock::now();
+    auto _pivot_end = std::chrono::high_resolution_clock::now();
+    auto _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
     /*
     Strategy is to execute multiple pivots at the same time
     Resolve conflicts through a barrier
@@ -649,6 +671,8 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     int V = numSupplies + numDemands;
 
     // Discover Cycles
+    _pivot_start = std::chrono::high_resolution_clock::now();
+    
     dim3 __blockDim(blockSize, blockSize, 1);
     dim3 __gridDim(ceil(1.0*numDemands/blockSize), ceil(1.0*numSupplies/blockSize), 1);
     
@@ -665,10 +689,14 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
         // xxxxxx - Barrier 1 - xxxxxx
 
     // DEBUG UTILITY 1 ::
-    __debug_utility_1(d_reducedCosts_ptr, backtracker, depth, loop_minimum,
-        loop_min_from, loop_min_to, loop_min_id, numSupplies, numDemands);
+    // __debug_utility_1(d_reducedCosts_ptr, backtracker, depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, numSupplies, numDemands);
+    _pivot_end = std::chrono::high_resolution_clock::now();
+    _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    dfs_time += _pivot_duration.count();
+
 
     // Resolve Conflicts >>
+    _pivot_start = std::chrono::high_resolution_clock::now();
     // std::cout<<"Parallel Pivoiting : Discovered Loops!"<<std::endl;
     // std::cout<<"Parallel Pivoiting : Resolving Conflicts | Running Step 1 (Discover conflicts) ..."<<std::endl;        
     vertex_conflicts _vtx_conflict_default;
@@ -683,7 +711,7 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     // xxxxxx - Barrier 2 - xxxxxx
 
     // DEBUG UTILITY 2 ::
-    __debug_utility_2(v_conflicts, V);
+    // __debug_utility_2(v_conflicts, V);
     
     // std::cout<<"Parallel Pivoiting : Completed Step 1 | Running Step 2 (Resolve Conflicts) ..."<<std::endl;
     resolve_conflicts_step_2 <<<__gridDim, __blockDim>>> (depth, backtracker, v_conflicts, numSupplies, numDemands);
@@ -692,10 +720,14 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     // xxxxxx - Barrier 3 - xxxxxx
 
     // DEBUG UTILITY 3 ::
-    __debug_utility_3(backtracker, depth, loop_minimum, numSupplies, numDemands);
+    // __debug_utility_3(backtracker, depth, loop_minimum, numSupplies, numDemands);
+    _pivot_end = std::chrono::high_resolution_clock::now();
+    _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    resolve_time += _pivot_duration.count();
 
     // std::cout<<"Parallel Pivoiting : Conflicts Resolved | Running flow adjustments ..."<<std::endl;        
     // Check if any conflicting pivots still exist >>
+    _pivot_start = std::chrono::high_resolution_clock::now();
     int _conflict_flag = thrust::reduce(thrust::device, depth, depth + (numSupplies*numDemands), 0);
     if (_conflict_flag > 0) {
         
@@ -750,6 +782,9 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     else {
         std::cout<<"No independent cycles found!"<<std::endl;
     }
+    _pivot_end = std::chrono::high_resolution_clock::now();
+    _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    adjustment_time += _pivot_duration.count();
 }
 
 

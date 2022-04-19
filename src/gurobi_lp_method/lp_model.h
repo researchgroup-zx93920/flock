@@ -41,6 +41,11 @@ public:
     GRBModel *model;
     ProblemInstance * data;
     flowInformation * optimal_flows;
+    
+    double objVal;
+    int totalIterations;
+    double totalSolveTime;
+
     std::map<int, GRBVar> x_ij; // Flow variable - represeting flow from supply - i to demand j
 
     void execute();

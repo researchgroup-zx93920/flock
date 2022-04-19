@@ -56,12 +56,24 @@ int main(int argc, char **argv)
     lpModel model = lpModel(&problem, flows);
     model.execute();
     model.create_flows();
+    std::cout<<">>>> BASIC STATISTICS | Objective: "<<model.objVal<<" | Iterations: "<<model.totalIterations<<" | Time: "<<model.totalSolveTime<<std::endl;
   }
   else if (problem.algo == ProblemInstance::my_algo::parallel_uv)
   {
     uvModel_parallel model = uvModel_parallel(&problem, flows);
     model.execute();
     model.create_flows();
+    std::cout<<">>>> BASIC STATISTICS | Objective: "<<model.objVal<<" | Iterations: "<<model.totalIterations<<" | Time: "<<model.totalSolveTime<<std::endl;
+    
+    std::cout<<">>>> ADV STATISTICS | Total Time: "<<model.totalSolveTime;
+    std::cout<<" | UV Time: "<<model.uv_time;
+    std::cout<<" | R Time: "<<model.reduced_cost_time;
+    std::cout<<" | PIVOT Time: "<<model.pivot_time<<std::endl;
+
+    std::cout<<">>>> ADV2 STATISTICS | Total Pivot Time: "<<model.pivot_time;
+    std::cout<<" | DFS Time: "<<model.dfs_time;
+    std::cout<<" | RESOLVE Time: "<<model.resolve_time;
+    std::cout<<" | ADJUST Time: "<<model.adjustment_time<<std::endl;
   }
   else if (problem.algo == ProblemInstance::my_algo::vogel_sequencial)
   {

@@ -39,6 +39,12 @@ public:
     void create_flows();
 
     double deviceCommunicationTime;
+    // Model Statistics >>
+    double uv_time, reduced_cost_time, pivot_time, dfs_time, resolve_time, adjustment_time;
+
+    double objVal;
+    int totalIterations;
+    double totalSolveTime;
 
     uvModel_parallel(ProblemInstance * problem, flowInformation * flows);
     ~uvModel_parallel();
