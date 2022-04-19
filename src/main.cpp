@@ -71,11 +71,10 @@ int main(int argc, char **argv)
   }
 
   std::cout << "Flows created successfully!" << std::endl;
-  problem.active_flows = problem.numSupplies + problem.numDemands - 1;
 
-  for (int i=0; i<(problem.active_flows); i++) {
-    std::cout<<flows[i]<<std::endl;
-  }
+  // for (int i=0; i<(problem.active_flows); i++) {
+  //   std::cout<<flows[i]<<std::endl;
+  // }
   
   free(flows);
   std::cout << "Flows freed successfully!" << std::endl;

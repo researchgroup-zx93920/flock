@@ -193,8 +193,8 @@ void uvModel_parallel::perform_pivot(bool &result)
     // have all the reduced costs in the d_reducedCosts_ptr on device
     float min_reduced_cost = 0;
     gpuErrchk(cudaMemcpy(&min_reduced_cost, d_reducedCosts_ptr + min_index, sizeof(float), cudaMemcpyDeviceToHost));
-    std::cout<<"Min Reduced Cost  = "<<min_reduced_cost<<std::endl;
-    if (min_reduced_cost < 0 && std::abs(min_reduced_cost) > 10e-5)
+    // std::cout<<"Min Reduced Cost  = "<<min_reduced_cost<<std::endl;
+    if (min_reduced_cost < 0 && std::abs(min_reduced_cost) > 10e-3)
     {
         // Found a negative reduced cost >>
         if (PIVOTING_STRATEGY == "sequencial") 
@@ -202,12 +202,17 @@ void uvModel_parallel::perform_pivot(bool &result)
             // pivot row and pivot col are declared private attributes
             pivot_row =  min_index/data->numDemands;
             pivot_col = min_index - (pivot_row*data->numDemands);
-            perform_sequencial_pivot();
+            perform_a_sequencial_pivot(backtracker, stack, visited, 
+                h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr,
+                result, pivot_row, pivot_col, data->numSupplies, data->numDemands);
         }
 
         else if (PIVOTING_STRATEGY == "parallel") 
         {
-            std::cout<<" Parallel Pivoting!" <<std::endl;
+            perform_a_parallel_pivot(backtracker, stack, visited,
+                h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, 
+                result,  d_reducedCosts_ptr, depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, v_conflicts,
+                data->numSupplies, data->numDemands);
         }
             
         else
@@ -272,6 +277,13 @@ void uvModel_parallel::execute()
         &d_A, &d_b, &d_x, nnz, data->numSupplies, data->numDemands);
     std::cout<<"\tSuccessfully allocated Resources for DUAL ..."<<std::endl;
 
+    // Follow PIVOTING_dfs for the following
+    initialize_device_PIVOT(&backtracker, &stack, &visited, 
+    &depth, &loop_minimum, &loop_min_from, &loop_min_to, &loop_min_id,
+    &v_conflicts, data->numSupplies, data->numDemands);
+    std::cout<<"\tSuccessfully allocated Resources for PIVOTING ..."<<std::endl;
+    
+
     // Container for reduced costs
     gpuErrchk(cudaMalloc((void **) &d_reducedCosts_ptr, sizeof(float)*data->numSupplies*data->numDemands));
     std::cout<<"\tSuccessfully allocated Resources for Reduced costs ..."<<std::endl;
@@ -282,9 +294,6 @@ void uvModel_parallel::execute()
         data->numSupplies, data->numDemands);
     std::cout<<"\tGenerated initial tree (on host & device) ..."<<std::endl;
     
-    // Follow PIVOTING_dfs for the following
-    // initialize_pivoting();
-    
     // **************************************
     // LOOP STEP 2 : SIMPLEX PROCEDURE
     // **************************************
@@ -292,7 +301,7 @@ void uvModel_parallel::execute()
     
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
-        std::cout<<"Iteration :"<<iteration_counter<<std::endl;
+        // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
 
         // 2.1 
         solve_uv();
@@ -303,12 +312,12 @@ void uvModel_parallel::execute()
         // d_reducedCosts_ptr was populated on device
         
         // DEBUG ::
-        view_uv();
-        view_reduced_costs();
-        view_tree();
+        // view_uv();
+        // view_reduced_costs();
+        // view_tree();
 
         // 2.3
-        // perform_pivot(result);
+        perform_pivot(result);
         iteration_counter++;
 
     }
@@ -321,11 +330,16 @@ void uvModel_parallel::execute()
     // Post process operation after pivoting
     // **************************************
 
-    terminate_DUAL(u_vars_ptr, v_vars_ptr, U_vars, V_vars, 
+    terminate_device_DUAL(u_vars_ptr, v_vars_ptr, U_vars, V_vars, 
         d_csr_values, d_csr_columns, d_csr_offsets, d_A, d_b, d_x);
-    // terminate_PIVOT();
+    std::cout<<"\tSuccessfully de-allocated resources for DUAL ..."<<std::endl;
+    terminate_device_PIVOT(backtracker, stack, visited, 
+        depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, v_conflicts);
+    std::cout<<"\tSuccessfully de-allocated Resources for PIVOT ..."<<std::endl;
     gpuErrchk(cudaFree(d_reducedCosts_ptr));
+    std::cout<<"\tSuccessfully de-allocated Resources for Reduced costs ..."<<std::endl;
 
+    std::cout<<"\tProcessing Solution ..."<<std::endl;
     retrieve_solution_on_current_tree(feasible_flows, d_adjMtx_ptr, d_flowMtx_ptr, 
         data->active_flows, data->numSupplies, data->numDemands);
 

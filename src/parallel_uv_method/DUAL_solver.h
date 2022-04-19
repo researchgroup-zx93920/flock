@@ -15,7 +15,7 @@ __host__ void initialize_device_DUAL(float ** u_vars_ptr, float ** v_vars_ptr,
         float ** d_csr_values, int ** d_csr_columns, int ** d_csr_offsets,
         float ** d_A, float ** d_b, float ** d_x, int64_t &nnz, int numSupplies, int numDemands);
 
-__host__ void terminate_DUAL(float * u_vars_ptr, float * v_vars_ptr, 
+__host__ void terminate_device_DUAL(float * u_vars_ptr, float * v_vars_ptr, 
         Variable * U_vars, Variable * V_vars, 
         float * d_csr_values, int * d_csr_columns, int * d_csr_offsets,
         float * d_A, float * d_b, float * d_x);

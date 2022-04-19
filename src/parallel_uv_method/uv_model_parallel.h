@@ -6,6 +6,8 @@
 #include "IBFS_vogel.h"
 #include "IBFS_nwc.h"
 #include "DUAL_solver.h"
+#include "PIVOT_dfs.h"
+
 // #include "PIVOT_dfs.h"
 
 /*
@@ -109,9 +111,6 @@ private:
         stackNode * stack;
         vertex_conflicts * v_conflicts;
         bool * visited;
-
-        vertex_conflicts _vtx_conflict_default;
-    
 
     // ###############################
     // CLASS METHODS | Names are self explanatory - doc strings are available on the definition

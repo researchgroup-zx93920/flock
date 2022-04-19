@@ -28,7 +28,7 @@
 #define UV_STRUCTS
 
 // PARAMETERS
-#define blockSize 16
+#define blockSize 8
 
 // Degeneracy resolve
 #define epsilon 0.000001f
@@ -45,20 +45,26 @@ nwc : Northwest Corner - sequential implementation
 vam : vogel's approximation - parallel regret implementation
 */
 
-#define CALCULATE_DUAL "tree"
+#define CALCULATE_DUAL "sparse_linear_solver"
 /*
-tree : traverse the tree in parallel to find values on verties
+tree : traverse the tree in parallel to find values on verties [FUNDAMENTAL-BUG HERE]
 sparse_linear_solver : solve system of lin_equations (sparse linear algebra :: cusparse)
 dense_linear_solver : solve system of lin_equations (dense linear algebra :: cublas)
 */
 
-#define PIVOTING_STRATEGY "sequencial"
+#define PIVOTING_STRATEGY "parallel"
 /*
 sequencial : perform pivoting one at a time based on dantzig's rule
-parallel : perform parallel pivoting
+parallel : perform parallel pivoting (run flow adjustments in parallel)
 */
 
-#define MAX_ITERATIONS 1
+#define PARALLEL_PIVOTING_METHOD "hybrid"
+/*
+pure : run flow adjustments in parallel
+hybrid : run adjustments sequencial
+*/
+
+#define MAX_ITERATIONS 10000
 
 // >>>>>>>>>> END OF PARAMETERS // 
 
@@ -77,6 +83,34 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 
 // Credit: https://github.com/NVIDIA/CUDALibrarySamples/blob/master/cuSOLVER/utils/cusolver_utils.h
 // cusolver API error checking
+/*
+    CUSOLVER_STATUS_SUCCESS=0,
+    CUSOLVER_STATUS_NOT_INITIALIZED=1,
+    CUSOLVER_STATUS_ALLOC_FAILED=2,
+    CUSOLVER_STATUS_INVALID_VALUE=3,
+    CUSOLVER_STATUS_ARCH_MISMATCH=4,
+    CUSOLVER_STATUS_MAPPING_ERROR=5,
+    CUSOLVER_STATUS_EXECUTION_FAILED=6,
+    CUSOLVER_STATUS_INTERNAL_ERROR=7,
+    CUSOLVER_STATUS_MATRIX_TYPE_NOT_SUPPORTED=8,
+    CUSOLVER_STATUS_NOT_SUPPORTED = 9,
+    CUSOLVER_STATUS_ZERO_PIVOT=10,
+    CUSOLVER_STATUS_INVALID_LICENSE=11,
+    CUSOLVER_STATUS_IRS_PARAMS_NOT_INITIALIZED=12,
+    CUSOLVER_STATUS_IRS_PARAMS_INVALID=13,
+    CUSOLVER_STATUS_IRS_PARAMS_INVALID_PREC=14,
+    CUSOLVER_STATUS_IRS_PARAMS_INVALID_REFINE=15,
+    CUSOLVER_STATUS_IRS_PARAMS_INVALID_MAXITER=16,
+    CUSOLVER_STATUS_IRS_INTERNAL_ERROR=20,
+    CUSOLVER_STATUS_IRS_NOT_SUPPORTED=21,
+    CUSOLVER_STATUS_IRS_OUT_OF_RANGE=22,
+    CUSOLVER_STATUS_IRS_NRHS_NOT_SUPPORTED_FOR_REFINE_GMRES=23,
+    CUSOLVER_STATUS_IRS_INFOS_NOT_INITIALIZED=25,
+    CUSOLVER_STATUS_IRS_INFOS_NOT_DESTROYED=26,
+    CUSOLVER_STATUS_IRS_MATRIX_SINGULAR=30,
+    CUSOLVER_STATUS_INVALID_WORKSPACE=31
+*/
+
 #define CUSOLVER_CHECK(err)                                                                        \
     do {                                                                                           \
         cusolverStatus_t err_ = (err);                                                             \
@@ -131,8 +165,9 @@ struct vogelDifference {
 };
 
 struct Variable {
-    float value = -99999;
+
     bool assigned = false;
+    float value = -99999;
 
     __host__ __device__ Variable& operator=(const float& x)
     {

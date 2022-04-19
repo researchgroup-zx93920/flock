@@ -57,7 +57,7 @@ __host__ void initialize_device_DUAL(float ** u_vars_ptr, float ** v_vars_ptr,
     }
 }
 
-__host__ void terminate_DUAL(float * u_vars_ptr, float * v_vars_ptr, 
+__host__ void terminate_device_DUAL(float * u_vars_ptr, float * v_vars_ptr, 
         Variable * U_vars, Variable * V_vars, 
         float * d_csr_values, int * d_csr_columns, int * d_csr_offsets,
         float * d_A, float * d_b, float * d_x) {
@@ -175,18 +175,22 @@ __host__ void find_dual_using_sparse_solver(float * u_vars_ptr, float * v_vars_p
 
         // Core >>		
         cusolverSpHandle_t solver_handle;
-	cusolverSpCreate(&solver_handle);
+	CUSOLVER_CHECK(cusolverSpCreate(&solver_handle));
 
         cusparseMatDescr_t descrA;
-        cusparseCreateMatDescr(&descrA);
-	cusparseSetMatType(descrA, CUSPARSE_MATRIX_TYPE_GENERAL);
-	cusparseSetMatIndexBase(descrA, CUSPARSE_INDEX_BASE_ZERO); 
+        CUSPARSE_CHECK(cusparseCreateMatDescr(&descrA));
+	CUSPARSE_CHECK(cusparseSetMatType(descrA, CUSPARSE_MATRIX_TYPE_GENERAL));
+	CUSPARSE_CHECK(cusparseSetMatIndexBase(descrA, CUSPARSE_INDEX_BASE_ZERO)); 
 
         int singularity;
 
 	CUSOLVER_CHECK(cusolverSpScsrlsvqr(solver_handle, V, nnz, descrA, 
                                         d_csr_values, d_csr_offsets, d_csr_columns, d_b, 
                                         10e-6, 0, d_x, &singularity));
+        
+        // Clean up ! 
+        CUSOLVER_CHECK(cusolverSpDestroy(solver_handle));
+        CUSPARSE_CHECK(cusparseDestroyMatDescr(descrA));
 
         if (singularity == -1) {
 
