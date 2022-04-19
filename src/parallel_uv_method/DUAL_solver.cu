@@ -3,6 +3,7 @@
 
 __host__ void initialize_device_DUAL(float ** u_vars_ptr, float ** v_vars_ptr, 
         Variable ** U_vars, Variable ** V_vars, 
+        int ** length, int ** start, int ** Ea, bool ** Fa, bool ** Xa, float ** variables,
         float ** d_csr_values, int ** d_csr_columns, int ** d_csr_offsets,
         float ** d_A, float ** d_b, float ** d_x, int64_t &nnz, int numSupplies, int numDemands) {
     
@@ -17,6 +18,18 @@ __host__ void initialize_device_DUAL(float ** u_vars_ptr, float ** v_vars_ptr,
         //  empty u and v equations using the Variable Data Type >>
         gpuErrchk(cudaMalloc((void **) U_vars, sizeof(Variable)*numSupplies));
         gpuErrchk(cudaMalloc((void **) V_vars, sizeof(Variable)*numDemands));
+    }
+
+    else if (CALCULATE_DUAL=="bfs") {
+
+        //  empty u and v equations using the Variable Data Type >>
+        gpuErrchk(cudaMalloc((void **) length, sizeof(int)*(V+1)));
+        gpuErrchk(cudaMalloc((void **) start, sizeof(int)*(V)));
+        gpuErrchk(cudaMalloc((void **) Ea, sizeof(int)*2*(V-1)));
+        gpuErrchk(cudaMalloc((void**) Fa, sizeof(bool)*V));
+        gpuErrchk(cudaMalloc((void**) Xa, sizeof(bool)*V));
+        gpuErrchk(cudaMalloc((void**) variables, sizeof(float)*V));
+
     }
 
     else if (CALCULATE_DUAL=="sparse_linear_solver") {
@@ -59,6 +72,7 @@ __host__ void initialize_device_DUAL(float ** u_vars_ptr, float ** v_vars_ptr,
 
 __host__ void terminate_device_DUAL(float * u_vars_ptr, float * v_vars_ptr, 
         Variable * U_vars, Variable * V_vars, 
+        int * length, int * start, int * Ea, bool * Fa, bool * Xa, float * variables,
         float * d_csr_values, int * d_csr_columns, int * d_csr_offsets,
         float * d_A, float * d_b, float * d_x) {
      
@@ -70,6 +84,16 @@ __host__ void terminate_device_DUAL(float * u_vars_ptr, float * v_vars_ptr,
                 gpuErrchk(cudaFree(U_vars));
                 gpuErrchk(cudaFree(V_vars));
         
+        }
+        
+        else if (CALCULATE_DUAL=="bfs") {
+                
+                gpuErrchk(cudaFree(length));
+                gpuErrchk(cudaFree(start));
+                gpuErrchk(cudaFree(Ea));
+                gpuErrchk(cudaFree(Fa));
+                gpuErrchk(cudaFree(Xa));
+                gpuErrchk(cudaFree(variables));
         }
         
         else if (CALCULATE_DUAL=="sparse_linear_solver") {
@@ -183,10 +207,22 @@ __host__ void find_dual_using_sparse_solver(float * u_vars_ptr, float * v_vars_p
 	CUSPARSE_CHECK(cusparseSetMatIndexBase(descrA, CUSPARSE_INDEX_BASE_ZERO)); 
 
         int singularity;
-
-	CUSOLVER_CHECK(cusolverSpScsrlsvqr(solver_handle, V, nnz, descrA, 
+        int reorder = 0; // Cholesky : 1 : symrcm, 2 : symamd, or 3 : csrmetisnd
+        if (SPARSE_SOLVER=="qr") {
+                
+                CUSOLVER_CHECK(cusolverSpScsrlsvqr(solver_handle, V, nnz, descrA, 
                                         d_csr_values, d_csr_offsets, d_csr_columns, d_b, 
                                         10e-6, 0, d_x, &singularity));
+        
+        }
+
+	else if (SPARSE_SOLVER=="chol") {
+
+                CUSOLVER_CHECK(cusolverSpScsrlsvchol(solver_handle, V, nnz, descrA,
+                     d_csr_values, d_csr_offsets, d_csr_columns, d_b,
+                     10e-6, reorder, d_x, &singularity));
+
+        }
         
         // Clean up ! 
         CUSOLVER_CHECK(cusolverSpDestroy(solver_handle));
@@ -231,5 +267,88 @@ __host__ void find_dual_using_dense_solver(float * u_vars_ptr, float * v_vars_pt
                 numSupplies, numDemands);
         gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
+
+}
+
+/*
+DEBUG UTILITY : VIEW ADJACENCY LIST STRCTURE 
+*/
+__host__ void __debug_view_adjList(int * length, int * start, int * Ea, int V) 
+{        
+        int * h_length = (int *) malloc(sizeof(int)*V);
+        int * h_start = (int *) malloc(sizeof(int)*V);
+        int * h_Ea = (int *) malloc(sizeof(int)*2*(V-1));
+
+        cudaMemcpy(h_length, length, sizeof(int)*V, cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_start, start, sizeof(int)*V, cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_Ea, Ea, sizeof(int)*2*(V-1), cudaMemcpyDeviceToHost);
+
+        std::cout<<"Str = [ ";
+        for (int i =0; i < V; i++){
+                std::cout<<h_start[i]<<", ";
+        }
+        std::cout<<"]"<<std::endl;
+        std::cout<<"Len = [ ";
+        for (int i =0; i < V; i++){
+                std::cout<<h_length[i]<<", ";
+        }
+        std::cout<<"]"<<std::endl;
+        std::cout<<"Ea = [ ";
+        for (int i =0; i < 2*(V-1); i++){
+                std::cout<<h_Ea[i]<<", ";
+        }
+        std::cout<<"]"<<std::endl;
+        // *************** END OF DEBUG UTILITY ***************
+}
+
+
+__host__ void find_dual_using_bfs(float * u_vars_ptr, float * v_vars_ptr, 
+        int * length, int * start, int * Ea, bool * Fa, bool * Xa, float * variables,
+        int * d_adjMtx_ptr, float * d_costs_ptr, int numSupplies, int numDemands) {
+
+        int V = numSupplies + numDemands;
+        bool f0 = true;
+
+        // Kernel Dimensions >>
+        dim3 __blockDim(blockSize, 1, 1); 
+        dim3 __gridDim(ceil(1.0*V/blockSize), 1, 1);
+
+        determine_length <<< __gridDim, __blockDim >>> (length, d_adjMtx_ptr, V, numSupplies);
+        gpuErrchk(cudaPeekAtLastError());
+        gpuErrchk(cudaDeviceSynchronize());
+        
+        thrust::inclusive_scan(thrust::device, length, length + V, start);
+        
+        fill_Ea <<< __gridDim, __blockDim >>> (start, Ea, d_adjMtx_ptr, V, numSupplies);
+        gpuErrchk(cudaPeekAtLastError());
+        gpuErrchk(cudaDeviceSynchronize());
+
+        int * _length = &length[1];
+
+        // DEBUG ::
+        // __debug_view_adjList(_length, start, Ea, V);
+        
+	thrust::fill(thrust::device, Fa, Fa + V, false);
+        thrust::fill(thrust::device, Xa, Xa + V, false);
+        thrust::fill(thrust::device, variables, variables + V, 0.0);
+        gpuErrchk(cudaMemcpy(&Fa[0], &f0, sizeof(bool), cudaMemcpyHostToDevice));
+
+        // >>> Running BFS
+        bool done;
+	bool * d_done;
+	gpuErrchk(cudaMalloc((void**) &d_done, sizeof(bool)));
+	int count = 0;
+
+	do {
+		count++;
+		done = true;
+		gpuErrchk(cudaMemcpy(d_done, &done, sizeof(bool), cudaMemcpyHostToDevice));
+		CUDA_BFS_KERNEL <<<__gridDim, __blockDim >>>(start, _length, Ea, Fa, Xa, variables, d_costs_ptr, d_done, numSupplies, numDemands, V);
+		gpuErrchk(cudaMemcpy(&done, d_done , sizeof(bool), cudaMemcpyDeviceToHost));
+
+	} while (!done);
+
+	gpuErrchk(cudaMemcpy(u_vars_ptr, &variables[0], sizeof(float)*numSupplies, cudaMemcpyDeviceToHost));
+        gpuErrchk(cudaMemcpy(v_vars_ptr, &variables[numSupplies], sizeof(float)*numDemands, cudaMemcpyDeviceToHost));
 
 }

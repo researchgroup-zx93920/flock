@@ -245,6 +245,72 @@ __global__ void assign_next(int * d_adjMtx_ptr, float * d_costs_ptr,
     }
 }
 
+// Credits: https://github.com/siddharths2710/cuda_bfs/blob/master/cuda_bfs/kernel.cu
+__global__ void CUDA_BFS_KERNEL(int * start, int * length, int *Ea, bool * Fa, bool * Xa, 
+        float * variables, float * d_costs_ptr, bool * done, int numSupplies, int numDemands, int V)
+{
+
+	int id = threadIdx.x + blockIdx.x * blockDim.x;
+	if (id > V)
+		*done = false;
+
+	if (Fa[id] == true && Xa[id] == false)
+	{
+		// printf("%d ", id); //This printf gives the order of vertices in BFS	
+		Fa[id] = false;
+		Xa[id] = true;
+		__syncthreads(); 
+		int k = 0;
+		int i;
+		int start_ptr = start[id];
+		int end_ptr = start_ptr + length[id];
+		for (int i = start_ptr; i < end_ptr; i++) 
+		{
+			int nid = Ea[i];
+			if (Xa[nid] == false)
+			{       
+                                int row_indx = min(nid, id);
+                                int col_indx = max(nid, id) - numSupplies;
+				variables[nid] = d_costs_ptr[row_indx*numDemands+col_indx] - variables[id];
+				Fa[nid] = true;
+				*done = false;
+			}
+		}
+	}
+}
+
+__global__ void determine_length(int * length, int * d_adjMtx_ptr, int V, int numSupplies) {
+        int L = 0;
+        int i = blockIdx.x *blockDim.x + threadIdx.x;
+        if (i < V) 
+        {    
+                for (int j=0; j<V; j++) {
+                        int idx = TREE_LOOKUP(i, j, V);
+                        if (d_adjMtx_ptr[idx] > 0) {
+                                L++;
+                        }
+                }
+                length[i+1] = L;
+                length[0] = 0;
+        }
+}
+
+__global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, int V, int numSupplies) {
+        int i = blockIdx.x*blockDim.x + threadIdx.x;
+        int offset = start[i];
+        int L = 0;
+        if (i < V) {
+                for (int j=0; j<V; j++) {
+                        int idx = TREE_LOOKUP(i, j, V);
+                        if (d_adjMtx_ptr[idx] > 0) {
+                                Ea[offset + L] = j;
+                                L++;
+                        }
+                }
+        }
+}
+
+
 /*
 APPROACH 2:
 Kernels concerned with solving the UV System using a using a matrix solver

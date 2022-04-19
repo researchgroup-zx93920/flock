@@ -15,6 +15,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/transform.h>
 #include <thrust/sort.h>
+#include <thrust/scan.h>
 #include <thrust/extrema.h>
 #include <thrust/remove.h>
 #include <thrust/execution_policy.h>
@@ -28,7 +29,7 @@
 #define UV_STRUCTS
 
 // PARAMETERS
-#define blockSize 8
+#define blockSize 4
 
 // Degeneracy resolve
 #define epsilon 0.000001f
@@ -45,14 +46,20 @@ nwc : Northwest Corner - sequential implementation
 vam : vogel's approximation - parallel regret implementation
 */
 
-#define CALCULATE_DUAL "sparse_linear_solver"
+#define CALCULATE_DUAL "bfs"
 /*
-tree : traverse the tree in parallel to find values on verties [FUNDAMENTAL-BUG HERE]
+tree : traverse the tree in parallel to find values on verties [FUNDAMENTAL-BUG HERE] 
+bfs : Replacement approach for tree method 
 sparse_linear_solver : solve system of lin_equations (sparse linear algebra :: cusparse)
 dense_linear_solver : solve system of lin_equations (dense linear algebra :: cublas)
 */
 
-#define PIVOTING_STRATEGY "parallel"
+#define SPARSE_SOLVER "qr"
+/*
+qr, chol
+*/
+
+#define PIVOTING_STRATEGY "sequencial"
 /*
 sequencial : perform pivoting one at a time based on dantzig's rule
 parallel : perform parallel pivoting (run flow adjustments in parallel)
@@ -204,5 +211,6 @@ struct is_zero
 std::ostream& operator << (std::ostream& o, const MatrixCell& x);
 std::ostream& operator << (std::ostream& o, const vogelDifference& x);
 std::ostream& operator << (std::ostream& o, const Variable& x);
+
 
 #endif

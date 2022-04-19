@@ -100,6 +100,9 @@ private:
 
         // DUAL :: Solving using a breadth first traversal on Tree
         Variable * U_vars, * V_vars;
+        int * dual_length, * dual_start, * Ea;
+        float * variables;
+        bool * Xa, * Fa;
 
         // DUAL :: Temporary
         float * h_reduced_costs;

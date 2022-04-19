@@ -135,6 +135,17 @@ void uvModel_parallel::solve_uv()
         */
         find_dual_using_tree(u_vars_ptr, v_vars_ptr, d_adjMtx_ptr, d_costs_ptr, U_vars, V_vars, data->numSupplies, data->numDemands);
     }
+
+    else if (CALCULATE_DUAL=="bfs") 
+    {
+        /* 
+        Initialize u and v and then solve them through 
+        Breadth first search using the adj matrix provided
+        */
+        find_dual_using_bfs(u_vars_ptr, v_vars_ptr, 
+            dual_length, dual_start, Ea, Fa, Xa, variables, 
+            d_adjMtx_ptr, d_costs_ptr, data->numSupplies, data->numDemands);
+    }
     else if (CALCULATE_DUAL=="sparse_linear_solver") {
         /* 
         Solve a system of linear equations
@@ -147,7 +158,6 @@ void uvModel_parallel::solve_uv()
             d_csr_values, d_csr_columns, d_csr_offsets, d_x, d_b, nnz,
             data->numSupplies, data->numDemands);
     }
-
     else if (CALCULATE_DUAL=="dense_linear_solver") {
         /* 
         Solve a system of linear equations
@@ -161,12 +171,9 @@ void uvModel_parallel::solve_uv()
         find_dual_using_dense_solver(u_vars_ptr, v_vars_ptr, d_costs_ptr, d_adjMtx_ptr,
             d_A, d_x, d_b, data->numSupplies, data->numDemands);
     }
-
     else {
-    
         std::cout<<"Invalid method of dual calculation!"<<std::endl;
         std::exit(-1); 
-
     }
 }
 
@@ -286,7 +293,9 @@ void uvModel_parallel::execute()
     std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
     
     // Follow DUAL_solver for the following
-    initialize_device_DUAL(&u_vars_ptr, &v_vars_ptr, &U_vars, &V_vars, &d_csr_values, &d_csr_columns, &d_csr_offsets,
+    initialize_device_DUAL(&u_vars_ptr, &v_vars_ptr, &U_vars, &V_vars, 
+        &dual_length, &dual_start, &Ea, &Fa, &Xa, &variables,
+        &d_csr_values, &d_csr_columns, &d_csr_offsets,
         &d_A, &d_b, &d_x, nnz, data->numSupplies, data->numDemands);
     std::cout<<"\tSuccessfully allocated Resources for DUAL ..."<<std::endl;
 
@@ -318,6 +327,8 @@ void uvModel_parallel::execute()
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
         // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
+        // view_uv();
+        // view_tree();
 
         // 2.1 
         iter_start = std::chrono::high_resolution_clock::now();
@@ -341,8 +352,9 @@ void uvModel_parallel::execute()
         
         // DEBUG ::
         // view_uv();
-        // view_reduced_costs();
         // view_tree();
+        // view_reduced_costs();
+        
 
         // 2.3
         iter_start = std::chrono::high_resolution_clock::now();
@@ -364,7 +376,8 @@ void uvModel_parallel::execute()
     // Post process operation after pivoting
     // **************************************
 
-    terminate_device_DUAL(u_vars_ptr, v_vars_ptr, U_vars, V_vars, 
+    terminate_device_DUAL(u_vars_ptr, v_vars_ptr, U_vars, V_vars,
+        dual_length, dual_start, Ea, Fa, Xa, variables, 
         d_csr_values, d_csr_columns, d_csr_offsets, d_A, d_b, d_x);
     std::cout<<"\tSuccessfully de-allocated resources for DUAL ..."<<std::endl;
     terminate_device_PIVOT(backtracker, stack, visited, 

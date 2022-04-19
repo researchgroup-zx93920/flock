@@ -660,7 +660,7 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     
     auto _pivot_start = std::chrono::high_resolution_clock::now();
     auto _pivot_end = std::chrono::high_resolution_clock::now();
-    auto _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    auto _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     /*
     Strategy is to execute multiple pivots at the same time
     Resolve conflicts through a barrier
@@ -691,7 +691,7 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     // DEBUG UTILITY 1 ::
     // __debug_utility_1(d_reducedCosts_ptr, backtracker, depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, numSupplies, numDemands);
     _pivot_end = std::chrono::high_resolution_clock::now();
-    _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     dfs_time += _pivot_duration.count();
 
 
@@ -722,7 +722,7 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     // DEBUG UTILITY 3 ::
     // __debug_utility_3(backtracker, depth, loop_minimum, numSupplies, numDemands);
     _pivot_end = std::chrono::high_resolution_clock::now();
-    _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     resolve_time += _pivot_duration.count();
 
     // std::cout<<"Parallel Pivoiting : Conflicts Resolved | Running flow adjustments ..."<<std::endl;        
@@ -783,7 +783,7 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
         std::cout<<"No independent cycles found!"<<std::endl;
     }
     _pivot_end = std::chrono::high_resolution_clock::now();
-    _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     adjustment_time += _pivot_duration.count();
 }
 

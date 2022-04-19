@@ -4,6 +4,8 @@
 #include "parallel_structs.h"
 #include "parallel_kernels.h"
 
+
+
 // ALLOCATE and DE-ALLOCATE RESOURCES
 __host__ void initialize_device_PIVOT(int ** backtracker, stackNode ** stack, bool ** visited, 
     int ** depth, float ** loop_minimum, int ** loop_min_from, int ** loop_min_to, int ** loop_min_id,
