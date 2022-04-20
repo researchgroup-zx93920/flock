@@ -14,7 +14,9 @@ __host__ void initialize_device_DUAL(float ** u_vars_ptr, float ** v_vars_ptr,
     gpuErrchk(cudaMalloc((void **) v_vars_ptr, sizeof(float)*numDemands));
 
     if (CALCULATE_DUAL=="tree") {
-
+        
+        std::cout<<"Tree is deprecated, USE bfs INSTEAD!"<<std::endl;
+        exit(-1);
         //  empty u and v equations using the Variable Data Type >>
         gpuErrchk(cudaMalloc((void **) U_vars, sizeof(Variable)*numSupplies));
         gpuErrchk(cudaMalloc((void **) V_vars, sizeof(Variable)*numDemands));
@@ -67,6 +69,7 @@ __host__ void initialize_device_DUAL(float ** u_vars_ptr, float ** v_vars_ptr,
         gpuErrchk(cudaMalloc((void **) d_A, sizeof(float)*V*V));
         gpuErrchk(cudaMalloc((void **) d_b, sizeof(float)*V));
         gpuErrchk(cudaMalloc((void **) d_x, V * sizeof(float)));
+
     }
 }
 
@@ -207,12 +210,14 @@ __host__ void find_dual_using_sparse_solver(float * u_vars_ptr, float * v_vars_p
 	CUSPARSE_CHECK(cusparseSetMatIndexBase(descrA, CUSPARSE_INDEX_BASE_ZERO)); 
 
         int singularity;
-        int reorder = 0; // Cholesky : 1 : symrcm, 2 : symamd, or 3 : csrmetisnd
+        // Cholesky : 1 : symrcm, 2 : symamd, or 3 : csrmetisnd
+        int reorder = 0;
+
         if (SPARSE_SOLVER=="qr") {
                 
                 CUSOLVER_CHECK(cusolverSpScsrlsvqr(solver_handle, V, nnz, descrA, 
                                         d_csr_values, d_csr_offsets, d_csr_columns, d_b, 
-                                        10e-6, 0, d_x, &singularity));
+                                        10e-9, reorder, d_x, &singularity));
         
         }
 
@@ -220,7 +225,7 @@ __host__ void find_dual_using_sparse_solver(float * u_vars_ptr, float * v_vars_p
 
                 CUSOLVER_CHECK(cusolverSpScsrlsvchol(solver_handle, V, nnz, descrA,
                      d_csr_values, d_csr_offsets, d_csr_columns, d_b,
-                     10e-6, reorder, d_x, &singularity));
+                     10e-9, reorder, d_x, &singularity));
 
         }
         

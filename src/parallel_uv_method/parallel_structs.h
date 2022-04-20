@@ -29,7 +29,7 @@
 #define UV_STRUCTS
 
 // PARAMETERS
-#define blockSize 4
+#define blockSize 8
 
 // Degeneracy resolve
 #define epsilon 0.000001f
@@ -54,7 +54,7 @@ sparse_linear_solver : solve system of lin_equations (sparse linear algebra :: c
 dense_linear_solver : solve system of lin_equations (dense linear algebra :: cublas)
 */
 
-#define SPARSE_SOLVER "qr"
+#define SPARSE_SOLVER "chol"
 /*
 qr, chol
 */

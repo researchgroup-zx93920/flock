@@ -255,6 +255,8 @@ void uvModel_parallel::perform_pivot(bool &result)
 void uvModel_parallel::execute() 
 {
     // SIMPLEX ALGORITHM >>
+    std::cout<<">>>> PARAMS | BFS: "<<BFS_METHOD<<" | CALCULATE_DUAL: "<<CALCULATE_DUAL<<" | PIVOTING STRATEGY: "<<PIVOTING_STRATEGY<<std::endl;
+    std::cout<<">>>> PARAMS L2 | SPARSE_SOLVER: "<<SPARSE_SOLVER<<" | PARALLEL PIVOTING METHOD: "<<PARALLEL_PIVOTING_METHOD<<std::endl;
 
     // **************************************
     // STEP 1: Finding BFS
@@ -322,7 +324,7 @@ void uvModel_parallel::execute()
     std::cout<<"SIMPLEX PASS 2 :: find the dual -> reduced -> pivots -> repeat!"<<std::endl;
     auto iter_start = std::chrono::high_resolution_clock::now();
     auto iter_end = std::chrono::high_resolution_clock::now();
-    auto iter_duration = std::chrono::duration_cast<std::chrono::milliseconds>(iter_end - iter_start);
+    auto iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
 
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
@@ -337,7 +339,7 @@ void uvModel_parallel::execute()
         // u_vars_ptr and v_vars ptr were populated on device
 
         iter_end = std::chrono::high_resolution_clock::now();
-        iter_duration = std::chrono::duration_cast<std::chrono::milliseconds>(iter_end - iter_start);
+        iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
         uv_time += iter_duration.count();
 
         // 2.2 
@@ -347,7 +349,7 @@ void uvModel_parallel::execute()
         // d_reducedCosts_ptr was populated on device
 
         iter_end = std::chrono::high_resolution_clock::now();
-        iter_duration = std::chrono::duration_cast<std::chrono::milliseconds>(iter_end - iter_start);
+        iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
         reduced_cost_time += iter_duration.count();
         
         // DEBUG ::
@@ -362,7 +364,7 @@ void uvModel_parallel::execute()
         perform_pivot(result);
         
         iter_end = std::chrono::high_resolution_clock::now();
-        iter_duration = std::chrono::duration_cast<std::chrono::milliseconds>(iter_end - iter_start);
+        iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
         pivot_time += iter_duration.count();
 
         iteration_counter++;
