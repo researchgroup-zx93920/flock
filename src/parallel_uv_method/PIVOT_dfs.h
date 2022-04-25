@@ -31,4 +31,4 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     float * loop_minimum, int * loop_min_from, int * loop_min_to, int * loop_min_id, // Parallel pivot book-keeping
     vertex_conflicts * v_conflicts, // Parallel pivot book-keeping
     double &dfs_time, double &resolve_time, double &adjustment_time,
-    int numSupplies, int numDemands);
+    int iteration, int numSupplies, int numDemands);

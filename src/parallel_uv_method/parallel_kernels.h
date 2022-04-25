@@ -64,7 +64,7 @@ __global__ void assign_next(int * d_adjMtx_ptr, float * d_costs_ptr,
 __global__ void CUDA_BFS_KERNEL(int * start, int * length, int *Ea, bool * Fa, bool * Xa, 
         float * variables, float * d_costs_ptr, bool * done, int numSupplies, int numDemands, int V);
 
-__global__ void determine_length(int * length, int * d_adjMtx_ptr, int V, int numSupplies);
+__global__ void determine_length(int * length, int * d_adjMtx_ptr, int V);
 
 __global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, int V, int numSupplies);
 

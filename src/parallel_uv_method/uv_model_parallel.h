@@ -104,6 +104,11 @@ private:
         float * variables;
         bool * Xa, * Fa;
 
+        // DUAL :: Sequencial BFS >>
+        int * h_length, * h_start, * h_Ea;
+        bool * h_visited;
+        float * h_variables;
+
         // DUAL :: Temporary
         float * h_reduced_costs;
 
@@ -127,7 +132,7 @@ private:
     void generate_initial_BFS();
     void solve_uv();
     void get_reduced_costs();
-    void perform_pivot(bool &result);
+    void perform_pivot(bool &result, int iteration);
     void solve();
 
     // Developer Facility Methods >>

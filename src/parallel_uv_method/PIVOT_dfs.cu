@@ -542,7 +542,7 @@ Fetch and view discovered cycles
 Function: Copy depth, backtrack from device and print
 */
 __host__ void __debug_utility_1(float * d_reducedCosts_ptr, int * backtracker, int * depth, float * loop_minimum,
-        int * loop_min_from, int * loop_min_to, int * loop_min_id, int numSupplies, int numDemands) 
+        int * loop_min_from, int * loop_min_to, int * loop_min_id, int iteration, int numSupplies, int numDemands) 
 {
     std::cout<<"DEBUG UTIITY - 1 | Viewing Discovered Loops"<<std::endl;
     int num_threads_launching = numSupplies*numDemands;
@@ -569,13 +569,13 @@ __host__ void __debug_utility_1(float * d_reducedCosts_ptr, int * backtracker, i
     for (int i=0; i < num_threads_launching; i++) {
         int offset = V*i;
         if (h_depth[i] > 0){
-            std::cout<<"Thread - "<<i<<" : Depth : "<<h_depth[i]<<" : ";
-            for (int j = 0; j <= h_depth[i]; j++) {
-                std::cout<<h_backtracker[offset+j]<<" ";
-            }
+            std::cout<<"Iteration : "<<iteration<<" : Thread : "<<i<<" : Depth : "<<h_depth[i]<<" : ";
+            // for (int j = 0; j <= h_depth[i]; j++) {
+            //     std::cout<<h_backtracker[offset+j]<<" ";
+            // }
             std::cout<<std::endl;
-            std::cout<<"\t Loop Minimum = "<<h_loop_minimum[i]<<" From :"<<h_loop_min_from[i]<<" To : "<<h_loop_min_to[i]<<std::endl;
-            std::cout<<"\t Reduced Costs = "<<h_reduced_costs[i]<<std::endl;
+            // std::cout<<"\t Loop Minimum = "<<h_loop_minimum[i]<<" From :"<<h_loop_min_from[i]<<" To : "<<h_loop_min_to[i]<<std::endl;
+            // std::cout<<"\t Reduced Costs = "<<h_reduced_costs[i]<<std::endl;
             num_cycles++;
         }
     }
@@ -629,12 +629,12 @@ __host__ void __debug_utility_3(int * backtracker, int * depth, float * loop_min
     for (int i=0; i < num_threads_launching; i++) {
         int offset = V*i;
        if (h_depth[i] > 0){
-            std::cout<<"Thread - "<<i<<" : Depth : "<<h_depth[i]<<" : ";
-            for (int j = 0; j < h_depth[i]; j++) {
-                std::cout<<h_backtracker[offset+j]<<" ";
-            }
+            std::cout<<"Thread : "<<i<<" : Depth : "<<h_depth[i]<<" : ";
+            // for (int j = 0; j < h_depth[i]; j++) {
+            //     std::cout<<h_backtracker[offset+j]<<" ";
+            // }
             std::cout<<std::endl;
-            std::cout<<"\t Loop Minimum = "<<h_loop_minimum[i]<<std::endl;
+            // std::cout<<"\t Loop Minimum = "<<h_loop_minimum[i]<<std::endl;
            num_cycles++;
        }
     }
@@ -656,7 +656,7 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     float * loop_minimum, int * loop_min_from, int * loop_min_to, int * loop_min_id, 
     vertex_conflicts * v_conflicts,
     double &dfs_time, double &resolve_time, double &adjustment_time,
-    int numSupplies, int numDemands) {
+    int iteration, int numSupplies, int numDemands) {
     
     auto _pivot_start = std::chrono::high_resolution_clock::now();
     auto _pivot_end = std::chrono::high_resolution_clock::now();
@@ -689,7 +689,7 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
         // xxxxxx - Barrier 1 - xxxxxx
 
     // DEBUG UTILITY 1 ::
-    // __debug_utility_1(d_reducedCosts_ptr, backtracker, depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, numSupplies, numDemands);
+    // __debug_utility_1(d_reducedCosts_ptr, backtracker, depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, iteration, numSupplies, numDemands);
     _pivot_end = std::chrono::high_resolution_clock::now();
     _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     dfs_time += _pivot_duration.count();

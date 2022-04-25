@@ -1,6 +1,7 @@
 #include<iostream>
 #include<map>
 #include<vector>
+#include<queue>
 #include<algorithm>
 #include<utility>
 
@@ -46,15 +47,16 @@ nwc : Northwest Corner - sequential implementation
 vam : vogel's approximation - parallel regret implementation
 */
 
-#define CALCULATE_DUAL "bfs"
+#define CALCULATE_DUAL "bfs_seq"
 /*
 tree : traverse the tree in parallel to find values on verties [FUNDAMENTAL-BUG HERE] 
-bfs : Replacement approach for tree method 
+bfs : Replacement approach for tree method
+bfs : just like bfs - performed on host
 sparse_linear_solver : solve system of lin_equations (sparse linear algebra :: cusparse)
 dense_linear_solver : solve system of lin_equations (dense linear algebra :: cublas)
 */
 
-#define SPARSE_SOLVER "chol"
+#define SPARSE_SOLVER "qr"
 /*
 qr, chol
 */

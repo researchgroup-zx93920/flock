@@ -133,7 +133,8 @@ void uvModel_parallel::solve_uv()
         Initialize u and v and then solve them through 
         Breadth first search using the adj matrix provided
         */
-        find_dual_using_tree(u_vars_ptr, v_vars_ptr, d_adjMtx_ptr, d_costs_ptr, U_vars, V_vars, data->numSupplies, data->numDemands);
+        find_dual_using_tree(u_vars_ptr, v_vars_ptr, d_adjMtx_ptr, d_costs_ptr, 
+            U_vars, V_vars, data->numSupplies, data->numDemands);
     }
 
     else if (CALCULATE_DUAL=="bfs") 
@@ -141,11 +142,26 @@ void uvModel_parallel::solve_uv()
         /* 
         Initialize u and v and then solve them through 
         Breadth first search using the adj matrix provided
+        BFS is performed on the device
         */
         find_dual_using_bfs(u_vars_ptr, v_vars_ptr, 
             dual_length, dual_start, Ea, Fa, Xa, variables, 
             d_adjMtx_ptr, d_costs_ptr, data->numSupplies, data->numDemands);
     }
+
+    else if (CALCULATE_DUAL=="bfs_seq") 
+    {
+        /* 
+        Initialize u and v and then solve them through 
+        Breadth first search using the adj matrix provided
+        BFS is performed on the host 
+        */
+        find_dual_using_seq_bfs(u_vars_ptr, v_vars_ptr, 
+            dual_length, dual_start, Ea, d_adjMtx_ptr, data->costs, 
+            h_length, h_start, h_Ea, h_visited, h_variables,
+            data->numSupplies, data->numDemands);
+    }
+
     else if (CALCULATE_DUAL=="sparse_linear_solver") {
         /* 
         Solve a system of linear equations
@@ -200,7 +216,7 @@ Pivoting Operation in Trnasport Simplex. A pivot is complete in following 3 Step
     Step 3: Perform the pivot and adjust the flow
     Step 4/0: Repeat!
 */
-void uvModel_parallel::perform_pivot(bool &result) 
+void uvModel_parallel::perform_pivot(bool &result, int iteration) 
 {
     // *******************************************
     // STEP 1: Check if already optimal
@@ -234,7 +250,7 @@ void uvModel_parallel::perform_pivot(bool &result)
                 h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, 
                 result,  d_reducedCosts_ptr, depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, v_conflicts,
                 dfs_time, resolve_time, adjustment_time,
-                data->numSupplies, data->numDemands);
+                iteration, data->numSupplies, data->numDemands);
         }
             
         else
@@ -255,8 +271,10 @@ void uvModel_parallel::perform_pivot(bool &result)
 void uvModel_parallel::execute() 
 {
     // SIMPLEX ALGORITHM >>
-    std::cout<<">>>> PARAMS | BFS: "<<BFS_METHOD<<" | CALCULATE_DUAL: "<<CALCULATE_DUAL<<" | PIVOTING STRATEGY: "<<PIVOTING_STRATEGY<<std::endl;
-    std::cout<<">>>> PARAMS L2 | SPARSE_SOLVER: "<<SPARSE_SOLVER<<" | PARALLEL PIVOTING METHOD: "<<PARALLEL_PIVOTING_METHOD<<std::endl;
+    std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nCALCULATE_DUAL: ";
+    std::cout<<CALCULATE_DUAL<<"\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY<<"\n--------------------------------"<<std::endl;
+    std::cout<<"------------- PARAMS L2 -------------\nSPARSE_SOLVER: "<<SPARSE_SOLVER;
+    std::cout<<"\nPARALLEL PIVOTING METHOD: "<<PARALLEL_PIVOTING_METHOD<<"\n--------------------------------"<<std::endl;
 
     // **************************************
     // STEP 1: Finding BFS
@@ -298,7 +316,9 @@ void uvModel_parallel::execute()
     initialize_device_DUAL(&u_vars_ptr, &v_vars_ptr, &U_vars, &V_vars, 
         &dual_length, &dual_start, &Ea, &Fa, &Xa, &variables,
         &d_csr_values, &d_csr_columns, &d_csr_offsets,
-        &d_A, &d_b, &d_x, nnz, data->numSupplies, data->numDemands);
+        &d_A, &d_b, &d_x, nnz,
+        &h_length, &h_start, &h_Ea, &h_visited, &h_variables,
+        data->numSupplies, data->numDemands);
     std::cout<<"\tSuccessfully allocated Resources for DUAL ..."<<std::endl;
 
     // Follow PIVOTING_dfs for the following
@@ -312,7 +332,7 @@ void uvModel_parallel::execute()
     gpuErrchk(cudaMalloc((void **) &d_reducedCosts_ptr, sizeof(float)*data->numSupplies*data->numDemands));
     std::cout<<"\tSuccessfully allocated Resources for Reduced costs ..."<<std::endl;
 
-    // Create tree structure on host device (for pivoting)
+    // Create tree structure on host and device (for pivoting)
     create_IBF_tree_on_host_device(feasible_flows, 
         &d_adjMtx_ptr, &h_adjMtx_ptr, &d_flowMtx_ptr, &h_flowMtx_ptr, 
         data->numSupplies, data->numDemands);
@@ -337,6 +357,9 @@ void uvModel_parallel::execute()
         
         solve_uv();
         // u_vars_ptr and v_vars ptr were populated on device
+        // view_tree();
+        // view_uv();
+        // exit(0);
 
         iter_end = std::chrono::high_resolution_clock::now();
         iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
@@ -361,7 +384,7 @@ void uvModel_parallel::execute()
         // 2.3
         iter_start = std::chrono::high_resolution_clock::now();
         
-        perform_pivot(result);
+        perform_pivot(result, iteration_counter);
         
         iter_end = std::chrono::high_resolution_clock::now();
         iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
@@ -380,7 +403,8 @@ void uvModel_parallel::execute()
 
     terminate_device_DUAL(u_vars_ptr, v_vars_ptr, U_vars, V_vars,
         dual_length, dual_start, Ea, Fa, Xa, variables, 
-        d_csr_values, d_csr_columns, d_csr_offsets, d_A, d_b, d_x);
+        d_csr_values, d_csr_columns, d_csr_offsets, d_A, d_b, d_x, 
+        h_length, h_start, h_Ea, h_visited, h_variables);
     std::cout<<"\tSuccessfully de-allocated resources for DUAL ..."<<std::endl;
     terminate_device_PIVOT(backtracker, stack, visited, 
         depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, v_conflicts);

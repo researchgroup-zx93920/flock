@@ -261,7 +261,6 @@ __global__ void CUDA_BFS_KERNEL(int * start, int * length, int *Ea, bool * Fa, b
 		Xa[id] = true;
 		__syncthreads(); 
 		int k = 0;
-		int i;
 		int start_ptr = start[id];
 		int end_ptr = start_ptr + length[id];
 		for (int i = start_ptr; i < end_ptr; i++) 
@@ -269,8 +268,8 @@ __global__ void CUDA_BFS_KERNEL(int * start, int * length, int *Ea, bool * Fa, b
 			int nid = Ea[i];
 			if (Xa[nid] == false)
 			{       
-                                int row_indx = min(nid, id);
-                                int col_indx = max(nid, id) - numSupplies;
+                int row_indx = min(nid, id);
+                int col_indx = max(nid, id) - numSupplies;
 				variables[nid] = d_costs_ptr[row_indx*numDemands+col_indx] - variables[id];
 				Fa[nid] = true;
 				*done = false;
@@ -279,9 +278,10 @@ __global__ void CUDA_BFS_KERNEL(int * start, int * length, int *Ea, bool * Fa, b
 	}
 }
 
-__global__ void determine_length(int * length, int * d_adjMtx_ptr, int V, int numSupplies) {
+__global__ void determine_length(int * length, int * d_adjMtx_ptr, int V) {
         int L = 0;
         int i = blockIdx.x *blockDim.x + threadIdx.x;
+        // No data re-use (this is a straight fwd kernel)
         if (i < V) 
         {    
                 for (int j=0; j<V; j++) {
