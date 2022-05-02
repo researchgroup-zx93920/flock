@@ -4,8 +4,6 @@ Follow the implementation of uv_method_parallel class methods
 and all of this will suddenly make sense
 */
 
-#include <iostream>
-
 #include "parallel_structs.h"
 #include "parallel_kernels.h"
 

@@ -1,6 +1,3 @@
-#include <iostream>
-#include <chrono>
-
 #include "parallel_structs.h"
 #include "parallel_kernels.h"
 #include "IBFS_vogel.h"
@@ -138,7 +135,9 @@ private:
     // Developer Facility Methods >>
     void view_uv();
     void view_reduced_costs();
+    void count_negative_reduced_costs();
     void view_tree();
+
 
 };
 

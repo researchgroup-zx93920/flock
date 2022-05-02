@@ -12,8 +12,6 @@ You'll either find it here or there's a comment that would take you to the
 appropriate place
 */
 
-#include <iostream>
-
 #include "parallel_structs.h"
 
 #ifndef KERNELS

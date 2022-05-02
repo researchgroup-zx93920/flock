@@ -1,7 +1,3 @@
-#include <iostream>
-#include <cstring>
-#include <map>
-
 #include "parallel_structs.h"
 
 // Retrieve row attribute of a Matrix Cell object

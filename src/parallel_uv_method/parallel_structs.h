@@ -1,9 +1,11 @@
 #include<iostream>
+#include<cstring>
 #include<map>
 #include<vector>
 #include<queue>
 #include<algorithm>
 #include<utility>
+#include<chrono>
 
 #include <cuda.h>
 #include <cuda_runtime.h>

@@ -272,9 +272,9 @@ void uvModel_parallel::execute()
 {
     // SIMPLEX ALGORITHM >>
     std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nCALCULATE_DUAL: ";
-    std::cout<<CALCULATE_DUAL<<"\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY<<"\n--------------------------------"<<std::endl;
+    std::cout<<CALCULATE_DUAL<<"\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY<<"\n-------------------------------------"<<std::endl;
     std::cout<<"------------- PARAMS L2 -------------\nSPARSE_SOLVER: "<<SPARSE_SOLVER;
-    std::cout<<"\nPARALLEL PIVOTING METHOD: "<<PARALLEL_PIVOTING_METHOD<<"\n--------------------------------"<<std::endl;
+    std::cout<<"\nPARALLEL PIVOTING METHOD: "<<PARALLEL_PIVOTING_METHOD<<"\n-------------------------------------"<<std::endl;
 
     // **************************************
     // STEP 1: Finding BFS
@@ -327,7 +327,6 @@ void uvModel_parallel::execute()
     &v_conflicts, data->numSupplies, data->numDemands);
     std::cout<<"\tSuccessfully allocated Resources for PIVOTING ..."<<std::endl;
     
-
     // Container for reduced costs
     gpuErrchk(cudaMalloc((void **) &d_reducedCosts_ptr, sizeof(float)*data->numSupplies*data->numDemands));
     std::cout<<"\tSuccessfully allocated Resources for Reduced costs ..."<<std::endl;
@@ -370,6 +369,7 @@ void uvModel_parallel::execute()
         
         get_reduced_costs();
         // d_reducedCosts_ptr was populated on device
+        // count_negative_reduced_costs();
 
         iter_end = std::chrono::high_resolution_clock::now();
         iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
@@ -485,6 +485,23 @@ void uvModel_parallel::view_reduced_costs()
         std::cout << "ReducedCosts[" << i << "] = " << h_reduced_costs[i] << std::endl;
     }
 
+}
+
+
+void uvModel_parallel::count_negative_reduced_costs() 
+{
+
+    // Print reduced costs
+    float * h_reduced_costs;
+    int _count = 0;
+    h_reduced_costs = (float *) malloc(data->numDemands*data->numSupplies*sizeof(float));
+    gpuErrchk(cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, data->numDemands*data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < data->numDemands*data->numSupplies; i++) {
+        if (h_reduced_costs[i] < 0 && abs(h_reduced_costs[i]) > 10e-3) {
+            _count++;
+        }
+    }
+    std::cout<<"Number of Negative Reduced Costs = "<<_count<<std::endl;
 }
 
 void uvModel_parallel::view_tree() 
