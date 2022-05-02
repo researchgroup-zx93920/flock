@@ -783,3 +783,13 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
 }
 
 
+
+__host__ void perform_a_parallel_pivot_improved(int * backtracker, stackNode * stack, bool * visited,
+    int * h_adjMtx_ptr, float * h_flowMtx_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
+    bool &result, float * d_reducedCosts_ptr, int * depth, 
+    float * loop_minimum, int * loop_min_from, int * loop_min_to, int * loop_min_id, 
+    vertex_conflicts * v_conflicts,
+    double &dfs_time, double &resolve_time, double &adjustment_time,
+    int iteration, int numSupplies, int numDemands) {
+
+    };
