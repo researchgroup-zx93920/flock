@@ -46,5 +46,7 @@ __global__ void updateDifferences(vogelDifference *minima, MatrixCell *row_book,
 
 // Orchestrator function for executing vogel's algorithm
 __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell *costMatrix,
-                                      flowInformation *flows, std::map<std::pair<int, int>, int> &flow_indexes,
-                                      int numSupplies, int numDemands);
+                                      flowInformation *flows, int numSupplies, int numDemands);
+
+__host__ void find_vogel_bfs_sequencial(int *supplies, int *demands, MatrixCell *costMatrix,
+                                      flowInformation *flows, int numSupplies, int numDemands);

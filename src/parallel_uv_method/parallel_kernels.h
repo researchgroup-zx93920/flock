@@ -31,10 +31,29 @@ __global__ void retrieve_final_tree(flowInformation * d_flows_ptr, int * d_adjMt
 
 __host__ void create_IBF_tree_on_host_device(flowInformation * feasible_flows,
     int ** d_adjMtx_ptr, int ** h_adjMtx_ptr, float ** d_flowMtx_ptr, float ** h_flowMtx_ptr, 
+    int ** d_vertex_start, int ** d_vertex_degree, int ** d_adjVertices,
+    int ** h_vertex_start, int ** h_vertex_degree, int ** h_adjVertices, 
     int numSupplies, int numDemands);
+
+__host__ void close_solver(int * d_adjMtx_ptr, int * h_adjMtx_ptr, float * d_flowMtx_ptr, float * h_flowMtx_ptr, 
+    int * h_vertex_start, int * h_vertex_degree, int * h_adjVertices,
+    int * d_vertex_start, int * d_vertex_degree, int * d_adjVertices);
 
 __host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
     int &active_flows, int numSupplies, int numDemands);
+
+/*Determine number of non zero elements in each row of adjacency matrix */
+__global__ void determine_length(int * length, int * d_adjMtx_ptr, int V);
+
+/* Convert adjacency matrix to adjacency list - compaction kernel */
+__global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, int V, int numSupplies);
+
+/* View adjacency list */
+__host__ void __debug_view_adjList(int * start, int * length, int * Ea, int V);
+
+/* Convert d_adjMatrix to adjacency list (utillized by both host_bfs and DFS in pivoting) */
+__host__ void make_adjacency_list(int * start, int * length, int * Ea, int * d_adjMtx_ptr, 
+        int numSupplies, int numDemands, int V);
 
 // ##################################################
 // SOLVING DUAL >>
@@ -56,15 +75,13 @@ __global__ void initialize_V_vars(Variable * V_vars, int numDemands);
 /*
 Breadth First Traversal on UV
 */
+
+/* assign_next is deprecated because of inherence race condition */
 __global__ void assign_next(int * d_adjMtx_ptr, float * d_costs_ptr, 
     Variable *u_vars, Variable *v_vars, int numSupplies, int numDemands);
 
 __global__ void CUDA_BFS_KERNEL(int * start, int * length, int *Ea, bool * Fa, bool * Xa, 
         float * variables, float * d_costs_ptr, bool * done, int numSupplies, int numDemands, int V);
-
-__global__ void determine_length(int * length, int * d_adjMtx_ptr, int V);
-
-__global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, int V, int numSupplies);
 
 /*
 APPROACH 2:
@@ -99,6 +116,9 @@ __global__ void retrieve_uv_solution(float * d_x, float * u_vars_ptr, float * v_
 Kernel to compute Reduced Costs in the transportation table
 */
 __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, float * d_costs_ptr, float * d_reducedCosts_ptr, 
+    int numSupplies, int numDemands);
+
+__global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, float * d_costs_ptr, MatrixCell * d_reducedCosts_ptr, 
     int numSupplies, int numDemands);
 
 #endif

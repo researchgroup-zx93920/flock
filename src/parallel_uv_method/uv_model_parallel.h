@@ -5,7 +5,6 @@
 #include "DUAL_solver.h"
 #include "PIVOT_dfs.h"
 
-// #include "PIVOT_dfs.h"
 
 /*
 Algorithm alternative to solve transportation problem
@@ -29,8 +28,6 @@ public:
 
     flowInformation * feasible_flows;  // Feasible flow at any point in the algorithm flow
                                        // Useful for mapping data structs on CPU - GPU interop
-    std::map<std::pair<int,int>, int> flow_indexes; 
-    // The flows at given cell (i,j) is available at this index in flows
 
     void execute();
     void create_flows();
@@ -60,8 +57,12 @@ private:
         // sometimes zero flows would make life better :D
 
         // For a simplex iteration, current feasible tree is maintained on both host (h_) and device (d_)
-        int * d_adjMtx_ptr, * h_adjMtx_ptr;  
+        // The tree is maintained in the form of adjMtx as well as adjList
+        int * d_adjMtx_ptr, * h_adjMtx_ptr; 
+        int * d_vertex_start, * d_vertex_degree, * d_adjVertices;
+        int * h_vertex_start, * h_vertex_degree, * h_adjVertices;  
         float * d_flowMtx_ptr, * h_flowMtx_ptr;
+        
         /*
         IMPORTANT | adjMtx and flowMtx has been designed with special consideration
 
@@ -87,8 +88,9 @@ private:
     //  - cost of flow through an edge
     //  - dual costs towards supply constraints
     //  - dual costs towards demand constraints
-        float * d_reducedCosts_ptr, * d_costs_ptr, * u_vars_ptr, * v_vars_ptr;
-    
+        float * d_costs_ptr, * u_vars_ptr, * v_vars_ptr;
+        MatrixCell * d_reducedCosts_ptr, min_reduced_cost;
+
         // DUAL :: Solving system of equations 
         float u_0 = 0, u_0_coef = 1;
         int * d_csr_offsets, * d_csr_columns;
@@ -96,13 +98,10 @@ private:
         int64_t nnz;
 
         // DUAL :: Solving using a breadth first traversal on Tree
-        Variable * U_vars, * V_vars;
-        int * dual_length, * dual_start, * Ea;
         float * variables;
         bool * Xa, * Fa;
 
         // DUAL :: Sequencial BFS >>
-        int * h_length, * h_start, * h_Ea;
         bool * h_visited;
         float * h_variables;
 

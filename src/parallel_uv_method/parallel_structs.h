@@ -43,19 +43,25 @@
 1 : Verbose model
 */
 
-#define BFS_METHOD "vam"
+#define BFS_METHOD "vam_device"
 /*
-nwc : Northwest Corner - sequential implementation
-vam : vogel's approximation - parallel regret implementation
+ALL THESE METHODS/KERNELS ARE IMPLEMENTED COLLECTIVELY IN - BFS_* PREFIXED FILES
+
+nwc_host : Northwest Corner - sequential implementation
+vam_host : Northwest Corner - sequential implementation
+vam_device : vogel's approximation - parallel regret implementation
 */
 
-#define CALCULATE_DUAL "bfs_seq"
+#define CALCULATE_DUAL "host_bfs"
 /*
-tree : traverse the tree in parallel to find values on verties [FUNDAMENTAL-BUG HERE] 
-bfs : Replacement approach for tree method
-bfs : just like bfs - performed on host
-sparse_linear_solver : solve system of lin_equations (sparse linear algebra :: cusparse)
-dense_linear_solver : solve system of lin_equations (dense linear algebra :: cublas)
+ALL THESE METHODS/KERNELS ARE IMPLEMENTED COLLECTIVELY IN - DUAL_solver.h/.cu FILES
+
+device_bfs : traverse the tree (bfs fashion) in parallel to find values on verties
+host_bfs : just like bfs - performed on host
+host_sparse_linear_solver : solver system of sparse lin_equations on host
+host_dense_linear_solver : solver system of dense lin_equations on host
+device_sparse_linear_solver : solve system of sparse lin_equations on device (sparse linear algebra :: cusparse)
+device_dense_linear_solver : solve system of dense lin_equations (dense linear algebra :: cublas)
 */
 
 #define SPARSE_SOLVER "qr"
@@ -63,10 +69,33 @@ dense_linear_solver : solve system of lin_equations (dense linear algebra :: cub
 qr, chol
 */
 
-#define PIVOTING_STRATEGY "sequencial"
+#define PIVOTING_STRATEGY "sequencial_dfs"
 /*
-sequencial : perform pivoting one at a time based on dantzig's rule
-parallel : perform parallel pivoting (run flow adjustments in parallel)
+sequencial_dfs : perform pivoting one at a time based on dantzig's rule
+parallel_dfs : perform parallel pivoting (run flow adjustments in parallel)
+*/
+
+#define COMPACTION_FACTOR 3
+/*
+Lets the solver decide how many parallel cycles need to be discovered in one case
+*/
+
+#define NUM_THREADS_LAUNCHING(M, N, strategy) (strategy==1?((floor((M + N - 1)/3))*(COMPACTION_FACTOR)):(2*(M+N)))
+/* 
+IDEA 1 :
+Theoretically k = FLOOR[(M + N - 1)/3] deconflcited cycles can exist
+We'll discover COMPACTION_FACTOR * k parallel pivots and resolve conflicts within them
+in the hope that we'll get the most of the deconflicted cycles from the 
+top cream of negative reduced costs
+
+IDEA 2 : 
+Follow this paper's parameter - DOI: 10.1080/10556788.2016.1260568 
+Just consider at most 2(M + N) negative reduced costs 
+*/
+
+#define PARALLEL_PIVOT_IDEA 1
+/*
+Idea to use from above 1/2
 */
 
 #define PARALLEL_PIVOTING_METHOD "hybrid"
@@ -209,6 +238,14 @@ struct is_zero
     __host__ __device__ bool operator()(const flowInformation &x)
     {
         return (x.qty == 0);
+    }
+};
+
+struct is_nonzero_entry
+{
+    __host__ __device__ bool operator()(const int &x)
+    {
+        return (x != 0);
     }
 };
 

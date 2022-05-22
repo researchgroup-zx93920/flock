@@ -141,9 +141,8 @@ Improvement Idea -
         - Also reorder demand supply accordingly >> Maintain the original indexes to assign flow
 2. Can we discard Matrix Cell Data Structure after the sorting job is done in step 1?
 */
-__host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * costMatrix,
-                                      flowInformation * feasible_flows, std::map<std::pair<int, int>, int> &flow_indexes,
-                                      int numSupplies, int numDemands)
+__host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * costMatrix, flowInformation * feasible_flows, 
+        int numSupplies, int numDemands)
 {
 
         // Step 0 :
@@ -316,7 +315,6 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
                         // consume available supply and update demand
                         _this_flow = {.source = flow_row, .destination = flow_col, .qty = std::max(1.0f*res_supplies[flow_row], epsilon)};
                         feasible_flows[counter] = _this_flow;
-                        flow_indexes.insert(std::make_pair(std::make_pair(flow_row, flow_col), counter));
                         res_demands[flow_col] -= res_supplies[flow_row];
                         res_supplies[flow_row] = 0;
                         prev_eliminated = flow_row;
@@ -327,7 +325,6 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
                         // satisfy current demand and update supply
                         _this_flow = {.source = flow_row, .destination = flow_col, .qty = std::max(1.0f*res_demands[flow_col], epsilon)};
                         feasible_flows[counter] = _this_flow;
-                        flow_indexes.insert(std::make_pair(std::make_pair(flow_row, flow_col), counter));
                         res_supplies[flow_row] -= res_demands[flow_col];
                         res_demands[flow_col] = 0;
                         prev_eliminated = numSupplies + flow_col;
@@ -357,4 +354,188 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         }
 
         std::cout << "FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete" << std::endl;
+}
+
+
+void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costMatrix, 
+        flowInformation * flows, int numSupplies, int numDemands) {
+    
+    std::cout<<"Vogel's Approximation sequencial BFS Method"<<std::endl;
+    // Book-keeping stuff >>
+    int coveredRows = 0 , coveredColumns = 0;
+    int * residual_supply = (int *) malloc(numSupplies*sizeof(int));
+    std::memcpy(residual_supply, supplies, numSupplies*sizeof(int));
+
+    int *residual_demand = (int *) malloc(numDemands*sizeof(int));
+    std::memcpy(residual_demand, demands, numDemands*sizeof(int));
+
+    int * rowCovered = (int *) calloc(numSupplies, sizeof(int));
+    int * colCovered = (int *) calloc(numDemands, sizeof(int));    
+    int * differences = (int *) calloc(numSupplies + numDemands, sizeof(int));
+    std::cout<<"\tSTEP 0 : Setting-up book-keeping structs"<<std::endl;
+
+    std::cout<<"\tSTEP 1 : Running Vogel's Heuristic"<<std::endl;
+    bool prev_row = true, prev_col = true; // Denotes if a row/col was eliminated in previous iteration
+
+    while ((coveredRows + coveredColumns) < (numDemands+numSupplies-1)) {
+        
+        // std::cout<<"Iteration - "<<coveredColumns+coveredRows<<std::endl;
+        float temp1, temp2, tempDiff;
+        float costTemp;
+        int i_tempDiff, i_minCost;
+        // std::cout<<"prev_row = "<<prev_row<<std::endl;
+        // std::cout<<"prev_col = "<<prev_col<<std::endl;
+
+        // Re/Calculate row differences >> 
+        if (prev_row) {
+            for (int i=0; i< numSupplies; i++){
+                if (rowCovered[i] == 0) {
+                    temp1 = INT_MAX;
+                    temp2 = INT_MAX;
+                    for (int j=0; j< numDemands; j++) {
+                        // Only look at columns not covered >> 
+                        if (colCovered[j] == 0) {
+                            float entry = costMatrix[i*numDemands + j].cost;
+                            if (entry <= temp1) {
+                                temp2 = temp1;
+                                temp1 = entry;
+                            }
+                            else if (entry <= temp2) {
+                                temp2 = entry;
+                            }
+                        }
+                    }
+                    differences[i] = temp2 - temp1;
+                }
+                else {
+                    differences[i] = INT_MIN;
+                }
+            }
+            prev_row = false;
+        }
+        
+
+        // Re/Calculate col differences >> 
+        if (prev_col) {
+            for (int j=0; j< numDemands; j++){
+                if (colCovered[j] == 0) {
+                    temp1 = INT_MAX;
+                    temp2 = INT_MAX;
+                    // Only look at rows not covered >>
+                    for (int i=0; i< numSupplies; i++) {
+                        if (rowCovered[i] == 0) {
+                            float entry = costMatrix[i*numDemands + j].cost;
+                            if (entry <= temp1) {
+                                temp2 = temp1;
+                                temp1 = entry;
+                            }
+                            else if (entry <= temp2) {
+                                temp2 = entry;
+                            }
+                        }
+                    }
+                    differences[numSupplies + j] = temp2 - temp1;
+                }
+                else {
+                    differences[numSupplies + j] = INT_MIN;
+                }
+            }
+            prev_col = false;
+        }
+        
+        // Determine the maximum of differences - (Reduction)
+        tempDiff = INT_MIN;
+        i_tempDiff = -1;
+        for (int i=0; i < numSupplies + numDemands; i++) {
+            if (differences[i] > tempDiff) {
+                // tie broken by first seen
+                tempDiff = differences[i];
+                i_tempDiff = i;
+            }
+        }
+        
+        int counter = coveredRows + coveredColumns;
+        // Check if row or col difference and determine corresponding min cost
+        // Now we have Basic row and col
+        // Assign flow based on availability 
+        if (i_tempDiff >= numSupplies) {
+            // This is a col difference
+            i_tempDiff -= numSupplies;
+            // In this column index find the min cost
+            costTemp = INT_MAX;
+            for (int i=0; i<numSupplies; i++) {
+                float entry = costMatrix[i*numDemands + i_tempDiff].cost;
+                if (entry < costTemp && rowCovered[i] == 0) {
+                    costTemp = entry;
+                    i_minCost = i;
+                }
+            }
+
+            // std::cout<<"Col: Index-1 "<<i_tempDiff<<std::endl;
+            // std::cout<<"Col: Index-2 "<<i_minCost<<std::endl;
+
+            // std::cout<<" Res-Sup "<<residual_supply[i_minCost]<<std::endl;
+            // std::cout<<" Res-Demand "<<residual_demand[i_tempDiff]<<std::endl;
+            
+            // Min cost row is i_minCost
+            if (residual_demand[i_tempDiff] > residual_supply[i_minCost]){
+                
+                flows[counter] = {.source = i_minCost, .destination = i_tempDiff,
+                                .qty = 1.0f*residual_supply[i_minCost]};
+                residual_demand[i_tempDiff] -= residual_supply[i_minCost];
+                residual_supply[i_minCost] = 0;
+                rowCovered[i_minCost] = 1;
+                prev_row = true;
+                coveredRows += 1;
+            }
+            else {
+                flows[counter] = {.source = i_minCost, .destination = i_tempDiff, 
+                                        .qty = 1.0f*residual_demand[i_tempDiff]};
+                residual_supply[i_minCost] -= residual_demand[i_tempDiff];
+                residual_demand[i_tempDiff] = 0;
+                colCovered[i_tempDiff] = 1;
+                prev_col = true;
+                coveredColumns += 1;
+            }
+        }
+        else {
+            // Then this is a row difference
+            // In this row find the min cost
+            costTemp = INT_MAX;
+            
+            for (int j=0; j<numDemands; j++) {
+                float entry = costMatrix[i_tempDiff*numDemands + j].cost;
+                if (entry < costTemp && colCovered[j] == 0) {
+                    costTemp = entry;
+                    i_minCost = j;
+                }
+            }
+            // minCost column is i_minCost
+            // std::cout<<"Row: Index-1 "<<i_tempDiff<<std::endl;
+            // std::cout<<"Row: Index-2 "<<i_minCost<<std::endl;
+
+            // std::cout<<" Res-Sup "<<residual_supply[i_tempDiff]<<std::endl;
+            // std::cout<<" Res-Demand "<<residual_demand[i_minCost]<<std::endl;
+
+            if (residual_demand[i_minCost] > residual_supply[i_tempDiff]){
+                flows[counter] = {.source = i_tempDiff, .destination = i_minCost, 
+                                    .qty = 1.0f*residual_supply[i_tempDiff]};
+                residual_demand[i_minCost] -= residual_supply[i_tempDiff];
+                residual_supply[i_tempDiff] = 0;
+                rowCovered[i_tempDiff] = 1;
+                prev_row = true;
+                coveredRows += 1;
+            }
+            else {
+                flows[counter] = {.source = i_tempDiff, .destination = i_minCost,
+                                    .qty = 1.0f*residual_demand[i_minCost]};
+                residual_supply[i_tempDiff] -= residual_demand[i_minCost];
+                residual_demand[i_minCost] = 0;
+                colCovered[i_minCost] = 1;
+                prev_col = true;
+                coveredColumns += 1;
+            }  
+        }
+    }
+    std::cout<<"\tVogel's Heuristic Completed!"<<std::endl;
 }

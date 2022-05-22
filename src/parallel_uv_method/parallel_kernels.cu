@@ -102,6 +102,8 @@ In case of sequencial pivoting - one would need a copy of adjMatrix on the host 
 */
 __host__ void create_IBF_tree_on_host_device(flowInformation * feasible_flows,
     int ** d_adjMtx_ptr, int ** h_adjMtx_ptr, float ** d_flowMtx_ptr, float ** h_flowMtx_ptr, 
+    int ** d_vertex_start, int ** d_vertex_degree, int ** d_adjVertices,
+    int ** h_vertex_start, int ** h_vertex_degree, int ** h_adjVertices, 
     int numSupplies, int numDemands) 
 {
     int V = numSupplies+numDemands;
@@ -132,6 +134,15 @@ __host__ void create_IBF_tree_on_host_device(flowInformation * feasible_flows,
     gpuErrchk(cudaMemcpy(*h_adjMtx_ptr, *d_adjMtx_ptr, sizeof(int)*(_utm_entries), cudaMemcpyDeviceToHost));
     *h_flowMtx_ptr = (float *) malloc(sizeof(float)*(V-1));
     gpuErrchk(cudaMemcpy(*h_flowMtx_ptr, *d_flowMtx_ptr, sizeof(float)*(V-1), cudaMemcpyDeviceToHost));
+
+    // Iterations would also work with a adjacency list
+    gpuErrchk(cudaMalloc((void **) d_vertex_start, sizeof(int)*(V)));
+    gpuErrchk(cudaMalloc((void **) d_vertex_degree, sizeof(int)*(V+1)));
+    gpuErrchk(cudaMalloc((void **) d_adjVertices, sizeof(int)*2*(V-1)));
+    *h_vertex_start = (int *) malloc(sizeof(int)*V);
+    *h_vertex_degree = (int *) malloc(sizeof(int)*V);
+    *h_adjVertices = (int *) malloc(sizeof(int)*2*(V-1));
+
 }
 
 /*
@@ -163,6 +174,120 @@ __host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows
     active_flows = flow_count;
     gpuErrchk(cudaMemcpy(feasible_flows, d_flows_ptr, (flow_count)*sizeof(flowInformation), cudaMemcpyDeviceToHost));
 
+}
+
+/* Clear up the memory occupied by graph on host on device */
+__host__ void close_solver(int * d_adjMtx_ptr, int * h_adjMtx_ptr, float * d_flowMtx_ptr, float * h_flowMtx_ptr, 
+    int * h_vertex_start, int * h_vertex_degree, int * h_adjVertices,
+    int * d_vertex_start, int * d_vertex_degree, int * d_adjVertices)
+{
+
+    gpuErrchk(cudaFree(d_vertex_start));
+    gpuErrchk(cudaFree(d_vertex_degree));
+    gpuErrchk(cudaFree(d_adjVertices));
+    gpuErrchk(cudaFree(d_adjMtx_ptr));
+    gpuErrchk(cudaFree(d_flowMtx_ptr));
+    
+    free(h_vertex_start);
+    free(h_vertex_degree);
+    free(h_adjVertices);
+    free(h_adjMtx_ptr);
+    free(h_flowMtx_ptr);
+
+}
+
+__global__ void determine_length(int * length, int * d_adjMtx_ptr, int V) {
+        int L = 0;
+        int i = blockIdx.x *blockDim.x + threadIdx.x;
+        // No data re-use (this is a straight fwd kernel)
+        if (i < V) 
+        {    
+                for (int j=0; j<V; j++) {
+                        int idx = TREE_LOOKUP(i, j, V);
+                        if (d_adjMtx_ptr[idx] > 0) {
+                                L++;
+                        }
+                }
+                length[i+1] = L;
+                length[0] = 0;
+        }
+}
+
+__global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, int V, int numSupplies) {
+        int i = blockIdx.x*blockDim.x + threadIdx.x;
+        int offset = start[i];
+        int L = 0;
+        if (i < V) {
+                for (int j=0; j<V; j++) {
+                        int idx = TREE_LOOKUP(i, j, V);
+                        if (d_adjMtx_ptr[idx] > 0) {
+                                Ea[offset + L] = j;
+                                L++;
+                        }
+                }
+        }
+}
+
+/*
+DEBUG UTILITY : VIEW ADJACENCY LIST STRCTURE 
+*/
+__host__ void __debug_view_adjList(int * start, int * length, int * Ea, int V) 
+{        
+        int * h_length = (int *) malloc(sizeof(int)*V);
+        int * h_start = (int *) malloc(sizeof(int)*V);
+        int * h_Ea = (int *) malloc(sizeof(int)*2*(V-1));
+
+        cudaMemcpy(h_length, length, sizeof(int)*V, cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_start, start, sizeof(int)*V, cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_Ea, Ea, sizeof(int)*2*(V-1), cudaMemcpyDeviceToHost);
+
+        std::cout<<"Str = [ ";
+        for (int i =0; i < V; i++){
+                std::cout<<h_start[i]<<", ";
+        }
+        std::cout<<"]"<<std::endl;
+        std::cout<<"Len = [ ";
+        for (int i =0; i < V; i++){
+                std::cout<<h_length[i]<<", ";
+        }
+        std::cout<<"]"<<std::endl;
+        std::cout<<"Ea = [ ";
+        for (int i =0; i < 2*(V-1); i++){
+                std::cout<<h_Ea[i]<<", ";
+        }
+        std::cout<<"]"<<std::endl;
+        
+        free(h_length);
+        free(h_Ea);
+        free(h_start);
+        // *************** END OF DEBUG UTILITY ***************
+
+}
+
+__host__ void make_adjacency_list(int * start, int * length, int * Ea, int * d_adjMtx_ptr, 
+        int numSupplies, int numDemands, int V) {
+
+        // Kernel Dimensions >> 
+        dim3 __blockDim(blockSize, 1, 1); 
+        dim3 __gridDim(ceil(1.0*V/blockSize), 1, 1);
+
+        determine_length <<< __gridDim, __blockDim >>> (length, d_adjMtx_ptr, V);
+        gpuErrchk(cudaPeekAtLastError());
+        gpuErrchk(cudaDeviceSynchronize());
+        
+        thrust::inclusive_scan(thrust::device, length, length + V, start);
+        
+        fill_Ea <<< __gridDim, __blockDim >>> (start, Ea, d_adjMtx_ptr, V, numSupplies);
+        gpuErrchk(cudaPeekAtLastError());
+        gpuErrchk(cudaDeviceSynchronize());
+        // Entries in Matrix >>
+        // int _utm_entries = (V*(V+1))/2; // Number of entries in upper triangular matrix
+        // auto result_end = thrust::copy_if(thrust::device, d_adjMtx_ptr, d_adjMtx_ptr + _utm_entries, 
+        //                     Ea, is_nonzero_entry()); // --> need col indices of non-zeros
+
+        // DEBUG :: 
+        // __debug_view_adjList(start, &length[1], Ea, V);
+        // exit(0);
 }
 
 
@@ -278,39 +403,6 @@ __global__ void CUDA_BFS_KERNEL(int * start, int * length, int *Ea, bool * Fa, b
 	}
 }
 
-__global__ void determine_length(int * length, int * d_adjMtx_ptr, int V) {
-        int L = 0;
-        int i = blockIdx.x *blockDim.x + threadIdx.x;
-        // No data re-use (this is a straight fwd kernel)
-        if (i < V) 
-        {    
-                for (int j=0; j<V; j++) {
-                        int idx = TREE_LOOKUP(i, j, V);
-                        if (d_adjMtx_ptr[idx] > 0) {
-                                L++;
-                        }
-                }
-                length[i+1] = L;
-                length[0] = 0;
-        }
-}
-
-__global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, int V, int numSupplies) {
-        int i = blockIdx.x*blockDim.x + threadIdx.x;
-        int offset = start[i];
-        int L = 0;
-        if (i < V) {
-                for (int j=0; j<V; j++) {
-                        int idx = TREE_LOOKUP(i, j, V);
-                        if (d_adjMtx_ptr[idx] > 0) {
-                                Ea[offset + L] = j;
-                                L++;
-                        }
-                }
-        }
-}
-
-
 /*
 APPROACH 2:
 Kernels concerned with solving the UV System using a using a matrix solver
@@ -402,7 +494,6 @@ Kernel to compute Reduced Costs in the transportation table
 __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, float * d_costs_ptr, float * d_reducedCosts_ptr, 
     int numSupplies, int numDemands)
 {
-
         int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
         int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
 
@@ -410,6 +501,29 @@ __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, floa
             // r =  C_ij - (u_i + v_j);
             float r = d_costs_ptr[row_indx*numDemands+col_indx] - u_vars_ptr[row_indx] - v_vars_ptr[col_indx];
             d_reducedCosts_ptr[row_indx*numDemands+col_indx] = r;
+        }
+}
+
+
+/* Optimized function for the above kernel to compute reduced costs */
+__global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, float * d_costs_ptr, MatrixCell * d_reducedCosts_ptr, 
+    int numSupplies, int numDemands)
+{
+
+        __shared__ float U[blockSize];
+        __shared__ float V[blockSize];
+        
+        int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
+        int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
+
+        if (row_indx < numSupplies && col_indx < numDemands) {
+            // r =  C_ij - (u_i + v_j);
+            U[threadIdx.y] =  u_vars_ptr[row_indx];
+            V[threadIdx.x] = v_vars_ptr[col_indx];
+            __syncthreads();
+            float r = d_costs_ptr[row_indx*numDemands+col_indx] - U[threadIdx.y] - V[threadIdx.x];
+            MatrixCell _m = {.row = row_indx, .col = col_indx, .cost = r};
+            d_reducedCosts_ptr[row_indx*numDemands+col_indx] = _m;
         }
 }
 
