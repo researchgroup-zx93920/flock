@@ -303,7 +303,6 @@ __host__ void find_dual_using_seq_bfs(float * u_vars_ptr, float * v_vars_ptr,
                                 h_variables[child] = h_costs_ptr[row*numDemands + col] - h_variables[parent];
                                 assigned_parents.push(child);
                         }
-
                 }
                 assigned_parents.pop();
         }

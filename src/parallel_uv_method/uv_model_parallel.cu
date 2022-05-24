@@ -298,7 +298,7 @@ void uvModel_parallel::perform_pivot(bool &result, int iteration)
         {
             // view_reduced_costs();
 
-            perform_a_parallel_pivot(backtracker, stack, visited,
+            perform_a_parallel_pivot_floyd_warshall(backtracker, stack, visited,
                 h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, 
                 d_vertex_start, &d_vertex_degree[1], d_adjVertices,
                 result,  d_reducedCosts_ptr, depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, v_conflicts,
@@ -475,6 +475,7 @@ void uvModel_parallel::execute()
     std::cout<<"\tSuccessfully de-allocated Resources for Reduced costs ..."<<std::endl;
 
     std::cout<<"\tProcessing Solution ..."<<std::endl;
+    cudaMemcpy(d_flowMtx_ptr, h_flowMtx_ptr, (V-1)*sizeof(float), cudaMemcpyHostToDevice);
     retrieve_solution_on_current_tree(feasible_flows, d_adjMtx_ptr, d_flowMtx_ptr, 
         data->active_flows, data->numSupplies, data->numDemands);
 

@@ -121,4 +121,11 @@ __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, floa
 __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, float * d_costs_ptr, MatrixCell * d_reducedCosts_ptr, 
     int numSupplies, int numDemands);
 
+// ##################################################
+// PARALLEL PIVOTING UTILITY KERNELS >>
+// ##################################################
+
+__global__ void _naive_floyd_warshall_kernel(const int k, const int V, int * d_adjMtx, int * path);
+
+__global__ void fill_adjMtx(int * d_adjMtx_transform, int * d_adjMtx_actual, int * d_pathMtx, int V);
 #endif

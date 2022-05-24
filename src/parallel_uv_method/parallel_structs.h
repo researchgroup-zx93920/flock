@@ -6,6 +6,7 @@
 #include<algorithm>
 #include<utility>
 #include<chrono>
+#include<math.h>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -69,7 +70,7 @@ device_dense_linear_solver : solve system of dense lin_equations (dense linear a
 qr, chol
 */
 
-#define PIVOTING_STRATEGY "sequencial_dfs"
+#define PIVOTING_STRATEGY "parallel_dfs"
 /*
 sequencial_dfs : perform pivoting one at a time based on dantzig's rule
 parallel_dfs : perform parallel pivoting (run flow adjustments in parallel)
@@ -80,7 +81,7 @@ parallel_dfs : perform parallel pivoting (run flow adjustments in parallel)
 Lets the solver decide how many parallel cycles need to be discovered in one case
 */
 
-#define NUM_THREADS_LAUNCHING(M, N, strategy) (strategy==1?((floor((M + N - 1)/3))*(COMPACTION_FACTOR)):(2*(M+N)))
+#define NUM_THREADS_LAUNCHING(M, N, strategy) (strategy==1?((floor((M + N - 1)/3))*(COMPACTION_FACTOR)):2*(M+N))
 /* 
 IDEA 1 :
 Theoretically k = FLOOR[(M + N - 1)/3] deconflcited cycles can exist
@@ -93,7 +94,7 @@ Follow this paper's parameter - DOI: 10.1080/10556788.2016.1260568
 Just consider at most 2(M + N) negative reduced costs 
 */
 
-#define PARALLEL_PIVOT_IDEA 1
+#define PARALLEL_PIVOT_IDEA 2
 /*
 Idea to use from above 1/2
 */
@@ -104,7 +105,7 @@ pure : run flow adjustments in parallel
 hybrid : run adjustments sequencial
 */
 
-#define MAX_ITERATIONS 10000
+#define MAX_ITERATIONS 30000
 
 // >>>>>>>>>> END OF PARAMETERS // 
 

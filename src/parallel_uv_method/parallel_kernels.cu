@@ -151,6 +151,7 @@ Given a feasible tree on device, load a feasible solution to transportation prob
 __host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
     int &active_flows, int numSupplies, int numDemands)
 {
+    
     // Recreate device flows using the current adjMatrix
     flowInformation default_flow;
     default_flow.qty = 0;
@@ -525,6 +526,60 @@ __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, floa
             MatrixCell _m = {.row = row_indx, .col = col_indx, .cost = r};
             d_reducedCosts_ptr[row_indx*numDemands+col_indx] = _m;
         }
+}
+
+
+/*
+ Naive CUDA kernel implementation of Floyd Wharshall
+ check if path from vertex x -> y will be shorter using a via. vertex k 
+ for all vertices in graph:
+    check if (x -> k -> y) < (x -> k)
+
+*/
+__global__ void _naive_floyd_warshall_kernel(const int k, const int V, int * d_adjMtx, int * path) {
+    
+    int col_indx = blockDim.x * blockIdx.x + threadIdx.x;
+    int row_indx = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (col_indx < V && row_indx < V) {
+        int indexYX = row_indx * V + col_indx;
+        int indexKX = k * V + col_indx;
+        int indexYK = row_indx*V + k;
+
+        int newPath = d_adjMtx[indexYK] + d_adjMtx[indexKX];
+        int oldPath = d_adjMtx[indexYX];
+        if (oldPath > newPath) {
+            d_adjMtx[indexYX] = newPath;
+            path[indexYX] = path[indexKX];
+        }
+    }
+}
+
+
+__device__ int my_signum(const int x) {
+    return (((x) > 0)?(1):(INT16_MAX));
+}
+
+/* Set initial values in adj Matrix and path matrix */
+__global__ void fill_adjMtx(int * d_adjMtx_transform, int * d_adjMtx_actual, int * d_pathMtx, int V) {
+    
+    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
+    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
+
+    if (row_indx < V && col_indx < V) {
+
+        int dist = my_signum(d_adjMtx_actual[TREE_LOOKUP(row_indx, col_indx, V)]);
+        
+        d_adjMtx_transform[row_indx*V + col_indx] = dist; // Setting B - A
+        d_adjMtx_transform[col_indx*V + row_indx] = dist; // setting A - B 
+        d_adjMtx_transform[row_indx*V + row_indx]  = 0; // setting the diagonal entries 0 
+        
+        if (dist == 1) {
+            d_pathMtx[row_indx*V + col_indx] = row_indx;
+            d_pathMtx[col_indx*V + row_indx] = col_indx;
+        
+        }        
+    }
 }
 
 #endif

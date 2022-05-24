@@ -172,7 +172,7 @@ __host__ void exit_i_and_enter_j(int * d_adjMtx_ptr, float * d_flowMtx_ptr, int 
     gpuErrchk(cudaMemcpy(&d_adjMtx_ptr[id], &new_value, sizeof(int), cudaMemcpyHostToDevice));
 
     // The flow would have become zero - update it again
-    gpuErrchk(cudaMemcpy(&d_flowMtx_ptr[min_flow_indx], &min_flow, sizeof(float), cudaMemcpyHostToDevice));
+    // gpuErrchk(cudaMemcpy(&d_flowMtx_ptr[min_flow_indx], &min_flow, sizeof(float), cudaMemcpyHostToDevice));
 
 }
 
@@ -204,17 +204,17 @@ __host__ void do_flow_adjustment_on_host_device(int * h_adjMtx_ptr, float * h_fl
     // std::cout<<"Min to : "<<min_to<<std::endl;
     // std::cout<<"Min index : "<<min_flow_id<<std::endl;
  
-    int j=-1, _from, _to, id;
+    int _from, _to, id;
     float _flow;
+
     for (int i=1; i<depth; i++) 
     {
         _from = backtracker[i];
         _to = backtracker[i+1];
         id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
-        _flow = j*min_flow;
+        _flow = ((int) pow(-1, (int)i%2))*min_flow;
         h_flowMtx_ptr[id] += _flow;
-        modify_flowMtx_on_device(d_flowMtx_ptr, id, h_flowMtx_ptr[id]);
-        j *= -1;
+        // modify_flowMtx_on_device(d_flowMtx_ptr, id, h_flowMtx_ptr[id]);
     }
 
     // Do the replacment between exiting i - entering j on both host and device
@@ -294,7 +294,7 @@ __host__ void perform_a_sequencial_pivot(int * backtracker, stackNode * stack, b
 
     auto _pivot_start = std::chrono::high_resolution_clock::now();
     auto _pivot_end = std::chrono::high_resolution_clock::now();
-    auto _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    auto _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     // *******************************************
     // STEP: Traverse tree and find a cycle
     // *******************************************
@@ -312,7 +312,7 @@ __host__ void perform_a_sequencial_pivot(int * backtracker, stackNode * stack, b
         pivot_col+numSupplies, pivot_row, V);
     
     _pivot_end = std::chrono::high_resolution_clock::now();
-    _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     dfs_time += _pivot_duration.count();
 
     // If loop not discovered >>
@@ -331,6 +331,7 @@ __host__ void perform_a_sequencial_pivot(int * backtracker, stackNode * stack, b
         // *******************************************
         // STEP : Performing the pivot operation 
         // *******************************************
+
         backtracker[_depth] = pivot_row;
 
         // std::cout<<"Printing Cycle :: [ ";
@@ -344,7 +345,7 @@ __host__ void perform_a_sequencial_pivot(int * backtracker, stackNode * stack, b
             pivot_row, pivot_col, _depth, V, numSupplies, numDemands);
     }
     _pivot_end = std::chrono::high_resolution_clock::now();
-    _pivot_duration = std::chrono::duration_cast<std::chrono::milliseconds>(_pivot_end - _pivot_start);
+    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     adjustment_time += _pivot_duration.count();
 }
 
@@ -361,6 +362,7 @@ __global__ void find_loops(MatrixCell * d_reducedCosts_ptr, int * d_adjMtx_ptr, 
     MatrixCell c = d_reducedCosts_ptr[local_id];
 
     // Check bounds and if this reduced cost is negative
+    // Bound is number of parallel pivots that need to be performed
     if (local_id < bound && c.cost < -10e-3 ) { 
 
         int V = numSupplies + numDemands;
@@ -389,6 +391,361 @@ __global__ void find_loops(MatrixCell * d_reducedCosts_ptr, int * d_adjMtx_ptr, 
         // else depth[local_id] = 0 (remains default)
     }
 }
+
+
+/*
+Fetch and view discovered cycles 
+Function: Copy depth, backtrack from device and print
+*/
+__host__ void __debug_utility_1(MatrixCell * d_reducedCosts_ptr, int * backtracker, int * depth,  
+    int iteration, int numSupplies, int numDemands, int num_threads_launching) 
+{
+    std::cout<<"DEBUG UTIITY - 1 | Viewing Discovered Loops"<<std::endl;
+    int V = numSupplies + numDemands;
+
+    int * h_backtracker = (int *) malloc(num_threads_launching * V * sizeof(int));
+    int * h_depth = (int *) malloc(num_threads_launching * sizeof(int));
+    MatrixCell * h_reduced_costs = (MatrixCell *) malloc(num_threads_launching * sizeof(MatrixCell));
+
+    int num_cycles = 0;
+    
+    cudaMemcpy(h_backtracker, backtracker, num_threads_launching * V * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_depth, depth, num_threads_launching * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, num_threads_launching * sizeof(MatrixCell), cudaMemcpyDeviceToHost);
+
+    for (int i=0; i < num_threads_launching; i++) {
+        int offset = V*i;
+        if (h_depth[i] > 0) {
+            std::cout<<"Iteration : "<<iteration<<" : Thread : "<<i<<" : Depth : "<<h_depth[i]<<" : ";
+            for (int j = 0; j <= h_depth[i]; j++) {
+                std::cout<<h_backtracker[offset+j]<<" ";
+            }
+            std::cout<<std::endl;
+            // std::cout<<"\t Loop Minimum = "<<h_loop_minimum[i]<<" From :"<<h_loop_min_from[i]<<" To : "<<h_loop_min_to[i]<<std::endl;
+            std::cout<<"\t Reduced Cost Row = "<<h_reduced_costs[i].row<<std::endl;
+            std::cout<<"\t Reduced Cost Col = "<<h_reduced_costs[i].col<<std::endl;
+            std::cout<<"\t Reduced Cost = "<<h_reduced_costs[i].cost<<std::endl;
+            num_cycles++;
+        }
+    }
+
+    free(h_backtracker);
+    free(h_depth);
+    free(h_reduced_costs);
+
+    std::cout<<"\n"<<num_cycles<<" cycles were discovered!"<<std::endl;
+    // *********************** END OF DEBUG UTILITY - 1 *************** //
+}
+
+/*
+Fetch and view v_owner and v_savings 
+Function: Copy arrays from device and print
+*/
+__host__ void __debug_utility_2(vertex_conflicts * v_conflicts, int numSupplies, int numDemands)
+{
+    std::cout<<"DEBUG UTIITY - 2 | Viewing Loop Owners"<<std::endl;
+
+    vertex_conflicts * h_v_savings = (vertex_conflicts *) malloc(numSupplies * numDemands * sizeof(vertex_conflicts));
+    cudaMemcpy(h_v_savings, v_conflicts,  numSupplies * numDemands * sizeof(vertex_conflicts), cudaMemcpyDeviceToHost);
+
+    for (int i=0; i < numSupplies; i++) {
+        for (int j=0; j < numDemands; j++) {
+            std::cout << "Edge - (" <<i<<", "<<j+numSupplies<< ") by Thread : " << h_v_savings[i*numDemands + j].ints[1]<< std::endl;
+        }
+    }
+    // *********************** END OF DEBUG UTILITY - 2 *************** //
+}
+
+__host__ void __debug_utility_3(int * backtracker, int * depth, 
+    int numSupplies, int numDemands, int num_threads_launching) 
+{
+    // // *********************** DEBUG UTILITY - 3 *************** //
+    // // Fetch and view the loops that do not conflict and maximize savings 
+    
+    std::cout<<"DEBUG UTIITY - 3 | Viewing Non-Conflicting loops"<<std::endl;
+    int V = numSupplies + numDemands;
+    int * h_backtracker = (int *) malloc(num_threads_launching * V * sizeof(int));
+    int * h_depth = (int *) malloc(num_threads_launching * sizeof(int));
+    int num_cycles = 0;
+    
+    cudaMemcpy(h_backtracker, backtracker, num_threads_launching * V * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_depth, depth, num_threads_launching * sizeof(int), cudaMemcpyDeviceToHost);
+
+    for (int i=0; i < num_threads_launching; i++) {
+        int offset = V*i;
+       if (h_depth[i] > 0){
+            std::cout<<"Thread : "<<i<<" : Depth : "<<h_depth[i]<<" : ";
+            for (int j = 0; j < h_depth[i]; j++) {
+                std::cout<<h_backtracker[offset+j]<<" ";
+            }
+            std::cout<<std::endl;
+           num_cycles++;
+       }
+    }
+
+    free(h_backtracker);
+    free(h_depth);
+
+    std::cout<<"\n"<<num_cycles<<" non conflicting cycles were discovered!"<<std::endl;
+    // *********************** END OF DEBUG UTILITY - 3 *************** //
+}
+
+/*
+API to execute parallel pivot
+*/
+__host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, bool * visited,
+    int * h_adjMtx_ptr, float * h_flowMtx_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
+    int * d_vertex_start, int * d_vertex_degree, int * d_adjVertices,
+    bool &result, MatrixCell * d_reducedCosts_ptr, int * depth, 
+    float * loop_minimum, int * loop_min_from, int * loop_min_to, int * loop_min_id, 
+    vertex_conflicts * v_conflicts,
+    double &dfs_time, double &resolve_time, double &adjustment_time,
+    int iteration, int numSupplies, int numDemands) {
+    
+    auto _pivot_start = std::chrono::high_resolution_clock::now();
+    auto _pivot_end = std::chrono::high_resolution_clock::now();
+    auto _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
+    /*
+    Strategy is to execute multiple pivots at the same time
+    Resolve conflicts through a barrier
+        
+    KERNEL 1: Go to all the cells with negative reduced costs -> find the pivots -> evaluate savings
+    KERNEL 2: Scan through the discovered loops, for each vertex - atomically update the bet's on each vertex in the loops
+    */
+
+    int V = numSupplies + numDemands;
+    int num_threads_launching = NUM_THREADS_LAUNCHING(numSupplies, numDemands, PARALLEL_PIVOT_IDEA);
+    //std::cout<<"Num Threads = "<<num_threads_launching<<std::endl;
+
+    // Discover Cycles
+    _pivot_start = std::chrono::high_resolution_clock::now();
+    
+    dim3 __blockDim(blockSize, 1, 1);
+    dim3 __gridDim(ceil(1.0*num_threads_launching/blockSize), 1, 1);
+    
+    thrust::fill(thrust::device, depth, depth + (num_threads_launching), 0);
+    thrust::fill(thrust::device, visited, visited + (V * num_threads_launching), false);
+
+    find_loops <<<__gridDim, __blockDim>>> (d_reducedCosts_ptr, d_adjMtx_ptr, d_flowMtx_ptr, // Lookups 
+        d_vertex_start, d_vertex_degree, d_adjVertices,
+        stack, visited,  // Intermediates
+        backtracker, depth, // book-keeping
+        numSupplies, numDemands, num_threads_launching); // Params
+    gpuErrchk(cudaPeekAtLastError());
+    gpuErrchk(cudaDeviceSynchronize()); 
+        // xxxxxx - Barrier 1 - xxxxxx
+    
+    // DEBUG UTILITY 1 ::
+    // __debug_utility_1(d_reducedCosts_ptr, backtracker, depth, iteration, 
+    // numSupplies, numDemands, num_threads_launching);
+
+    _pivot_end = std::chrono::high_resolution_clock::now();
+    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
+    dfs_time += _pivot_duration.count();
+    
+    /* ******************************
+        Multi-Pivot Method
+    ******************************* */
+
+    // Copy Discovered cycles to host and sequencially execute pivots on the host 
+    // Making sure no edge is used twice // 
+    bool * edge_visited = (bool *) malloc(numSupplies*numDemands*sizeof(bool)); 
+    
+    int * h_backtracker = (int *) malloc(num_threads_launching * V * sizeof(int));
+    int * h_depth = (int *) malloc(num_threads_launching * sizeof(int));
+    MatrixCell * h_reduced_costs = (MatrixCell *) malloc(num_threads_launching * sizeof(MatrixCell));
+
+    _pivot_start = std::chrono::high_resolution_clock::now();
+
+    int num_cycles_pivoted = 0;
+    thrust::fill(thrust::host, edge_visited, edge_visited + (numSupplies*numDemands), false);
+    
+    cudaMemcpy(h_backtracker, backtracker, num_threads_launching * V * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_depth, depth, num_threads_launching * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, num_threads_launching * sizeof(MatrixCell), cudaMemcpyDeviceToHost);
+    
+    // In the running workflow, we start with most negative reduced cost and proceed thereafter 
+    for (int i=0; i < num_threads_launching; i++) {
+
+        int offset = V*i;
+        if (h_depth[i] > 0) {
+            // check if all the edges are available >> 
+            bool cycle_valid = true; 
+            int _edge_from, _edge_to, _id;
+
+            for (int j = 0; j <= h_depth[i]-1; j++) {
+                
+                _edge_from = h_backtracker[offset+j] - numSupplies*(j%2);
+                _edge_to = h_backtracker[offset+j+1] - numSupplies*((j+1)%2);
+                _id = (_edge_from*numDemands + _edge_to)*((j+1)%2) + (_edge_to*numDemands + _edge_from)*(j%2);
+                cycle_valid = (cycle_valid && !(edge_visited[_id]));
+                // No need to check further if already found an edge that has been used
+                if (!cycle_valid) {
+                    // std::cout<<"break"<<std::endl;
+                    break;
+                }
+            }
+
+            if (cycle_valid) {
+
+                // Mark edges in thie cycles as used >>
+                #pragma omp parallel
+                #pragma omp for
+                for (int j = 0; j <= h_depth[i]-1; j++) {
+                
+                    _edge_from = h_backtracker[offset+j] - numSupplies*(j%2);
+                    _edge_to = h_backtracker[offset+j+1] - numSupplies*((j+1)%2);
+                    _id = (_edge_from*numDemands + _edge_to)*((j+1)%2) + (_edge_to*numDemands + _edge_from)*(j%2);
+                    edge_visited[_id] = true;
+                
+                }
+
+                #pragma omp barrier
+
+                execute_pivot_on_host_device(h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, 
+                    &h_backtracker[offset], h_reduced_costs[i].row, h_reduced_costs[i].col, h_depth[i], 
+                    V, numSupplies, numDemands);
+                
+                num_cycles_pivoted++;
+
+            }
+        }
+    }
+
+    _pivot_end = std::chrono::high_resolution_clock::now();
+    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
+    adjustment_time += _pivot_duration.count();
+
+    free(h_backtracker);
+    free(h_depth);
+    free(h_reduced_costs);
+
+    // End of multi-pivot
+    std::cout<<"Iteration : "<<iteration<<" | Number of cycles pivoted : "<<num_cycles_pivoted<<std::endl;
+
+}
+
+
+// ***********************************************************************
+
+__host__ void _debug_print_APSP(int * d_adjMtx, int * d_pathMtx, int V) {
+
+    int * h_adjMtx_copy = (int *) malloc(sizeof(int)*V*V);
+    int * h_pathMtx = (int *) malloc(sizeof(int)*V*V);
+
+    gpuErrchk(cudaMemcpy(h_adjMtx_copy, d_adjMtx, V*V*sizeof(int), cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(h_pathMtx, d_pathMtx, V*V*sizeof(int), cudaMemcpyDeviceToHost));
+	
+    std::cout<<" ********* Distances >>"<<std::endl;
+    for (int i=0; i<V; i++) {
+        std::cout<<i<<" : ";
+        for (int j=0; j<V; j++) {
+            std::cout<<h_adjMtx_copy[i*V + j]<<", ";
+        }
+        std::cout<<std::endl;
+    }
+    std::cout<<" ********* Path >>"<<std::endl;
+    for (int i=0; i<V; i++) {
+        std::cout<<i<<" : ";
+        for (int j=0; j<V; j++) {
+            std::cout<<h_pathMtx[i*V + j]<<", ";
+        }
+        std::cout<<std::endl;
+    }
+    std::cout << "All point shortest path printed!"<<std::endl;
+}
+
+/*
+Step 1: Find all point to all points shortest distance with Floyd Warshall using naive implementation 
+    of Floyd Warshall algorithm in CUDA
+
+- Step 2: For all negative reduced costs find the paths
+- Step 3: Find edge disjoint paths among the ones obtained in 2
+- Step 4: Perfrom flow adjustment on the paths
+*/
+__host__ void perform_a_parallel_pivot_floyd_warshall(int * backtracker, stackNode * stack, bool * visited,
+    int * h_adjMtx_ptr, float * h_flowMtx_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
+    int * d_vertex_start, int * d_vertex_degree, int * d_adjVertices,
+    bool &result, MatrixCell * d_reducedCosts_ptr, int * depth, 
+    float * loop_minimum, int * loop_min_from, int * loop_min_to, int * loop_min_id, 
+    vertex_conflicts * v_conflicts,
+    double &dfs_time, double &resolve_time, double &adjustment_time,
+    int iteration, int numSupplies, int numDemands) {
+    
+    auto _pivot_start = std::chrono::high_resolution_clock::now();
+    auto _pivot_end = std::chrono::high_resolution_clock::now();
+    auto _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
+    /*
+    Strategy is to execute multiple pivots at the same time
+    Resolve conflicts through a barrier
+        
+    KERNEL 1: Go to all the cells with negative reduced costs -> find the pivots -> evaluate savings
+    KERNEL 2: Scan through the discovered loops, for each vertex - atomically update the bet's on each vertex in the loops
+    */
+
+    int V = numSupplies + numDemands;
+    int num_threads_launching = NUM_THREADS_LAUNCHING(numSupplies, numDemands, PARALLEL_PIVOT_IDEA);
+    std::cout<<"Num Threads = "<<num_threads_launching<<std::endl;
+
+    // Discover Cycles
+    
+    int * d_adjMtx_ptr_copy, * d_pathMtx;
+    
+    int _utm_entries = V*V;  // (V*(V+1))/2; // Number of entries in upper triangular matrix 
+
+    // Allocate memory for floyd warshall
+	gpuErrchk(cudaMalloc((void **) &d_adjMtx_ptr_copy, _utm_entries*sizeof(int)));
+	gpuErrchk(cudaMalloc((void **) &d_pathMtx, _utm_entries*sizeof(int)));
+	
+    _pivot_start = std::chrono::high_resolution_clock::now();
+
+	// Make a copy of adjacency matrix to make depth
+    // IDEA: run my_signum all at once to get rid of that in the floyd warshall kernel - insted of memcpy run a kernel	
+	thrust::fill(thrust::device, d_pathMtx, d_pathMtx + _utm_entries, -1);
+    
+    dim3 dimBlock(blockSize, blockSize, 1);
+    dim3 dimGrid(ceil(1.0*V/blockSize),ceil(1.0*V/blockSize),1);
+    
+    fill_adjMtx <<< dimGrid, dimBlock >>> (d_adjMtx_ptr_copy, d_adjMtx_ptr, d_pathMtx, V);
+    gpuErrchk(cudaPeekAtLastError());
+    gpuErrchk(cudaDeviceSynchronize());
+
+    // Initialize the grid and block dimensions here
+    dim3 dimGrid2((V - 1) / blockSize + 1, (V - 1) / blockSize + 1, 1);
+    dim3 dimBlock2(blockSize, blockSize, 1);
+
+    // /* cudaFuncSetCacheConfig(_naive_fw_kernel, cudaFuncCachePreferL1); */
+    for (int vertex = 0; vertex < V; ++vertex) {
+        _naive_floyd_warshall_kernel <<< dimGrid2, dimBlock2 >>> (vertex, V, d_adjMtx_ptr_copy, d_pathMtx);
+        gpuErrchk(cudaPeekAtLastError());
+        gpuErrchk(cudaDeviceSynchronize());
+    }
+
+    int * done;
+    
+
+    // DEBUG UTILITY >>
+    // _debug_print_APSP(d_adjMtx_ptr_copy, d_pathMtx, V);
+
+    _pivot_end = std::chrono::high_resolution_clock::now();
+    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
+    dfs_time += _pivot_duration.count();
+
+    std::cout<<"APSP Completed in "<<dfs_time<<" microseconds"<<std::endl;
+    exit(0);
+
+}
+
+
+
+
+/******************** DUMP ***********************
+
+
+
+
+
+
 
 /*
 The Novel Conflict Selector >>
@@ -533,169 +890,21 @@ __global__ void run_flow_adjustments(int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
 }
 
 /*
-Fetch and view discovered cycles 
-Function: Copy depth, backtrack from device and print
-*/
-__host__ void __debug_utility_1(MatrixCell * d_reducedCosts_ptr, int * backtracker, int * depth,  
-    int iteration, int numSupplies, int numDemands, int num_threads_launching) 
-{
-    std::cout<<"DEBUG UTIITY - 1 | Viewing Discovered Loops"<<std::endl;
-    int V = numSupplies + numDemands;
 
-    int * h_backtracker = (int *) malloc(num_threads_launching * V * sizeof(int));
-    int * h_depth = (int *) malloc(num_threads_launching * sizeof(int));
-    MatrixCell * h_reduced_costs = (MatrixCell *) malloc(num_threads_launching * sizeof(MatrixCell));
-
-    int num_cycles = 0;
-    
-    cudaMemcpy(h_backtracker, backtracker, num_threads_launching * V * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_depth, depth, num_threads_launching * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, num_threads_launching * sizeof(MatrixCell), cudaMemcpyDeviceToHost);
-
-    for (int i=0; i < num_threads_launching; i++) {
-        int offset = V*i;
-        if (h_depth[i] > 0) {
-            std::cout<<"Iteration : "<<iteration<<" : Thread : "<<i<<" : Depth : "<<h_depth[i]<<" : ";
-            for (int j = 0; j <= h_depth[i]; j++) {
-                std::cout<<h_backtracker[offset+j]<<" ";
-            }
-            std::cout<<std::endl;
-            // std::cout<<"\t Loop Minimum = "<<h_loop_minimum[i]<<" From :"<<h_loop_min_from[i]<<" To : "<<h_loop_min_to[i]<<std::endl;
-            std::cout<<"\t Reduced Cost Row = "<<h_reduced_costs[i].row<<std::endl;
-            std::cout<<"\t Reduced Cost Col = "<<h_reduced_costs[i].col<<std::endl;
-            std::cout<<"\t Reduced Cost = "<<h_reduced_costs[i].cost<<std::endl;
-            num_cycles++;
-        }
-    }
-
-    free(h_backtracker);
-    free(h_depth);
-    free(h_reduced_costs);
-
-    std::cout<<"\n"<<num_cycles<<" cycles were discovered!"<<std::endl;
-    // *********************** END OF DEBUG UTILITY - 1 *************** //
-}
-
-/*
-Fetch and view v_owner and v_savings 
-Function: Copy arrays from device and print
-*/
-__host__ void __debug_utility_2(vertex_conflicts * v_conflicts, int numSupplies, int numDemands)
-{
-    std::cout<<"DEBUG UTIITY - 2 | Viewing Loop Owners"<<std::endl;
-
-    vertex_conflicts * h_v_savings = (vertex_conflicts *) malloc(numSupplies * numDemands * sizeof(vertex_conflicts));
-    cudaMemcpy(h_v_savings, v_conflicts,  numSupplies * numDemands * sizeof(vertex_conflicts), cudaMemcpyDeviceToHost);
-
-    for (int i=0; i < numSupplies; i++) {
-        for (int j=0; j < numDemands; j++) {
-            std::cout << "Edge - (" <<i<<", "<<j+numSupplies<< ") by Thread : " << h_v_savings[i*numDemands + j].ints[1]<< std::endl;
-        }
-    }
-    // *********************** END OF DEBUG UTILITY - 2 *************** //
-}
-
-__host__ void __debug_utility_3(int * backtracker, int * depth, 
-    int numSupplies, int numDemands, int num_threads_launching) 
-{
-    // // *********************** DEBUG UTILITY - 3 *************** //
-    // // Fetch and view the loops that do not conflict and maximize savings 
-    
-    std::cout<<"DEBUG UTIITY - 3 | Viewing Non-Conflicting loops"<<std::endl;
-    int V = numSupplies + numDemands;
-    int * h_backtracker = (int *) malloc(num_threads_launching * V * sizeof(int));
-    int * h_depth = (int *) malloc(num_threads_launching * sizeof(int));
-    int num_cycles = 0;
-    
-    cudaMemcpy(h_backtracker, backtracker, num_threads_launching * V * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_depth, depth, num_threads_launching * sizeof(int), cudaMemcpyDeviceToHost);
-
-    for (int i=0; i < num_threads_launching; i++) {
-        int offset = V*i;
-       if (h_depth[i] > 0){
-            std::cout<<"Thread : "<<i<<" : Depth : "<<h_depth[i]<<" : ";
-            for (int j = 0; j < h_depth[i]; j++) {
-                std::cout<<h_backtracker[offset+j]<<" ";
-            }
-            std::cout<<std::endl;
-           num_cycles++;
-       }
-    }
-
-    free(h_backtracker);
-    free(h_depth);
-
-    std::cout<<"\n"<<num_cycles<<" non conflicting cycles were discovered!"<<std::endl;
-    // *********************** END OF DEBUG UTILITY - 3 *************** //
-}
-
-/*
-API to execute parallel pivot
-*/
-__host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, bool * visited,
-    int * h_adjMtx_ptr, float * h_flowMtx_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
-    int * d_vertex_start, int * d_vertex_degree, int * d_adjVertices,
-    bool &result, MatrixCell * d_reducedCosts_ptr, int * depth, 
-    float * loop_minimum, int * loop_min_from, int * loop_min_to, int * loop_min_id, 
-    vertex_conflicts * v_conflicts,
-    double &dfs_time, double &resolve_time, double &adjustment_time,
-    int iteration, int numSupplies, int numDemands) {
-    
-    auto _pivot_start = std::chrono::high_resolution_clock::now();
-    auto _pivot_end = std::chrono::high_resolution_clock::now();
-    auto _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
-    /*
-    Strategy is to execute multiple pivots at the same time
-    Resolve conflicts through a barrier
-        
-    KERNEL 1: Go to all the cells with negative reduced costs -> find the pivots -> evaluate savings
-    KERNEL 2: Scan through the discovered loops, for each vertex - atomically update the bet's on each vertex in the loops
-    */
-
-    int V = numSupplies + numDemands;
-    int num_threads_launching = NUM_THREADS_LAUNCHING(numSupplies, numDemands, PARALLEL_PIVOT_IDEA);
-    std::cout<<"Num Threads = "<<num_threads_launching<<std::endl;
-
-    // Discover Cycles
-    _pivot_start = std::chrono::high_resolution_clock::now();
-    
-    dim3 __blockDim(blockSize, 1, 1);
-    dim3 __gridDim(ceil(1.0*num_threads_launching/blockSize), 1, 1);
-    
-    thrust::fill(thrust::device, depth, depth + (num_threads_launching), 0);
-    thrust::fill(thrust::device, visited, visited + (V * num_threads_launching), false);
-
-    find_loops <<<__gridDim, __blockDim>>> (d_reducedCosts_ptr, d_adjMtx_ptr, d_flowMtx_ptr, // Lookups 
-        d_vertex_start, d_vertex_degree, d_adjVertices,
-        stack, visited,  // Intermediates
-        backtracker, depth, // book-keeping
-        numSupplies, numDemands, num_threads_launching); // Params
-    gpuErrchk(cudaPeekAtLastError());
-    gpuErrchk(cudaDeviceSynchronize()); 
-        // xxxxxx - Barrier 1 - xxxxxx
-    
-    _pivot_end = std::chrono::high_resolution_clock::now();
-    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
-    dfs_time += _pivot_duration.count();
-
-    // DEBUG UTILITY 1 ::
-    // __debug_utility_1(d_reducedCosts_ptr, backtracker, depth, iteration, numSupplies, numDemands, num_threads_launching);
-    // exit(0);
-
-    // Resolve Conflicts >> 
+// Resolve Conflicts >> 
     _pivot_start = std::chrono::high_resolution_clock::now();
     // std::cout<<"Parallel Pivoiting : Discovered Loops!"<<std::endl;
     // std::cout<<"Parallel Pivoiting : Resolving Conflicts | Running Step 1 (Discover conflicts) ..."<<std::endl;        
     vertex_conflicts _vtx_conflict_default;
     _vtx_conflict_default.floats[0] = FLT_MAX;
     _vtx_conflict_default.ints[1] = -1;
-    thrust::fill(thrust::device, v_conflicts, v_conflicts + (num_threads_launching), _vtx_conflict_default);
+    thrust::fill(thrust::device, v_conflicts, v_conflicts + (numSupplies*numDemands), _vtx_conflict_default);
 
     resolve_conflicts_step_1 <<<__gridDim, __blockDim>>> (depth, backtracker, d_reducedCosts_ptr, 
         v_conflicts, numSupplies, numDemands, num_threads_launching);
     gpuErrchk(cudaPeekAtLastError());
-    gpuErrchk(cudaDeviceSynchronize());        
-    // xxxxxx - Barrier 2 - xxxxxx
+    gpuErrchk(cudaDeviceSynchronize());
+        // xxxxxx - Barrier 2 - xxxxxx
 
     // DEBUG UTILITY 2 ::
     // __debug_utility_2(v_conflicts, numSupplies, numDemands);
@@ -721,15 +930,15 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
         
         // METHOD 1 : RUN ADJUSTMENTS IN PARALLEL
         if (PARALLEL_PIVOTING_METHOD=="pure") {
-            std::cout<<"THIS PIVOTING METHOD IS TEMPORARILY OUT OF SERVICE!"<<std::endl;
+            std::cout<<"THIS PIVOTING METHOD IS OUT DATED, TRY - hybrid!"<<std::endl;
             exit(-1);
             run_flow_adjustments <<<__gridDim, __blockDim>>> (d_adjMtx_ptr, d_flowMtx_ptr, depth, backtracker, loop_minimum, 
                 loop_min_from, loop_min_to, loop_min_id, numSupplies, numDemands);
             gpuErrchk(cudaPeekAtLastError());
             gpuErrchk(cudaDeviceSynchronize());
-            // xxxxxx - Barrier 4 - xxxxxx
-
+                // xxxxxx - Barrier 4 - xxxxxx
         }
+
         // METHOD 2 : RUN FLOW ADJUSTMENTS IN SEQ on host (for all independent loops)
         else if (PARALLEL_PIVOTING_METHOD=="hybrid") {
             
@@ -766,6 +975,7 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
                             }
                         }
                     }
+                    
                     // std::cout<<"Min flow :"<<min_flow<<std::endl;
                     // std::cout<<"Min from :"<<min_from<<std::endl;
                     // std::cout<<"Min to :"<<min_to<<std::endl;
@@ -794,90 +1004,4 @@ __host__ void perform_a_parallel_pivot(int * backtracker, stackNode * stack, boo
     _pivot_end = std::chrono::high_resolution_clock::now();
     _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     adjustment_time += _pivot_duration.count();
-}
-
-
-// ***********************************************************************
-
-__device__ int my_signum(int x) {
-    return ((x) > 0)?(1):(0);
-}
-
-__global__ void floyd_warshall_kernel(int * d_adjMtx_ptr,int * d_pathMtx, int k, int V) {
-	
-    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
-    if(col_indx < V) {
-        
-        __shared__ int best;
-        if (threadIdx.x==0) {
-            best = my_signum(d_adjMtx_ptr[TREE_LOOKUP(k, blockIdx.y, V)]);
-        }
-	    __syncthreads();
-	    if(best==0) {
-            return;
-        }
-	    int tmp_b = my_signum(d_adjMtx_ptr[TREE_LOOKUP(col_indx, k, V)]);
-	    if(tmp_b==0) {
-            return;
-        }
-	    int cur = best + tmp_b;
-        int idx = TREE_LOOKUP(col_indx, blockIdx.y, V);
-	    if (cur < d_adjMtx_ptr[idx]) {
-		    d_adjMtx_ptr[idx]=cur;
-		    d_pathMtx[idx] = k; //  (col_indx) to (blockIdx.y) is reachable via vertex - k 
-	    }
-    }
-}
-
-__host__ void _discover_all_pair_shortest_paths(int * d_adjMtx_ptr, int * h_pathMtx, const int V) 
-{
-	
-	int *d_adjMtx_ptr_copy, * d_pathMtx;
-    // Allocate memory for floyd warshall
-	gpuErrchk(cudaMalloc((int **) &d_adjMtx_ptr_copy, V*V*sizeof(int)));
-	gpuErrchk(cudaMalloc((int **) &d_pathMtx, V*V*sizeof(int)));
-	
-	// Make a copy of adjacency matrix to make depth
-    // IDEA: run my_signum all at once to get rid of that in the floyd warshall kernel - insted of memcpy run a kernel
-
-	gpuErrchk(cudaMemcpy(d_adjMtx_ptr_copy, d_adjMtx_ptr, V*V*sizeof(int), cudaMemcpyDeviceToDevice)); // Correct this
-	thrust::fill(thrust::device, d_pathMtx, d_pathMtx + V*V*sizeof(int), -1);
-
-    dim3 dimBlock(blockSize, 1, 1);
-	dim3 dimGrid((V + blockSize-1)/blockSize, V, 1);
-
-    //main loop
-	for (int k=0; k<V; k++) {
-
-		floyd_warshall_kernel<<< dimGrid,dimBlock >>>(d_adjMtx_ptr_copy, d_pathMtx, k, V);
-		gpuErrchk(cudaPeekAtLastError());
-        gpuErrchk(cudaDeviceSynchronize());
-    
-    }
-
-	// Retrieve the dicovered paths and depths
-	// Depth of path from |[vtx-A]| -> to |[vtx-B]| are entries in d_adjMtx_copy[A,B]
-    // Path can be reconstructed using d_pathMtx within the flow adjustment kernel
-
-
-	// free device memory
-    
-}
-
-
-
-
-/*
-Step 1: Find all point to all points shortest distance with Floyd Warshall
-Step 2: For all negative reduced costs find the paths
-Step 3: Find edge disjoint paths among the ones obtained in 2
-Step 4: Perfrom flow adjustment on the paths
 */
-
-
-__host__ void perform_a_parallel_pivot_improved(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
-        int * d_adjMtx_ptr, float * d_flowMtx_ptr, bool &result, MatrixCell * d_reducedCosts_ptr, 
-        double &dfs_time, double &resolve_time, double &adjustment_time,
-        int iteration, int numSupplies, int numDemands) {    
-
-    };
