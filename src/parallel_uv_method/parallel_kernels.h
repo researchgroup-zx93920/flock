@@ -29,17 +29,12 @@ __global__ void create_initial_tree(flowInformation * d_flows_ptr, int * d_adjMt
 __global__ void retrieve_final_tree(flowInformation * d_flows_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr,
         int numSupplies, int numDemands);
 
-__host__ void create_IBF_tree_on_host_device(flowInformation * feasible_flows,
-    int ** d_adjMtx_ptr, int ** h_adjMtx_ptr, float ** d_flowMtx_ptr, float ** h_flowMtx_ptr, 
-    int ** d_vertex_start, int ** d_vertex_degree, int ** d_adjVertices,
-    int ** h_vertex_start, int ** h_vertex_degree, int ** h_adjVertices, 
+__host__ void create_IBF_tree_on_host_device(Graph &graph, flowInformation * feasible_flows, 
     int numSupplies, int numDemands);
 
-__host__ void close_solver(int * d_adjMtx_ptr, int * h_adjMtx_ptr, float * d_flowMtx_ptr, float * h_flowMtx_ptr, 
-    int * h_vertex_start, int * h_vertex_degree, int * h_adjVertices,
-    int * d_vertex_start, int * d_vertex_degree, int * d_adjVertices);
+__host__ void close_solver(Graph &graph);
 
-__host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
+__host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows, Graph &graph,
     int &active_flows, int numSupplies, int numDemands);
 
 /*Determine number of non zero elements in each row of adjacency matrix */
@@ -52,8 +47,7 @@ __global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, int V, int nu
 __host__ void __debug_view_adjList(int * start, int * length, int * Ea, int V);
 
 /* Convert d_adjMatrix to adjacency list (utillized by both host_bfs and DFS in pivoting) */
-__host__ void make_adjacency_list(int * start, int * length, int * Ea, int * d_adjMtx_ptr, 
-        int numSupplies, int numDemands, int V);
+__host__ void make_adjacency_list(Graph &graph, int numSupplies, int numDemands);
 
 // ##################################################
 // SOLVING DUAL >>

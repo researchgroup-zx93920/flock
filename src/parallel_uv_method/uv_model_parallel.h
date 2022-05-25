@@ -5,7 +5,6 @@
 #include "DUAL_solver.h"
 #include "PIVOT_dfs.h"
 
-
 /*
 Algorithm alternative to solve transportation problem
 
@@ -17,7 +16,6 @@ Step 2: Repeat ::
     2.2: Any reduced cost < 0 - repeat, exit otherwise
 Step 3: Return M + N - 1 flows 
 */
-
 class uvModel_parallel
 {
 
@@ -47,80 +45,33 @@ private:
 
     // Internal Flagging and constants
     bool solved;
-    int V;
+    Graph graph;
 
-    // Containers for data exchange between functions 
-        MatrixCell * costMatrix; // Useful for initial basic feasible solution (IBFS)
-    
-        // Adjacency matrix and flow matrix together represent the feasible tree
-        // Such a separation has been created to resolve degeneracies - 
-        // sometimes zero flows would make life better :D
-
-        // For a simplex iteration, current feasible tree is maintained on both host (h_) and device (d_)
-        // The tree is maintained in the form of adjMtx as well as adjList
-        int * d_adjMtx_ptr, * h_adjMtx_ptr; 
-        int * d_vertex_start, * d_vertex_degree, * d_adjVertices;
-        int * h_vertex_start, * h_vertex_degree, * h_adjVertices;  
-        float * d_flowMtx_ptr, * h_flowMtx_ptr;
-        
-        /*
-        IMPORTANT | adjMtx and flowMtx has been designed with special consideration
-
-        Adjacency matrix is a upper triangular matrix to store the tree inforamtion
-        Let's say you're looking at edge (i,j)
-        Now you want to find flow on i,j in the feasible tree
-        Then, note this: 
-        1. (i,j) is a feasible edge if adjMtx(i,j) > 0
-        2. Further, flow on (i,j) = flow[adjMtx(i,j)-1], 
-        In words: entries in  adjMtx point to the position of flow values stored in flowMtx
-        */
-    
     // ###############################
     // PREPROCESS and POSTPROCESS
     // ###############################
-        MatrixCell * device_costMatrix_ptr; 
+
+    // Containers for data exchange between functions 
+    // - reduced cost of edges on the device
+    // - cost of flow through an edge
+    // Useful for initial basic feasible solution (IBFS), Dual and inbetween simplex
+    // Having row column store with reducedcosts allows for reordering during DFS kernels    
+    MatrixCell * costMatrix, * device_costMatrix_ptr, * d_reducedCosts_ptr; 
+    float * d_costs_ptr;
+        
+    // TEMPORARY or DEBUGGING TOOLS
+    float * h_reduced_costs;
 
     // ###############################
     // DUAL and REDUCED COSTS (test for optimality)
     // ###############################
-    // Pointers to vectors relevant to optimality tests
-    //  - reduced cost of edges on the device
-    //  - cost of flow through an edge
-    //  - dual costs towards supply constraints
-    //  - dual costs towards demand constraints
-        float * d_costs_ptr, * u_vars_ptr, * v_vars_ptr;
-        MatrixCell * d_reducedCosts_ptr, min_reduced_cost;
-
-        // DUAL :: Solving system of equations 
-        float u_0 = 0, u_0_coef = 1;
-        int * d_csr_offsets, * d_csr_columns;
-        float * d_csr_values, * d_x, * d_A, * d_b;
-        int64_t nnz;
-
-        // DUAL :: Solving using a breadth first traversal on Tree
-        float * variables;
-        bool * Xa, * Fa;
-
-        // DUAL :: Sequencial BFS >>
-        bool * h_visited;
-        float * h_variables;
-
-        // DUAL :: Temporary
-        float * h_reduced_costs;
-
+    DualHandler dual;
+        
     // ###############################
     // SIMPLEX PIVOT | Sequencial and Parallel pivoting strategy
     // ###############################
-
-        // Useful for the sequencial strategy >>
-        int pivot_row, pivot_col;
-        
-        // Useful for the parallel strategy >>
-        int * backtracker, * depth, * loop_min_from, * loop_min_to, * loop_min_id;
-        float * loop_minimum;
-        stackNode * stack;
-        vertex_conflicts * v_conflicts;
-        bool * visited;
+    PivotHandler pivot;
+    PivotTimer timer;
 
     // ###############################
     // CLASS METHODS | Names are self explanatory - doc strings are available on the definition
@@ -136,7 +87,6 @@ private:
     void view_reduced_costs();
     void count_negative_reduced_costs();
     void view_tree();
-
 
 };
 

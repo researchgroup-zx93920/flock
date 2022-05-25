@@ -70,7 +70,7 @@ device_dense_linear_solver : solve system of dense lin_equations (dense linear a
 qr, chol
 */
 
-#define PIVOTING_STRATEGY "parallel_dfs"
+#define PIVOTING_STRATEGY "sequencial_dfs"
 /*
 sequencial_dfs : perform pivoting one at a time based on dantzig's rule
 parallel_dfs : perform parallel pivoting (run flow adjustments in parallel)
@@ -248,6 +248,126 @@ struct is_nonzero_entry
     {
         return (x != 0);
     }
+};
+
+// Retrieve row attribute of a Matrix Cell object
+struct rowgen
+{
+        __host__ __device__ int operator()(MatrixCell &x) const
+        {
+                return x.row;
+        }
+};
+
+// Retrieve column attribute of a Matrix Cell object
+struct colgen
+{
+        __host__ __device__ int operator()(MatrixCell &x) const
+        {
+                return x.col;
+        }
+};
+
+// Unary method to compare two cells of a cost matrix
+struct compareCells
+{
+        __host__ __device__ bool operator()(const MatrixCell i, const MatrixCell j) const
+        {
+                return (i.cost < j.cost);
+        }
+};
+
+// Unary method to compare differences/penalties b/w any pair of row/col 
+struct compareDiff
+{
+        __host__ __device__ bool operator()(const vogelDifference i, const vogelDifference j) const
+        {
+                return (i.diff < j.diff);
+        }
+};
+
+
+struct DualHandler {
+
+        // Commons:
+        // - dual costs towards supply constraints (u_vars_ptr)
+        //  - dual costs towards demand constraints (v_vars_ptr)
+        float * u_vars_ptr = NULL, * v_vars_ptr = NULL;
+
+        // DUAL :: Solving system of equations 
+        float u_0 = 0, u_0_coef = 1;
+        int * d_csr_offsets, * d_csr_columns;
+        float * d_csr_values, * d_x, * d_A, * d_b;
+        int64_t nnz;
+
+        // DUAL :: Solving using a breadth first traversal on Tree
+        float * variables;
+        bool * Xa, * Fa;
+
+        // DUAL :: Sequencial BFS >>
+        bool * h_visited;
+        float * h_variables;
+
+};
+
+struct PivotHandler {
+    
+    // Useful for the sequencial strategy >>
+    int pivot_row, pivot_col;
+        
+    // Useful for both seq and parallel strategy >>
+    
+    // DFS >>
+    int * backtracker, * depth; 
+    bool * visited;
+    stackNode * stack;
+
+    // Flow adjustment on pivot - 
+    // ******** DEPRECATED 
+    // int * loop_min_from, * loop_min_to, * loop_min_id;
+    // float * loop_minimum;
+    
+    // Resolving conflicts in parallel pivoting
+    // vertex_conflicts * v_conflicts;
+
+};
+
+/* 
+It's a struct to carry appropriate pointers to pass 
+along in different functions. Not necessary but created for prettier code. 
+
+adjMtx and flowMtx has been designed with special consideration. [Adjacency matrix] and [flow matrix] together represent the feasible tree. Such a separation has been created to 
+resolve degeneracies sometimes zero flows would make life better :D. For a simplex iteration, current feasible tree 
+is maintained on both host (h_) and device (d_). The tree is maintained in the form of adjMtx as well as adjList
+ 
+Adjacency matrix is a upper triangular matrix to store the tree information. Example: 
+Let's say you're looking at edge (i,j)
+Now you want to find flow on i,j in the feasible tree
+Then, note this: 
+    1. (i,j) is a feasible edge if adjMtx(i,j) > 0
+    2. Further, flow on (i,j) = flow[adjMtx(i,j)-1], 
+In words: entries in  adjMtx point to the position of flow values stored in flowMtx
+
+Compressed transformation of adjMtx on host device, Consider a vertex - i,
+    - Vertex - i has d_vertex_degree[i] number of neighbours
+    - Neighbours are in d_adjVertices array starting from from index d_vertex_start[i] upto 
+        d_vertex_start[i] + d_vertex_degree[i]
+    - Such a transformation is created to perfrom BFS and DFS efficiently in case of dual,
+        Also, applying this transformation is massively parallel
+*/
+struct Graph {
+
+    // Number of vertices
+    int V;
+
+    // adjMatrix and flow on host device
+    int * h_adjMtx_ptr, * d_adjMtx_ptr;
+    float * h_flowMtx_ptr, * d_flowMtx_ptr; 
+
+    // Compressed transformation
+    int * d_vertex_start, * d_vertex_degree, * d_adjVertices;
+    int * h_vertex_start, * h_vertex_degree, * h_adjVertices; 
+
 };
 
 std::ostream& operator << (std::ostream& o, const MatrixCell& x);

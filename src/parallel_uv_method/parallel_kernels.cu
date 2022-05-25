@@ -100,20 +100,17 @@ __global__ void retrieve_final_tree(flowInformation * d_flows_ptr, int * d_adjMt
 Transfer flows on device and prepare an adjacency and flow matrix using the flows from IBFS
 In case of sequencial pivoting - one would need a copy of adjMatrix on the host to traverse the graph
 */
-__host__ void create_IBF_tree_on_host_device(flowInformation * feasible_flows,
-    int ** d_adjMtx_ptr, int ** h_adjMtx_ptr, float ** d_flowMtx_ptr, float ** h_flowMtx_ptr, 
-    int ** d_vertex_start, int ** d_vertex_degree, int ** d_adjVertices,
-    int ** h_vertex_start, int ** h_vertex_degree, int ** h_adjVertices, 
-    int numSupplies, int numDemands) 
-{
+__host__ void create_IBF_tree_on_host_device(Graph &graph, flowInformation * feasible_flows, 
+    int numSupplies, int numDemands) {
+
     int V = numSupplies+numDemands;
     int _utm_entries = (V*(V+1))/2; // Number of entries in upper triangular matrix 
 
-    gpuErrchk(cudaMalloc((void **) d_adjMtx_ptr, sizeof(int)*_utm_entries)); 
-    thrust::fill(thrust::device, *d_adjMtx_ptr, (*d_adjMtx_ptr) + _utm_entries, 0);
+    gpuErrchk(cudaMalloc((void **) &graph.d_adjMtx_ptr, sizeof(int)*_utm_entries)); 
+    thrust::fill(thrust::device, graph.d_adjMtx_ptr, (graph.d_adjMtx_ptr) + _utm_entries, 0);
 
-    gpuErrchk(cudaMalloc((void **) d_flowMtx_ptr, sizeof(float)*(V-1)));
-    thrust::fill(thrust::device, *d_flowMtx_ptr, (*d_flowMtx_ptr) + (V-1), 0);
+    gpuErrchk(cudaMalloc((void **) &graph.d_flowMtx_ptr, sizeof(float)*(V-1)));
+    thrust::fill(thrust::device, graph.d_flowMtx_ptr, (graph.d_flowMtx_ptr) + (V-1), 0);
 
     // Make a replica of feasible flows on device
     flowInformation * d_flows_ptr;
@@ -121,7 +118,7 @@ __host__ void create_IBF_tree_on_host_device(flowInformation * feasible_flows,
     gpuErrchk(cudaMemcpy(d_flows_ptr, feasible_flows, sizeof(flowInformation)*(V-1), cudaMemcpyHostToDevice));
 
     // Small kernel to parallely create a tree using the flows
-    create_initial_tree <<< ceil(1.0*(V-1)/blockSize), blockSize >>> (d_flows_ptr, *d_adjMtx_ptr, *d_flowMtx_ptr, numSupplies, numDemands);
+    create_initial_tree <<< ceil(1.0*(V-1)/blockSize), blockSize >>> (d_flows_ptr, graph.d_adjMtx_ptr, graph.d_flowMtx_ptr, numSupplies, numDemands);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     
@@ -130,25 +127,25 @@ __host__ void create_IBF_tree_on_host_device(flowInformation * feasible_flows,
     gpuErrchk(cudaFree(d_flows_ptr));
     
     // Make a copy on host >>
-    *h_adjMtx_ptr = (int *) malloc(sizeof(int)*(_utm_entries));
-    gpuErrchk(cudaMemcpy(*h_adjMtx_ptr, *d_adjMtx_ptr, sizeof(int)*(_utm_entries), cudaMemcpyDeviceToHost));
-    *h_flowMtx_ptr = (float *) malloc(sizeof(float)*(V-1));
-    gpuErrchk(cudaMemcpy(*h_flowMtx_ptr, *d_flowMtx_ptr, sizeof(float)*(V-1), cudaMemcpyDeviceToHost));
+    graph.h_adjMtx_ptr = (int *) malloc(sizeof(int)*(_utm_entries));
+    gpuErrchk(cudaMemcpy(graph.h_adjMtx_ptr, graph.d_adjMtx_ptr, sizeof(int)*(_utm_entries), cudaMemcpyDeviceToHost));
+    graph.h_flowMtx_ptr = (float *) malloc(sizeof(float)*(V-1));
+    gpuErrchk(cudaMemcpy(graph.h_flowMtx_ptr, graph.d_flowMtx_ptr, sizeof(float)*(V-1), cudaMemcpyDeviceToHost));
 
     // Iterations would also work with a adjacency list
-    gpuErrchk(cudaMalloc((void **) d_vertex_start, sizeof(int)*(V)));
-    gpuErrchk(cudaMalloc((void **) d_vertex_degree, sizeof(int)*(V+1)));
-    gpuErrchk(cudaMalloc((void **) d_adjVertices, sizeof(int)*2*(V-1)));
-    *h_vertex_start = (int *) malloc(sizeof(int)*V);
-    *h_vertex_degree = (int *) malloc(sizeof(int)*V);
-    *h_adjVertices = (int *) malloc(sizeof(int)*2*(V-1));
+    gpuErrchk(cudaMalloc((void **) &graph.d_vertex_start, sizeof(int)*(V)));
+    gpuErrchk(cudaMalloc((void **) &graph.d_vertex_degree, sizeof(int)*(V+1)));
+    gpuErrchk(cudaMalloc((void **) &graph.d_adjVertices, sizeof(int)*2*(V-1)));
+    graph.h_vertex_start = (int *) malloc(sizeof(int)*V);
+    graph.h_vertex_degree = (int *) malloc(sizeof(int)*V);
+    graph.h_adjVertices = (int *) malloc(sizeof(int)*2*(V-1));
 
 }
 
 /*
 Given a feasible tree on device, load a feasible solution to transportation problem on the host
 */
-__host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows, int * d_adjMtx_ptr, float * d_flowMtx_ptr, 
+__host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows, Graph &graph,
     int &active_flows, int numSupplies, int numDemands)
 {
     
@@ -163,7 +160,7 @@ __host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows
     dim3 __blockDim(blockSize, blockSize, 1);
     int grid_size = ceil(1.0*(numSupplies+numDemands)/blockSize); // VxV threads
     dim3 __gridDim(grid_size, grid_size, 1);
-    retrieve_final_tree <<< __gridDim, __blockDim >>> (d_flows_ptr, d_adjMtx_ptr, d_flowMtx_ptr, numSupplies, numDemands);
+    retrieve_final_tree <<< __gridDim, __blockDim >>> (d_flows_ptr, graph.d_adjMtx_ptr, graph.d_flowMtx_ptr, numSupplies, numDemands);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
     
@@ -178,22 +175,20 @@ __host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows
 }
 
 /* Clear up the memory occupied by graph on host on device */
-__host__ void close_solver(int * d_adjMtx_ptr, int * h_adjMtx_ptr, float * d_flowMtx_ptr, float * h_flowMtx_ptr, 
-    int * h_vertex_start, int * h_vertex_degree, int * h_adjVertices,
-    int * d_vertex_start, int * d_vertex_degree, int * d_adjVertices)
+__host__ void close_solver(Graph &graph)
 {
 
-    gpuErrchk(cudaFree(d_vertex_start));
-    gpuErrchk(cudaFree(d_vertex_degree));
-    gpuErrchk(cudaFree(d_adjVertices));
-    gpuErrchk(cudaFree(d_adjMtx_ptr));
-    gpuErrchk(cudaFree(d_flowMtx_ptr));
+    gpuErrchk(cudaFree(graph.d_vertex_start));
+    gpuErrchk(cudaFree(graph.d_vertex_degree));
+    gpuErrchk(cudaFree(graph.d_adjVertices));
+    gpuErrchk(cudaFree(graph.d_adjMtx_ptr));
+    gpuErrchk(cudaFree(graph.d_flowMtx_ptr));
     
-    free(h_vertex_start);
-    free(h_vertex_degree);
-    free(h_adjVertices);
-    free(h_adjMtx_ptr);
-    free(h_flowMtx_ptr);
+    free(graph.h_vertex_start);
+    free(graph.h_vertex_degree);
+    free(graph.h_adjVertices);
+    free(graph.h_adjMtx_ptr);
+    free(graph.h_flowMtx_ptr);
 
 }
 
@@ -265,22 +260,22 @@ __host__ void __debug_view_adjList(int * start, int * length, int * Ea, int V)
 
 }
 
-__host__ void make_adjacency_list(int * start, int * length, int * Ea, int * d_adjMtx_ptr, 
-        int numSupplies, int numDemands, int V) {
+__host__ void make_adjacency_list(Graph &graph, int numSupplies, int numDemands) {
 
         // Kernel Dimensions >> 
         dim3 __blockDim(blockSize, 1, 1); 
-        dim3 __gridDim(ceil(1.0*V/blockSize), 1, 1);
+        dim3 __gridDim(ceil(1.0*graph.V/blockSize), 1, 1);
 
-        determine_length <<< __gridDim, __blockDim >>> (length, d_adjMtx_ptr, V);
+        determine_length <<< __gridDim, __blockDim >>> (graph.d_vertex_degree, graph.d_adjMtx_ptr, graph.V);
         gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
         
-        thrust::inclusive_scan(thrust::device, length, length + V, start);
+        thrust::inclusive_scan(thrust::device, graph.d_vertex_degree, graph.d_vertex_degree + graph.V, graph.d_vertex_start);
         
-        fill_Ea <<< __gridDim, __blockDim >>> (start, Ea, d_adjMtx_ptr, V, numSupplies);
+        fill_Ea <<< __gridDim, __blockDim >>> (graph.d_vertex_start, graph.d_adjVertices, graph.d_adjMtx_ptr, graph.V, numSupplies);
         gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
+
         // Entries in Matrix >>
         // int _utm_entries = (V*(V+1))/2; // Number of entries in upper triangular matrix
         // auto result_end = thrust::copy_if(thrust::device, d_adjMtx_ptr, d_adjMtx_ptr + _utm_entries, 

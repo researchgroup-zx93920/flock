@@ -48,7 +48,7 @@ uvModel_parallel::uvModel_parallel(ProblemInstance *problem, flowInformation *fl
     // Why we copy it back to host? because NWC and Vogel can interchangably use this struct
     
     // !! Setup Constants !!
-    V = data->numSupplies+data->numDemands;
+    graph.V = data->numSupplies+data->numDemands;
 
     // Initialize model statistics >>
     deviceCommunicationTime = 0.0;
@@ -142,9 +142,7 @@ void uvModel_parallel::solve_uv()
         Breadth first search using the adj matrix provided
         BFS is performed on the device
         */
-        find_dual_using_bfs(u_vars_ptr, v_vars_ptr, 
-            &d_vertex_degree[1], d_vertex_start, d_adjVertices, Fa, Xa, variables, 
-            d_adjMtx_ptr, d_costs_ptr, data->numSupplies, data->numDemands);
+        find_dual_using_device_bfs(dual, graph, d_costs_ptr, data->numSupplies, data->numDemands);
     }
     else if (CALCULATE_DUAL=="host_bfs") 
     {
@@ -153,15 +151,7 @@ void uvModel_parallel::solve_uv()
         Breadth first search using the adj matrix provided
         BFS is performed on the host 
         */
-
-        // Copy Adjacency list on host >>
-        gpuErrchk(cudaMemcpy(h_vertex_degree, &d_vertex_degree[1], sizeof(int)*V, cudaMemcpyDeviceToHost));
-        gpuErrchk(cudaMemcpy(h_vertex_start, d_vertex_start, sizeof(int)*V, cudaMemcpyDeviceToHost));
-        gpuErrchk(cudaMemcpy(h_adjVertices, d_adjVertices, sizeof(int)*2*(V-1), cudaMemcpyDeviceToHost));
-        
-        find_dual_using_seq_bfs(u_vars_ptr, v_vars_ptr, 
-            h_vertex_degree, h_vertex_start, h_adjVertices, h_visited, h_variables,
-            d_adjMtx_ptr, data->costs, data->numSupplies, data->numDemands);
+        find_dual_using_host_bfs(dual, graph, data->costs, data->numSupplies, data->numDemands);
     }
     else if (CALCULATE_DUAL=="host_sparse_linear_solver") 
     {
@@ -202,8 +192,7 @@ void uvModel_parallel::solve_uv()
             - Set the default allocation
         2. Solve the sparse system A_csr * x = b // cuSparse solver
         */
-        find_dual_using_sparse_solver(u_vars_ptr, v_vars_ptr, d_costs_ptr, d_adjMtx_ptr,
-            d_csr_values, d_csr_columns, d_csr_offsets, d_x, d_b, nnz,
+        find_dual_using_sparse_solver(dual, graph, d_costs_ptr, 
             data->numSupplies, data->numDemands);
     }
     else if (CALCULATE_DUAL=="device_dense_linear_solver") 
@@ -237,87 +226,33 @@ void uvModel_parallel::get_reduced_costs()
 {
     dim3 __dimBlock(blockSize, blockSize, 1); // Refine this based on device query
     dim3 __dimGrid(ceil(1.0*data->numDemands/blockSize), ceil(1.0*data->numSupplies/blockSize), 1);
-    computeReducedCosts<<< __dimGrid, __dimBlock >>>(u_vars_ptr, v_vars_ptr, d_costs_ptr, d_reducedCosts_ptr, 
+    computeReducedCosts<<< __dimGrid, __dimBlock >>>(dual.u_vars_ptr, dual.v_vars_ptr, d_costs_ptr, d_reducedCosts_ptr, 
         data->numSupplies, data->numDemands);
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
 }
 
 
-/* 
-Pivoting Operation in Transport Simplex. A pivot is complete in following 3 Steps
-    Step 1: Check if already optimal 
-    Step 2: If not, Traverse tree and find a route (using DFS)
-    Step 3: Perform the pivot and adjust the flow
-    Step 4/0: Repeat!
-*/
+/* Perform pivot using a appropriate opterations as selected */
 void uvModel_parallel::perform_pivot(bool &result, int iteration) 
 {
-    // *******************************************
-    // STEP 1: Check if already optimal
-    // *******************************************
-
-    // Sort most negative reduced cost >>
-    thrust::sort(thrust::device,
-            d_reducedCosts_ptr, d_reducedCosts_ptr + (data->numSupplies*data->numDemands),
-            compareCells());
-
-    // have all the reduced costs in the d_reducedCosts_ptr on device
-    gpuErrchk(cudaMemcpy(&min_reduced_cost, &d_reducedCosts_ptr[0], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
-    
-    if (min_reduced_cost.cost < 0 && std::abs(min_reduced_cost.cost) > 10e-3)
+    // Find a negative reduced cost and pivot along >>
+    if (PIVOTING_STRATEGY == "sequencial_dfs") 
     {
-        // Found a negative reduced cost >>
-        if (PIVOTING_STRATEGY == "sequencial_dfs") 
-        {
-            int min_index = min_reduced_cost.row*data->numDemands + min_reduced_cost.col;
-            // pivot row and pivot col are declared private attributes
-            pivot_row =  min_index/data->numDemands;
-            pivot_col = min_index - (pivot_row*data->numDemands);
-
-            if (!(CALCULATE_DUAL=="host_bfs")) {
-                
-                // Copy Adjacency list on host >> 
-                gpuErrchk(cudaMemcpy(h_vertex_degree, &d_vertex_degree[1], sizeof(int)*V, cudaMemcpyDeviceToHost));
-                gpuErrchk(cudaMemcpy(h_vertex_start, d_vertex_start, sizeof(int)*V, cudaMemcpyDeviceToHost));
-                gpuErrchk(cudaMemcpy(h_adjVertices, d_adjVertices, sizeof(int)*2*(V-1), cudaMemcpyDeviceToHost));
-            
-            }
-
-            perform_a_sequencial_pivot(backtracker, stack, visited, 
-                h_vertex_start, h_vertex_degree, h_adjVertices,
-                h_adjMtx_ptr, h_flowMtx_ptr, 
-                d_vertex_start, d_vertex_degree, d_adjVertices,
-                d_adjMtx_ptr, d_flowMtx_ptr,
-                result, pivot_row, pivot_col, 
-                dfs_time, resolve_time, adjustment_time,
-                data->numSupplies, data->numDemands);
-        }
-
-        else if (PIVOTING_STRATEGY == "parallel_dfs") 
-        {
-            // view_reduced_costs();
-
-            perform_a_parallel_pivot_floyd_warshall(backtracker, stack, visited,
-                h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, 
-                d_vertex_start, &d_vertex_degree[1], d_adjVertices,
-                result,  d_reducedCosts_ptr, depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, v_conflicts,
-                dfs_time, resolve_time, adjustment_time,
-                iteration, data->numSupplies, data->numDemands);
-        }
-
-        else
-        {
-            std::cout<<"Invalid selection of pivoting strategy"<<std::endl;
-            exit(-1);
-        }
-
+        perform_a_sequencial_pivot(pivot, timer, graph, d_reducedCosts_ptr, result,
+            data->numSupplies, data->numDemands);
     }
-    else 
+
+    else if (PIVOTING_STRATEGY == "parallel_dfs") 
     {
-        result = true;
-        std::cout<<"Pivoting Complete!"<<std::endl;
+        perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, d_reducedCosts_ptr, result,
+            data->numSupplies, data->numDemands, iteration);
     }
+    else
+    {
+        std::cout<<"Invalid selection of pivoting strategy"<<std::endl;
+        exit(-1);
+    }    
 }
 
 
@@ -366,18 +301,11 @@ void uvModel_parallel::execute()
     std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
     
     // Follow DUAL_solver for the following
-    initialize_device_DUAL(&u_vars_ptr, &v_vars_ptr, 
-        &Fa, &Xa, &variables,
-        &d_csr_values, &d_csr_columns, &d_csr_offsets,
-        &d_A, &d_b, &d_x, nnz,
-        &h_visited, &h_variables,
-        data->numSupplies, data->numDemands);
+    dualMalloc(dual, data->numSupplies, data->numDemands);
     std::cout<<"\tSuccessfully allocated Resources for DUAL ..."<<std::endl;
 
     // Follow PIVOTING_dfs for the following
-    initialize_device_PIVOT(&backtracker, &stack, &visited, 
-    &depth, &loop_minimum, &loop_min_from, &loop_min_to, &loop_min_id,
-    &v_conflicts, data->numSupplies, data->numDemands);
+    pivotMalloc(pivot, data->numSupplies, data->numDemands);
     std::cout<<"\tSuccessfully allocated Resources for PIVOTING ..."<<std::endl;
     
     // Container for reduced costs
@@ -386,11 +314,7 @@ void uvModel_parallel::execute()
     std::cout<<"\tSuccessfully allocated Resources for Reduced costs ..."<<std::endl;
 
     // Create tree structure on host and device (for pivoting)
-    create_IBF_tree_on_host_device(feasible_flows, 
-        &d_adjMtx_ptr, &h_adjMtx_ptr, &d_flowMtx_ptr, &h_flowMtx_ptr, 
-        &d_vertex_start, &d_vertex_degree, &d_adjVertices,
-        &h_vertex_start, &h_vertex_degree, &h_adjVertices, 
-        data->numSupplies, data->numDemands);
+    create_IBF_tree_on_host_device(graph, feasible_flows, data->numSupplies, data->numDemands);
     std::cout<<"\tGenerated initial tree (on host & device) ..."<<std::endl;
     
     // **************************************
@@ -411,8 +335,7 @@ void uvModel_parallel::execute()
         [ Note that this step is anyway performed in DUAL BFS but 
         this is expected to be helpful in parallel pivot to supercharge DFS !! ]
         */
-        make_adjacency_list(d_vertex_start, d_vertex_degree, d_adjVertices, d_adjMtx_ptr, 
-            data->numSupplies, data->numDemands, V);
+        make_adjacency_list(graph, data->numSupplies, data->numDemands);
 
         // 2.1 
         iter_start = std::chrono::high_resolution_clock::now();
@@ -463,21 +386,16 @@ void uvModel_parallel::execute()
     // Post process operation after pivoting
     // **************************************
 
-    terminate_device_DUAL(u_vars_ptr, v_vars_ptr,
-        Fa, Xa, variables, 
-        d_csr_values, d_csr_columns, d_csr_offsets, d_A, d_b, d_x, 
-        h_visited, h_variables);
+    dualFree(dual);
     std::cout<<"\tSuccessfully de-allocated resources for DUAL ..."<<std::endl;
-    terminate_device_PIVOT(backtracker, stack, visited, 
-        depth, loop_minimum, loop_min_from, loop_min_to, loop_min_id, v_conflicts);
+    pivotFree(pivot);
     std::cout<<"\tSuccessfully de-allocated Resources for PIVOT ..."<<std::endl;
     gpuErrchk(cudaFree(d_reducedCosts_ptr));
     std::cout<<"\tSuccessfully de-allocated Resources for Reduced costs ..."<<std::endl;
 
     std::cout<<"\tProcessing Solution ..."<<std::endl;
-    cudaMemcpy(d_flowMtx_ptr, h_flowMtx_ptr, (V-1)*sizeof(float), cudaMemcpyHostToDevice);
-    retrieve_solution_on_current_tree(feasible_flows, d_adjMtx_ptr, d_flowMtx_ptr, 
-        data->active_flows, data->numSupplies, data->numDemands);
+    cudaMemcpy(graph.d_flowMtx_ptr, graph.h_flowMtx_ptr, (graph.V-1)*sizeof(float), cudaMemcpyHostToDevice);
+    retrieve_solution_on_current_tree(feasible_flows, graph, data->active_flows, data->numSupplies, data->numDemands);
 
     std::cout<<"Found "<<data->active_flows<<" active flows in the final result"<<std::endl;
 
@@ -489,9 +407,7 @@ void uvModel_parallel::execute()
     totalIterations = iteration_counter;
 
     // Clean up!
-    close_solver(d_adjMtx_ptr, h_adjMtx_ptr, d_flowMtx_ptr, h_flowMtx_ptr, 
-    h_vertex_start, h_vertex_degree, h_adjVertices,
-    d_vertex_start, d_vertex_degree, d_adjVertices);
+    close_solver(graph);
 
     double objval = 0.0;
     for (int i=0; i< (data->active_flows); i++){
@@ -526,7 +442,7 @@ void uvModel_parallel::view_uv()
     // Print U >>
     float * u_vector;
     u_vector = (float *) malloc(data->numSupplies*sizeof(float));
-    gpuErrchk(cudaMemcpy(u_vector, u_vars_ptr, data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(u_vector, dual.u_vars_ptr, data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost));
     for (int i = 0; i < data->numSupplies; i++) {
         std::cout << "U[" << i << "] = " << u_vector[i] << std::endl;
     }
@@ -536,7 +452,7 @@ void uvModel_parallel::view_uv()
     // Print V >>
     float * v_vector;
     v_vector = (float *) malloc(data->numDemands*sizeof(float));
-    gpuErrchk(cudaMemcpy(v_vector, v_vars_ptr, data->numDemands*sizeof(float), cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(v_vector, dual.v_vars_ptr, data->numDemands*sizeof(float), cudaMemcpyDeviceToHost));
     for (int i = 0; i < data->numDemands; i++) {
         std::cout << "V[" << i << "] = " << v_vector[i] << std::endl;
     }
@@ -584,10 +500,10 @@ void uvModel_parallel::view_tree()
     int _V = data->numSupplies+data->numDemands;
     
     h_adjMtx = (int *) malloc(((_V*(_V+1))/2)*sizeof(int));
-    gpuErrchk(cudaMemcpy(h_adjMtx, d_adjMtx_ptr, ((_V*(_V+1))/2)*sizeof(int), cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(h_adjMtx, graph.d_adjMtx_ptr, ((_V*(_V+1))/2)*sizeof(int), cudaMemcpyDeviceToHost));
 
     h_flowMtx = (float *) malloc((_V-1)*sizeof(float));
-    gpuErrchk(cudaMemcpy(h_flowMtx, d_flowMtx_ptr, (_V-1)*sizeof(float), cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(h_flowMtx, graph.d_flowMtx_ptr, (_V-1)*sizeof(float), cudaMemcpyDeviceToHost));
 
     for (int i = 0; i < _V; i++) {
         for (int j = i; j < _V; j++) {

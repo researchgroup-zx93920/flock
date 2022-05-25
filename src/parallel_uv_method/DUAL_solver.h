@@ -2,44 +2,27 @@
 NOTE - user may not understand this file directly 
 Follow the implementation of uv_method_parallel class methods
 and all of this will suddenly make sense
+
+Todo: 
+1. Make a dual strategy selector - dual malloc will take strategy and assign it within a iterator in handler
 */
 
 #include "parallel_structs.h"
 #include "parallel_kernels.h"
 
-// ALLOCATE and DE-ALLOCATE RESOURCES
-__host__ void initialize_device_DUAL(float ** u_vars_ptr, float ** v_vars_ptr, 
-        bool ** Fa, bool ** Xa, float ** variables, 
-        float ** d_csr_values, int ** d_csr_columns, int ** d_csr_offsets,
-        float ** d_A, float ** d_b, float ** d_x, int64_t &nnz, 
-        bool ** h_visited, float ** h_variables,
-        int numSupplies, int numDemands);
+// ALLOCATE and DE-ALLOCATE RESOURCES for dual based on appropriate strategy
+__host__ void dualMalloc(DualHandler &dual, int numSupplies, int numDemands);
 
-__host__ void terminate_device_DUAL(float * u_vars_ptr, float * v_vars_ptr, 
-        bool * Fa, bool * Xa, float * variables,
-        float * d_csr_values, int * d_csr_columns, int * d_csr_offsets,
-        float * d_A, float * d_b, float * d_x, 
-        bool * h_visited, float * h_variables);
+__host__ void dualFree(DualHandler &dual);
 
 
 // BREADTH FIRST SEARCH
-__host__ void find_dual_using_bfs(float * u_vars_ptr, float * v_vars_ptr,
-        int * length, int * start, int * Ea, bool * Fa, bool * Xa, float * variables,
-        int * d_adjMtx_ptr, float * d_costs_ptr, int numSupplies, int numDemands);
+__host__ void find_dual_using_device_bfs(DualHandler &dual, Graph &graph, float * d_costs_ptr, int numSupplies, int numDemands);
 
-__host__ void find_dual_using_seq_bfs(float * u_vars_ptr, float * v_vars_ptr, 
-        int * h_length, int * h_start, int * h_Ea, bool * h_visited, float * h_variables,
-        int * d_adjMtx_ptr, float * h_costs_ptr, int numSupplies, int numDemands);
+__host__ void find_dual_using_host_bfs(DualHandler &dual,  Graph &graph, float * h_costs_ptr, int numSupplies, int numDemands);
+
 
 // SOLVE LINEAR SYSTEM
-__host__ void find_dual_using_sparse_solver(float * u_vars_ptr, float * v_vars_ptr, 
-        float * d_costs_ptr, int * d_adjMtx_ptr,
-        float * d_csr_values, int * d_csr_columns, int * d_csr_offsets, float * d_x, float * d_b, 
-        int64_t nnz, int numSupplies, int numDemands);
+__host__ void find_dual_using_sparse_solver(DualHandler &dual, Graph &graph, float * d_costs_ptr, int numSupplies, int numDemands);
 
-__host__ void find_dual_using_dense_solver(float * u_vars_ptr, float * v_vars_ptr, 
-        float * d_costs_ptr, int * d_adjMtx_ptr,
-        float * d_A, float * d_x, float * d_b, 
-        int numSupplies, int numDemands);
-
-
+__host__ void find_dual_using_dense_solver(DualHandler &dual, Graph &graph, float * d_costs_ptr, int numSupplies, int numDemands);
