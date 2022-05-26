@@ -101,10 +101,10 @@ Just consider at most 2(M + N) negative reduced costs
 Idea to use from above 1/2
 */
 
-#define PARALLEL_PIVOTING_METHOD "hybrid"
+#define PARALLEL_PIVOTING_METHOD "delta"
 /*
-pure : run flow adjustments in parallel
-hybrid : run adjustments sequencial
+r : deconflict pivots purely based on reduced costs
+delta : deconflict parallel pivots based on delta -> currently appliable to stepping stone method
 */
 
 #define MAX_ITERATIONS 30000
@@ -344,6 +344,11 @@ struct PivotHandler {
     int * d_pivot_cycles, * deconflicted_cycles; 
     int * deconflicted_cycles_depth, * deconflicted_cycles_backtracker;
 
+    // Stepping stone specific pointers (this method also uses some of the fw pointers)
+    float * opportunity_cost;
+    // Oppotunity cost - Cost Improvement observed per unit along the cycle
+    // Delta - Possible Recirculation along the cycle 
+    // (computation of delta requires communication of flows to device - this is time taking)
 
 };
 

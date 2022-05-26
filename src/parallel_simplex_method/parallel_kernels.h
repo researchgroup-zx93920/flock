@@ -127,4 +127,15 @@ __global__ void expand_all_cycles(int * d_adjMtx_transform, int * d_pathMtx, int
 
 __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_cycles, MatrixCell * d_reducedCosts_ptr, int min_r_index, int diameter, int numSupplies, int numDemands);
 
+__global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_cycles, 
+    float * d_opportunity_costs, int min_r_index, int diameter, int numSupplies, int numDemands);
+
+__global__ void compute_opportunity_cost_and_delta(int * d_adjMtx_ptr, float * d_flowMtx_ptr, float * d_costs_ptr, 
+    int * d_adjMtx_transform, int * d_pivot_cycles, float * d_opportunity_costs, 
+    int diameter, int numSupplies, int numDemands);
+
+__global__ void compute_opportunity_cost(int * d_adjMtx_ptr, float * d_flowMtx_ptr, float * d_costs_ptr, 
+    int * d_adjMtx_transform, int * d_pivot_cycles, float * d_opportunity_costs, 
+    int diameter, int numSupplies, int numDemands);
+
 #endif

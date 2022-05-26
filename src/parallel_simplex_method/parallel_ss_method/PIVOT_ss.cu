@@ -23,13 +23,17 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands) 
         // Allocate Resources for floydwarshall cycle discovery strategy
         gpuErrchk(cudaMalloc((void **) &pivot.d_adjMtx_transform, V*V*sizeof(int)));
         gpuErrchk(cudaMalloc((void **) &pivot.d_pathMtx, V*V*sizeof(int)));
+        
+        // Allocate mem for pivoting items
+        gpuErrchk(cudaMalloc((void **) &pivot.opportunity_cost, numSupplies*numDemands*sizeof(float)));
+        
         // Storing indexes of deconflicted cycles >>
         pivot.deconflicted_cycles = (int *) malloc(MAX_DECONFLICT_CYCLES(numSupplies, numDemands)*sizeof(int)); // upper bound = M + N - 1/3
         // Allocate appropriate memory for executing pivots
         pivot.deconflicted_cycles_depth = (int *) malloc(sizeof(int)); // Store depth of each cycle
         // Each cycle has a size less than max possible diameter
-        pivot.deconflicted_cycles_backtracker = (int *) malloc(V*sizeof(int)); 
-        
+        pivot.deconflicted_cycles_backtracker = (int *) malloc(V*sizeof(int));
+
     }
 }
 
@@ -43,6 +47,7 @@ __host__ void pivotFree(PivotHandler &pivot) {
         // Free up space >>
         gpuErrchk(cudaFree(pivot.d_adjMtx_transform));
         gpuErrchk(cudaFree(pivot.d_pathMtx));
+        gpuErrchk(cudaFree(pivot.opportunity_cost));
         free(pivot.deconflicted_cycles);
         free(pivot.deconflicted_cycles_backtracker);
         free(pivot.deconflicted_cycles_depth);
@@ -72,8 +77,9 @@ __host__ static void exit_i_and_enter_j(int * d_adjMtx_ptr, float * d_flowMtx_pt
     gpuErrchk(cudaMemcpy(&d_adjMtx_ptr[id], &new_value, sizeof(int), cudaMemcpyHostToDevice));
 
     // The flow would have become zero - update it again
-    // gpuErrchk(cudaMemcpy(&d_flowMtx_ptr[min_flow_indx], &min_flow, sizeof(float), cudaMemcpyHostToDevice));
-
+    if (PARALLEL_PIVOTING_METHOD=="delta") {
+        gpuErrchk(cudaMemcpy(&d_flowMtx_ptr[min_flow_indx], &min_flow, sizeof(float), cudaMemcpyHostToDevice));
+    }
 }
 
 /*
@@ -114,7 +120,9 @@ __host__ static void do_flow_adjustment_on_host_device(int * h_adjMtx_ptr, float
         id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
         _flow = ((int) pow(-1, (int)i%2))*min_flow;
         h_flowMtx_ptr[id] += _flow;
-        // modify_flowMtx_on_device(d_flowMtx_ptr, id, h_flowMtx_ptr[id]);
+        if (PARALLEL_PIVOTING_METHOD=="delta") {
+            modify_flowMtx_on_device(d_flowMtx_ptr, id, h_flowMtx_ptr[id]);
+        }
     }
 
     // Do the replacment between exiting i - entering j on both host and device
@@ -255,7 +263,7 @@ Step 1: Find all point to all points shortest distance with Floyd Warshall using
 - Step 4: Perfrom flow adjustment on the paths
 */
 __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, PivotTimer &timer, 
-    Graph &graph, bool &result, int numSupplies, int numDemands, int iteration) {
+    Graph &graph, float * d_costs_ptr, bool &result, int numSupplies, int numDemands, int iteration) {
     
     // Find index of most negative reduced cost negative reduced cost >>
 
@@ -319,16 +327,31 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
 
     // DEBUG UTILITY : view cycles in expanded form >>
     _debug_view_discovered_cycles(pivot, diameter, numSupplies, numDemands);
+    
+    if (PARALLEL_PIVOTING_METHOD=="delta") {
+
+        compute_opportunity_cost_and_delta<<<dimGrid3, dimBlock3>>>(graph.d_adjMtx_ptr, graph.d_flowMtx_ptr, d_costs_ptr, 
+                            pivot.d_adjMtx_transform, pivot.d_pivot_cycles, pivot.opportunity_cost, 
+                            diameter, numSupplies, numDemands);
+    
+    }
+    
+    else if (PARALLEL_PIVOTING_METHOD=="r") {
+
+        compute_opportunity_cost<<<dimGrid3, dimBlock3>>>(graph.d_adjMtx_ptr, graph.d_flowMtx_ptr, d_costs_ptr, 
+                            pivot.d_adjMtx_transform, pivot.d_pivot_cycles, pivot.opportunity_cost, 
+                            diameter, numSupplies, numDemands);
+    
+    } 
 
     _pivot_end = std::chrono::high_resolution_clock::now();
     _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     timer.cycle_discovery += _pivot_duration.count();
-    exit(0);
 
-    /*
+    
     _pivot_start = std::chrono::high_resolution_clock::now();
 
-    // Get most negative reduced cost index - 
+    // Get most opportunistic flow index - 
     bool search_complete = false;
     int shared_mem_requirement = sizeof(int)*diameter; // allocated cycle length 
     int deconflicted_cycles_count = 0;
@@ -336,22 +359,24 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     while (!search_complete) {
 
         // std::cout<<min_reduced_cost.cost<<std::endl;
+        // Check if any cycles still remain untouched and if yes then get the best one
+        float min_opprtunity_cost;
+        int min_indx = thrust::min_element(thrust::device,
+                pivot.opportunity_cost, pivot.opportunity_cost + (numSupplies*numDemands)) - pivot.opportunity_cost;
+        gpuErrchk(cudaMemcpy(&min_opprtunity_cost, &pivot.opportunity_cost[min_indx], sizeof(float), cudaMemcpyDeviceToHost));
+
+        if (!(min_opprtunity_cost < 0 && std::abs(min_opprtunity_cost) > epsilon2)) {
+            search_complete = true;
+        }
+
         pivot.deconflicted_cycles[deconflicted_cycles_count] = min_indx;
         check_pivot_feasibility<<< dimGrid3, dimBlock3, shared_mem_requirement>>>(pivot.d_adjMtx_transform, pivot.d_pivot_cycles,
-                 d_reducedCosts_ptr, min_indx, diameter, numSupplies, numDemands);
+                 pivot.opportunity_cost, min_indx, diameter, numSupplies, numDemands);
         gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
         
         deconflicted_cycles_count++;
-        
-        // Check if any cycles still remain untouched and if yes then get the best one
-        min_indx = thrust::min_element(thrust::device,
-                d_reducedCosts_ptr, d_reducedCosts_ptr + (numSupplies*numDemands), compareCells()) - d_reducedCosts_ptr;
-        gpuErrchk(cudaMemcpy(&min_reduced_cost, &d_reducedCosts_ptr[min_indx], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
 
-        if (!(min_reduced_cost.cost < 0 && std::abs(min_reduced_cost.cost) > epsilon2)) {
-            search_complete = true;
-        }
     }
 
     // std::cout<<"Found "<<deconflicted_cycles_count<<" independent cycles to be pivoted"<<std::endl;
@@ -375,8 +400,6 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
         int offset_1 = pivot_row*numDemands + pivot_col; // to retrieve cycle
         int offset_2 = pivot_row*graph.V + (pivot_col+numSupplies); // to retrieve depth
 
-        
-        gpuErrchk(cudaMemcpy(&min_reduced_cost, &d_reducedCosts_ptr[pivot_indx], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
         gpuErrchk(cudaMemcpy(pivot.deconflicted_cycles_depth, &pivot.d_adjMtx_transform[offset_2], sizeof(int), cudaMemcpyDeviceToHost));
         gpuErrchk(cudaMemcpy(pivot.deconflicted_cycles_backtracker, &pivot.d_pivot_cycles[offset_1*diameter], ((*pivot.deconflicted_cycles_depth)+2)*sizeof(int), cudaMemcpyDeviceToHost));
 
@@ -389,9 +412,6 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     _pivot_end = std::chrono::high_resolution_clock::now();
     _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     timer.adjustment_time += _pivot_duration.count();
-    
-    
-    */
 
     // Free memory allocated for cycles
     gpuErrchk(cudaFree(pivot.d_pivot_cycles));

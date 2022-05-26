@@ -687,4 +687,173 @@ __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_
 }
 
 
+/*
+Check if a cycle is still feasible if any of the edges of the cycle located at min_indx has been used
+If it is infeasible then set the reduced cost of this cell as non-negative to deactivate pivot here
+*/
+__global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_cycles, 
+    float * d_opportunity_costs, int min_r_index, int diameter, int numSupplies, int numDemands) {
+
+    // Nomenclature : 
+    // this_cycle - cycle located on this thread
+    // earlier_cycle - cycle located on the min_r_index 
+    // Context : Edges in earlier cycle will be used by pivot (because min_reduced cost)
+    //      Then if there are any common edges between this_cycle and earlier_cycle
+    //      then this_cycle conflicts with earlier_cycle and it has to die
+    //      Set reduced cost = non_negative for this cycle
+
+    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;  // demand point
+    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;  // supply point 
+    int offset_1 = diameter*(row_indx*numDemands + col_indx); // offset for this_cycle store
+    int V = numSupplies + numDemands;
+    int offset_2 = row_indx*V + (col_indx+numSupplies); // offset for path and adjMtx 
+    
+    // Load the earlier cycle and it's depth - enough memory is available through diameter
+    extern __shared__ int earlier_cycle[];
+
+    int _pivot_row =  min_r_index/numDemands;
+    int _pivot_col = min_r_index - (_pivot_row*numDemands);
+    int earlier_cycle_depth = d_adjMtx_transform[_pivot_row*V + (_pivot_col+numSupplies)] + 1; // depth of earlier_cycle
+    
+    // Set opportunity cost of earlier_cycle nonNegative >>
+    d_opportunity_costs[_pivot_row*numDemands + _pivot_col] = epsilon;
+    // all threads in block load the same value
+
+    // Load the earlier cycle in parallel 
+    int _stride = blockDim.x*blockDim.y; 
+    int _local_index = threadIdx.y*blockDim.x + threadIdx.x;
+    int offset_3 = diameter*(_pivot_row*numSupplies + _pivot_col); // offset for earlier_cycle_store
+    while (_local_index < earlier_cycle_depth + 1) {
+        earlier_cycle[_local_index] = d_pivot_cycles[offset_3 + _local_index];
+        _local_index = _local_index + _stride;
+    }
+    __syncthreads();
+
+    // Now earlier cycle is available in shared memory - traverse this_cycle and check for common edges
+    if (row_indx < numSupplies && col_indx < numDemands) {
+
+        int vtx_i; // i^th vertex in this_cycle 
+        int vtx_j; // j^th vertex in earlier_cycle
+        int this_cycle_depth = d_adjMtx_transform[offset_2] + 1;
+        int vtx_i1, vtx_j1; // i+1^th and j+1^th vertices in corresponding columns
+        int edge_i, edge_j; // edge id of edges (i,i+1) and (j,j+1) - edgeid is the index of edge in supply x demand matrix
+
+        for (int i = 1; i < this_cycle_depth + 1; i++) {
+            
+            vtx_i = d_pivot_cycles[offset_1+i] - numSupplies*(i%2);
+            vtx_i1 = d_pivot_cycles[offset_1+i+1] - numSupplies*((i+1)%2);
+            edge_i = (vtx_i*numDemands + vtx_i1)*((i+1)%2) + (vtx_i1*numDemands + vtx_i)*(i%2);
+
+            for (int j = 1; j < earlier_cycle_depth + 1; j++) {
+                
+                vtx_j = earlier_cycle[j] - numSupplies*(j%2);
+                vtx_j1 = earlier_cycle[j+1] - numSupplies*((j+1)%2);
+                edge_j = (vtx_j*numDemands + vtx_j1)*((j+1)%2) + (vtx_j1*numDemands + vtx_j)*(j%2);
+                // Note that we're looking up undirected edges, so we compare unique identifiers of both
+                
+                // Whenever the cycles intersect
+                if (edge_i == edge_j) {
+                    // set opportunity cost of this_cycle as non-negative
+                    d_opportunity_costs[row_indx*numDemands + col_indx] = epsilon;
+                    return;
+                }
+            }
+        }
+    }
+}
+
+
+
+/* 
+Compute Oppotunity costs and delta -
+Logic : For each edge retreive cost and flow - 
+        Track their sum and minimum as you traverse along
+        Store the final value in appropriate array
+*/
+__global__ void compute_opportunity_cost_and_delta(int * d_adjMtx_ptr, float * d_flowMtx_ptr, float * d_costs_ptr, 
+    int * d_adjMtx_transform, int * d_pivot_cycles, float * d_opportunity_costs, 
+    int diameter, int numSupplies, int numDemands) {
+
+    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;  // demand point
+    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;  // supply point 
+    int offset_1 = diameter*(row_indx*numDemands + col_indx); // offset for cycle store
+    int V = numSupplies + numDemands;
+    int offset_2 = row_indx*V + (col_indx+numSupplies); // offset for adjMtx_transformed
+
+    if (row_indx < numSupplies && col_indx < numDemands) {
+
+        int id_graph, id_costs, _from = -1, _to = -1;
+        int this_cycle_depth = d_adjMtx_transform[offset_2] + 1;
+        float _flow, min_flow = INT_MAX, opportunity_cost = 0.0f;
+        
+        for (int i = 0; i < this_cycle_depth + 1; i++) {
+
+            _from = d_pivot_cycles[offset_1+i];
+            _to = d_pivot_cycles[offset_1+i+1];
+            id_costs = (_from*numDemands + _to)*((i+1)%2) + (_from*numDemands + _to)*(i%2);
+            
+            // ########### PART - 1 | Finding the opportunity costs >>
+            // Add evens and substract odds
+            opportunity_cost = opportunity_cost + pow(-1, i%2)*d_costs_ptr[id_costs];
+
+            // ########### PART - 2 | Finding the minimum flow >>
+            // Traverse the loop find the minimum flow that could be increased
+            // on the incoming edge - (Look for minimum of flows on odd indexed edges)
+            if (i%2==1) 
+            {
+                id_graph = d_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
+                _flow = d_flowMtx_ptr[id_graph];
+                
+                if (_flow < min_flow) 
+                {
+                    min_flow = _flow;
+                }
+            }
+        }
+
+        // Load the values the in books for next kernel
+        d_opportunity_costs[row_indx*numDemands + col_indx] = opportunity_cost*min_flow;
+    }
+}
+
+
+/* 
+Compute Oppotunity costs and delta -
+Logic : For each edge retreive costs - 
+        Track their sum as you traverse along
+        Store the final value in appropriate array
+*/
+__global__ void compute_opportunity_cost(int * d_adjMtx_ptr, float * d_flowMtx_ptr, float * d_costs_ptr, 
+    int * d_adjMtx_transform, int * d_pivot_cycles, float * d_opportunity_costs, 
+    int diameter, int numSupplies, int numDemands) {
+
+    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;  // demand point
+    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;  // supply point 
+    int offset_1 = diameter*(row_indx*numDemands + col_indx); // offset for cycle store
+    int V = numSupplies + numDemands;
+    int offset_2 = row_indx*V + (col_indx+numSupplies); // offset for adjMtx_transformed
+
+    if (row_indx < numSupplies && col_indx < numDemands) {
+
+        int id_costs, _from = -1, _to = -1;
+        int this_cycle_depth = d_adjMtx_transform[offset_2] + 1;
+        float opportunity_cost = 0.0f;
+        
+        for (int i = 0; i < this_cycle_depth + 1; i++) {
+
+            _from = d_pivot_cycles[offset_1+i];
+            _to = d_pivot_cycles[offset_1+i+1];
+            id_costs = (_from*numDemands + _to)*((i+1)%2) + (_from*numDemands + _to)*(i%2);
+            
+            // Finding the opprotunity costs >>
+            // Traverse the loop find the minimum flow that could be increased
+            // on the incoming edge - (Look for minimum of flows on odd indexed edges)
+            opportunity_cost = opportunity_cost + pow(-1, i%2)*d_costs_ptr[id_costs];
+        }
+
+        // Load the values the in books for next kernel
+        d_opportunity_costs[row_indx*numDemands + col_indx] = opportunity_cost;  
+    }
+}
+
 #endif

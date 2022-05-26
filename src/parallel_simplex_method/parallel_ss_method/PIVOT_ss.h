@@ -29,7 +29,7 @@ __host__ void pivotFree(PivotHandler &pivot);
 //     Graph &graph, bool &result, int numSupplies, int numDemands, int iteration);
 
 __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, PivotTimer &timer, 
-    Graph &graph, bool &result, int numSupplies, int numDemands, int iteration);
+    Graph &graph, float * d_costs_ptr, bool &result, int numSupplies, int numDemands, int iteration);
 
 }
 

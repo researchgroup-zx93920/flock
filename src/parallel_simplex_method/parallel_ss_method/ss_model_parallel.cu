@@ -131,7 +131,7 @@ void ssModel_parallel::perform_pivot(bool &result, int iteration)
     }
     else if (PIVOTING_STRATEGY == "parallel_fw") 
     {
-        SS_METHOD::perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, result,
+        SS_METHOD::perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, d_costs_ptr, result,
             data->numSupplies, data->numDemands, iteration);
     }
     else
