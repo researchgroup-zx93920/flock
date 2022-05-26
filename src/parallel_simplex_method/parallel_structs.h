@@ -71,10 +71,11 @@ device_dense_linear_solver : solve system of dense lin_equations (dense linear a
 qr, chol
 */
 
-#define PIVOTING_STRATEGY "sequencial_dfs"
+#define PIVOTING_STRATEGY "parallel_fw"
 /*
 sequencial_dfs : perform pivoting one at a time based on dantzig's rule
-parallel_dfs : perform parallel pivoting (run flow adjustments in parallel)
+parallel_dfs : perform parallel pivoting by DFS strategy to build cycles
+parallel_fw : perform parallel pivoting by floyd warshall strategy to build cycles
 */
 
 #define COMPACTION_FACTOR 3

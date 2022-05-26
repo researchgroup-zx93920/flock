@@ -12,9 +12,9 @@ LIB_GUROBI=-lgurobi_c++ -lgurobi91
 CUDA=/usr/local/cuda
 LIB_CUDA=-lcudart -lnvToolsExt -lcusparse -lcusolver
 
-all: flock
+all: flock clean
 
-flock: ensureDir lpMethod.o seq_simplex.o parallel_uv_method.o parallel_ss_method.o parallel_commons.o
+flock: ensureDir lpMethod.o parallel_uv_method.o parallel_ss_method.o parallel_commons.o
 	$(CPP) $(SRC)/*.cpp ./bin/*.o -I$(GUROBI_HOME)/include/ -I$(BOOST_INCLUDE_PATH)/ -I$(CUDA)/include/ -L$(GUROBI_HOME)/lib/ -L$(BOOST_LIB_PATH)/lib/ -L$(CUDA)/lib64/ $(LIB_GUROBI) $(LIB_BOOST) $(LIB_CUDA) -lgomp -o ./bin/flock
 
 lpMethod.o:

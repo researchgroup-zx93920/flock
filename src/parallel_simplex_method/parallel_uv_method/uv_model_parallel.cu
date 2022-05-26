@@ -239,15 +239,22 @@ void uvModel_parallel::perform_pivot(bool &result, int iteration)
     // Find a negative reduced cost and pivot along >>
     if (PIVOTING_STRATEGY == "sequencial_dfs") 
     {
-        perform_a_sequencial_pivot(pivot, timer, graph, d_reducedCosts_ptr, result,
+        UV_METHOD::perform_a_sequencial_pivot(pivot, timer, graph, d_reducedCosts_ptr, result,
             data->numSupplies, data->numDemands);
     }
 
     else if (PIVOTING_STRATEGY == "parallel_dfs") 
     {
-        perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, d_reducedCosts_ptr, result,
+        UV_METHOD::perform_a_parallel_pivot_dfs(pivot, timer, graph, d_reducedCosts_ptr, result,
             data->numSupplies, data->numDemands, iteration);
     }
+
+    else if (PIVOTING_STRATEGY == "parallel_fw") 
+    {
+        UV_METHOD::perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, d_reducedCosts_ptr, result,
+            data->numSupplies, data->numDemands, iteration);
+    }
+    
     else
     {
         std::cout<<"Invalid selection of pivoting strategy"<<std::endl;
@@ -305,7 +312,7 @@ void uvModel_parallel::execute()
     std::cout<<"\tSuccessfully allocated Resources for DUAL ..."<<std::endl;
 
     // Follow PIVOTING_dfs for the following
-    pivotMalloc(pivot, data->numSupplies, data->numDemands);
+    UV_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands);
     std::cout<<"\tSuccessfully allocated Resources for PIVOTING ..."<<std::endl;
     
     // Container for reduced costs
@@ -388,7 +395,7 @@ void uvModel_parallel::execute()
 
     dualFree(dual);
     std::cout<<"\tSuccessfully de-allocated resources for DUAL ..."<<std::endl;
-    pivotFree(pivot);
+    UV_METHOD::pivotFree(pivot);
     std::cout<<"\tSuccessfully de-allocated Resources for PIVOT ..."<<std::endl;
     gpuErrchk(cudaFree(d_reducedCosts_ptr));
     std::cout<<"\tSuccessfully de-allocated Resources for Reduced costs ..."<<std::endl;

@@ -1,5 +1,6 @@
-#include "PIVOT_dfs.h"
+#include "PIVOT_uv.h"
 
+namespace UV_METHOD {
 /* 
 Setup necessary resources for pivoting 
 these resources are static and to be shared/overwritten between iterations
@@ -22,22 +23,25 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands) 
     else if (PIVOTING_STRATEGY == "parallel_dfs") {
 
         // Allocate appropriate resources, Specific to parallel pivot >>
-        // int num_threads_launching = NUM_THREADS_LAUNCHING(numSupplies, numDemands, PARALLEL_PIVOT_IDEA);
+        int num_threads_launching = NUM_THREADS_LAUNCHING(numSupplies, numDemands, PARALLEL_PIVOT_IDEA);
         
         // BOOK 1: Stores the routes discovered for each thread
-        // gpuErrchk(cudaMalloc((void **) &pivot.backtracker, num_threads_launching * V * sizeof(int)));
+        gpuErrchk(cudaMalloc((void **) &pivot.backtracker, num_threads_launching * V * sizeof(int)));
         
         // BOOK 2: Stores the runtime stack for DFS running on each thread
-        // gpuErrchk(cudaMalloc((void **) &pivot.stack, num_threads_launching * V * sizeof(stackNode)));
+        gpuErrchk(cudaMalloc((void **) &pivot.stack, num_threads_launching * V * sizeof(stackNode)));
         
         // BOOK 3: Keeps a track if any vertex was visited during DFS for each thread
-        // gpuErrchk(cudaMalloc((void **) &pivot.visited, num_threads_launching * V * sizeof(bool)));
+        gpuErrchk(cudaMalloc((void **) &pivot.visited, num_threads_launching * V * sizeof(bool)));
         
         // BOOK 4: Stores the length of path discovered by each thread through DFS
-        // gpuErrchk(cudaMalloc((void **) &pivot.depth, num_threads_launching * sizeof(int)));
+        gpuErrchk(cudaMalloc((void **) &pivot.depth, num_threads_launching * sizeof(int)));
         
         // Following is temporarily removed 
         // gpuErrchk(cudaMalloc((void **) &pivot.v_conflicts, numSupplies * numDemands * sizeof(vertex_conflicts)));
+    }
+
+    else if (PIVOTING_STRATEGY == "parallel_fw") {
 
         // Allocate Resources for floydwarshall cycle discovery strategy
         gpuErrchk(cudaMalloc((void **) &pivot.d_adjMtx_transform, V*V*sizeof(int)));
@@ -68,10 +72,16 @@ __host__ void pivotFree(PivotHandler &pivot) {
     else if (PIVOTING_STRATEGY == "parallel_dfs")
     {
         // Free up space >>
-        // gpuErrchk(cudaFree(pivot.backtracker));
-        // gpuErrchk(cudaFree(pivot.stack));
-        // gpuErrchk(cudaFree(pivot.visited));
-        // gpuErrchk(cudaFree(pivot.depth));
+        gpuErrchk(cudaFree(pivot.backtracker));
+        gpuErrchk(cudaFree(pivot.stack));
+        gpuErrchk(cudaFree(pivot.visited));
+        gpuErrchk(cudaFree(pivot.depth));
+
+    }
+
+    else if (PIVOTING_STRATEGY == "parallel_fw")
+    
+    {
 
         gpuErrchk(cudaFree(pivot.d_adjMtx_transform));
         gpuErrchk(cudaFree(pivot.d_pathMtx));
@@ -82,10 +92,12 @@ __host__ void pivotFree(PivotHandler &pivot) {
     }
 }
 
+}
+
 /*
 Push a node in the provided stack
 */
-__host__ __device__ void stack_push(stackNode * stack, int &stack_top, int vtx, int depth)
+__host__ __device__ static void stack_push(stackNode * stack, int &stack_top, int vtx, int depth)
 {
     stack_top++;
     stackNode node = {.index = vtx, .depth = depth};
@@ -95,7 +107,7 @@ __host__ __device__ void stack_push(stackNode * stack, int &stack_top, int vtx, 
 /*
 Pop a node from the provided stack
 */
-__host__ __device__ stackNode stack_pop(stackNode * stack, int &stack_top)
+__host__ __device__ static stackNode stack_pop(stackNode * stack, int &stack_top)
 {
     stackNode vtx;
     vtx = stack[stack_top];
@@ -166,7 +178,7 @@ __host__ __device__ void perform_dfs_sequencial_on_i(int * adjMtx, int * vertex_
 Replaces the exiting basic flow with entering non basic flow
 Does the necessary adjustments on the variables on device memory
 */
-__host__ void exit_i_and_enter_j(int * d_adjMtx_ptr, float * d_flowMtx_ptr, int exit_src, int exit_dest, 
+__host__ static void exit_i_and_enter_j(int * d_adjMtx_ptr, float * d_flowMtx_ptr, int exit_src, int exit_dest, 
         int enter_src, int enter_dest, int min_flow_indx, float min_flow, int V) {
             
     int id;
@@ -189,11 +201,11 @@ __host__ void exit_i_and_enter_j(int * d_adjMtx_ptr, float * d_flowMtx_ptr, int 
 /*
 Do a copy from new value to device pointer
 */
-__host__ void modify_flowMtx_on_device(float * d_flowMtx_ptr, int id, float new_value) {
+__host__ static void modify_flowMtx_on_device(float * d_flowMtx_ptr, int id, float new_value) {
     gpuErrchk(cudaMemcpy(&d_flowMtx_ptr[id], &new_value, sizeof(float), cudaMemcpyHostToDevice));
 }
 
-__host__ void do_flow_adjustment_on_host_device(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
+__host__ static void do_flow_adjustment_on_host_device(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
         int * d_adjMtx_ptr, float * d_flowMtx_ptr, int * backtracker, float min_flow, int min_from, int min_to, int min_flow_id,
         int pivot_row, int pivot_col, int depth, int V, int numSupplies, int numDemands) {
 
@@ -244,7 +256,7 @@ __host__ void do_flow_adjustment_on_host_device(int * h_adjMtx_ptr, float * h_fl
         min_flow_id, min_flow, V);
 }
 
-__host__ void execute_pivot_on_host_device(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
+__host__ static void execute_pivot_on_host_device(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
         int * d_adjMtx_ptr, float * d_flowMtx_ptr, int * backtracker, 
         int pivot_row, int pivot_col, int depth, int V, int numSupplies, int numDemands) {
 
@@ -290,6 +302,7 @@ __host__ void execute_pivot_on_host_device(int * h_adjMtx_ptr, float * h_flowMtx
 
 }
 
+namespace UV_METHOD {
 /*
 Pivoting Operation in Transport Simplex. A pivot is complete in following 3 Steps
     Step 1: Check if already optimal 
@@ -390,6 +403,8 @@ __host__ void perform_a_sequencial_pivot(PivotHandler &pivot, PivotTimer &timer,
     }
 }
 
+}
+
 /*
 KERNEL 1 =>
 Parallel version of DFS on Device -
@@ -438,7 +453,7 @@ __global__ void find_loops(MatrixCell * d_reducedCosts_ptr, int * d_adjMtx_ptr, 
 Fetch and view all parallel discovered cycles 
 Function: Copy depth, backtrack from device and print
 */
-__host__ void __debug_utility_1(MatrixCell * d_reducedCosts_ptr, int * backtracker, int * depth,  
+__host__ static void __debug_utility_1(MatrixCell * d_reducedCosts_ptr, int * backtracker, int * depth,  
     int iteration, int numSupplies, int numDemands, int num_threads_launching) 
 {
     std::cout<<"DEBUG UTIITY - 1 | Viewing Discovered Loops"<<std::endl;
@@ -478,13 +493,15 @@ __host__ void __debug_utility_1(MatrixCell * d_reducedCosts_ptr, int * backtrack
     // *********************** END OF DEBUG UTILITY - 1 *************** //
 }
 
+
+namespace UV_METHOD {
 /*
 API to execute parallel pivot, this uses DFS for dicovering the loops and then
 gets the loops to execute pivot on the host (dehati way) - ask Mohit why is this a dehati way
 
 This is meant primarily for testing and deriving insights on parallel cycles
 */
-__host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer, 
+__host__ void perform_a_parallel_pivot_dfs(PivotHandler &pivot, PivotTimer &timer, 
     Graph &graph, MatrixCell * d_reducedCosts_ptr, bool &result, int numSupplies, int numDemands, int iteration) {
     
     // Check if termination criteria achieved 
@@ -623,10 +640,11 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
 
 }
 
+}
 
 // ***********************************************************************
 
-__host__ void _debug_print_APSP(int * d_adjMtx, int * d_pathMtx, int V) {
+__host__ static void _debug_print_APSP(int * d_adjMtx, int * d_pathMtx, int V) {
 
     int * h_adjMtx_copy = (int *) malloc(sizeof(int)*V*V);
     int * h_pathMtx = (int *) malloc(sizeof(int)*V*V);
@@ -657,7 +675,7 @@ __host__ void _debug_print_APSP(int * d_adjMtx, int * d_pathMtx, int V) {
 
 }
 
-__host__ void _debug_view_discovered_cycles(PivotHandler &pivot, int diameter, int numSupplies, int numDemands) {
+__host__ static void _debug_view_discovered_cycles(PivotHandler &pivot, int diameter, int numSupplies, int numDemands) {
 
     std::cout<<"Viewing Expanded cycles!"<<std::endl;
 
@@ -688,6 +706,8 @@ __host__ void _debug_view_discovered_cycles(PivotHandler &pivot, int diameter, i
     free(h_pivot_cycles);
 }
 
+
+namespace UV_METHOD {
 /*
 Step 1: Find all point to all points shortest distance with Floyd Warshall using naive implementation 
     of Floyd Warshall algorithm in CUDA
@@ -848,6 +868,8 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
 
     // Free memory allocated for cycles
     gpuErrchk(cudaFree(pivot.d_pivot_cycles));
+
+}
 
 }
 

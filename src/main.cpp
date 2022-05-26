@@ -81,7 +81,7 @@ int main(int argc, char **argv)
   }
   else if (problem.algo == ProblemInstance::my_algo::parallel_ss)
   {
-    uvModel_parallel model = uvModel_parallel(&problem, flows);
+    ssModel_parallel model = ssModel_parallel(&problem, flows);
     model.execute();
     model.create_flows();
     BOOST_LOG_TRIVIAL(info)<<">>>> BASIC STATISTICS | Objective: "<<model.objVal<<" | Iterations: "<<model.totalIterations<<" | Time: "<<model.totalSolveTime \

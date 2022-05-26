@@ -13,6 +13,8 @@ Todo:
 #include "../parallel_kernels.h"
 
 
+namespace UV_METHOD {
+
 // ALLOCATE and DE-ALLOCATE RESOURCES
 __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands);
 
@@ -24,8 +26,10 @@ __host__ void perform_a_sequencial_pivot(PivotHandler &pivot, PivotTimer &timer,
     Graph &graph, MatrixCell * d_reducedCosts_ptr, bool &result, int numSupplies, int numDemands);
 
 // Parallel Pivoting API >>>
-__host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer, 
+__host__ void perform_a_parallel_pivot_dfs(PivotHandler &pivot, PivotTimer &timer, 
     Graph &graph, MatrixCell * d_reducedCosts_ptr, bool &result, int numSupplies, int numDemands, int iteration);
 
 __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, PivotTimer &timer, 
     Graph &graph, MatrixCell * d_reducedCosts_ptr, bool &result, int numSupplies, int numDemands, int iteration);
+
+}
