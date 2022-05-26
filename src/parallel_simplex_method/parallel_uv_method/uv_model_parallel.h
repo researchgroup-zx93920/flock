@@ -1,9 +1,9 @@
-#include "parallel_structs.h"
-#include "parallel_kernels.h"
-#include "IBFS_vogel.h"
-#include "IBFS_nwc.h"
+#include "../parallel_structs.h"
+#include "../parallel_kernels.h"
+#include "../IBFS_vogel.h"
+#include "../IBFS_nwc.h"
 #include "DUAL_solver.h"
-#include "PIVOT_dfs.h"
+#include "PIVOT_uv.h"
 
 /*
 Algorithm alternative to solve transportation problem
@@ -30,9 +30,9 @@ public:
     void execute();
     void create_flows();
 
-    double deviceCommunicationTime;
+    double deviceCommunicationTime; // Not implemented
     // Model Statistics >>
-    double uv_time, reduced_cost_time, pivot_time, dfs_time, resolve_time, adjustment_time;
+    double uv_time, reduced_cost_time, pivot_time, cycle_discovery_time, resolve_time, adjustment_time;
 
     double objVal;
     int totalIterations;

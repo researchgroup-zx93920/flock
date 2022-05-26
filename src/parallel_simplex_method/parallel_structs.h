@@ -37,6 +37,7 @@
 
 // Degeneracy resolve
 #define epsilon 0.000001f
+#define epsilon2 10e-3
 
 #define DETAILED_LOGS 1
 /*
@@ -106,6 +107,9 @@ hybrid : run adjustments sequencial
 */
 
 #define MAX_ITERATIONS 30000
+
+/* Upper bound on max number of independent pivots */
+#define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
 
 // >>>>>>>>>> END OF PARAMETERS // 
 
@@ -286,6 +290,10 @@ struct compareDiff
         }
 };
 
+struct PivotTimer {
+    double cycle_discovery = 0, resolve_time = 0, adjustment_time = 0;
+};
+
 
 struct DualHandler {
 
@@ -329,6 +337,12 @@ struct PivotHandler {
     
     // Resolving conflicts in parallel pivoting
     // vertex_conflicts * v_conflicts;
+
+    // Floyd warshall specific pointers ->
+    int * d_adjMtx_transform, * d_pathMtx;
+    int * d_pivot_cycles, * deconflicted_cycles; 
+    int * deconflicted_cycles_depth, * deconflicted_cycles_backtracker;
+
 
 };
 

@@ -12,12 +12,12 @@ TODO:
 6. VOGEL is missing some flows in some specific degenerate cases !! - Need a diagnosis here!
 */
 
-#include "uv_model_parallel.h"
+#include "ss_model_parallel.h"
 
 /*
 Constructor - Maintaining consistancy across algorithm modes
 */
-uvModel_parallel::uvModel_parallel(ProblemInstance *problem, flowInformation *flows)
+ssModel_parallel::ssModel_parallel(ProblemInstance *problem, flowInformation *flows)
 {
 
     std::cout << std::endl <<"Initializing UV Model (parallel)" << std::endl;
@@ -55,7 +55,7 @@ uvModel_parallel::uvModel_parallel(ProblemInstance *problem, flowInformation *fl
     uv_time = 0.0; 
     reduced_cost_time = 0.0; 
     pivot_time = 0.0;
-    dfs_time = 0.0;
+    cycle_discovery_time = 0.0;
     resolve_time = 0.0;
     adjustment_time = 0.0;
     totalIterations = 0;
@@ -419,6 +419,10 @@ void uvModel_parallel::execute()
     objVal = objval;
     data->totalFlowCost = objVal;
     data->solveTime = totalSolveTime;
+    // Load back timer details
+    cycle_discovery_time = timer.cycle_discovery;
+    resolve_time = timer.resolve_time;
+    adjustment_time = timer.adjustment_time;
 
     std::cout<<" ============ Current Objective Value = "<<objval<<std::endl<<std::endl;
     

@@ -572,9 +572,119 @@ __global__ void fill_adjMtx(int * d_adjMtx_transform, int * d_adjMtx_actual, int
         if (dist == 1) {
             d_pathMtx[row_indx*V + col_indx] = row_indx;
             d_pathMtx[col_indx*V + row_indx] = col_indx;
-        
         }        
     }
 }
+
+
+/*
+Recursively explore pathMtx and store all the discovered cycles in the expanded form 
+Can spped this up using a 3D grid? 
+*/
+__global__ void expand_all_cycles(int * d_adjMtx_transform, int * d_pathMtx, int * d_pivot_cycles, int diameter, int numSupplies, int numDemands) {
+
+    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;  // demand point
+    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;  // supply point 
+    int offset_1 = diameter*(row_indx*numDemands + col_indx); // offset for cycle store
+    int V = numSupplies + numDemands;
+    // Entering Edge is from supply - i to demand - j we discover a cycle by finding a shortest path from [j] -> [i]
+    int offset_2 = row_indx*V + (col_indx+numSupplies); // offset for path and adjMtx 
+
+    if (row_indx < numSupplies && col_indx < numDemands) {
+
+        int depth = d_adjMtx_transform[offset_2] + 1;
+        int current_vtx = col_indx + numSupplies; // backtrack from - j
+        int target_vtx = row_indx; // reach - i 
+
+        d_pivot_cycles[offset_1] = target_vtx;
+        
+        int d = 1;
+
+        while (d < depth) {
+            d_pivot_cycles[offset_1 + d] = current_vtx;
+            current_vtx = d_pathMtx[target_vtx*V + current_vtx];
+            d++;
+        }
+
+        d_pivot_cycles[offset_1+depth] = target_vtx;
+    }
+}
+
+/*
+Check if a cycle is still feasible if any of the edges of the cycle located at min_indx has been used
+If it is infeasible then set the reduced cost of this cell as non-negative to deactivate pivot here
+*/
+__global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_cycles, 
+    MatrixCell * d_reducedCosts_ptr, int min_r_index, int diameter, int numSupplies, int numDemands) {
+
+    // Nomenclature : 
+    // this_cycle - cycle located on this thread
+    // earlier_cycle - cycle located on the min_r_index 
+    // Context : Edges in earlier cycle will be used by pivot (because min_reduced cost)
+    //      Then if there are any common edges between this_cycle and earlier_cycle
+    //      then this_cycle conflicts with earlier_cycle and it has to die
+    //      Set reduced cost = non_negative for this cycle
+
+    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;  // demand point
+    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;  // supply point 
+    int offset_1 = diameter*(row_indx*numDemands + col_indx); // offset for this_cycle store
+    int V = numSupplies + numDemands;
+    int offset_2 = row_indx*V + (col_indx+numSupplies); // offset for path and adjMtx 
+    
+    // Load the earlier cycle and it's depth - enough memory is available through diameter
+    extern __shared__ int earlier_cycle[];
+
+    int _pivot_row =  min_r_index/numDemands;
+    int _pivot_col = min_r_index - (_pivot_row*numDemands);
+    int earlier_cycle_depth = d_adjMtx_transform[_pivot_row*V + (_pivot_col+numSupplies)] + 1; // depth of earlier_cycle
+    // Set reduced cost of earlier_cycle nonNegative >>
+    MatrixCell _nonNegative = {.row = _pivot_row, .col = _pivot_col, .cost = epsilon};
+    d_reducedCosts_ptr[_pivot_row*numDemands + _pivot_col] = _nonNegative;
+    // all threads in block load the same value
+
+    // Load the earlier cycle in parallel 
+    int _stride = blockDim.x*blockDim.y; 
+    int _local_index = threadIdx.y*blockDim.x + threadIdx.x;
+    int offset_3 = diameter*(_pivot_row*numSupplies + _pivot_col); // offset for earlier_cycle_store
+    while (_local_index < earlier_cycle_depth + 1) {
+        earlier_cycle[_local_index] = d_pivot_cycles[offset_3 + _local_index];
+        _local_index = _local_index + _stride;
+    }
+    __syncthreads();
+
+    // Now earlier cycle is available in shared memory - traverse this_cycle and check for common edges
+    if (row_indx < numSupplies && col_indx < numDemands) {
+
+        int vtx_i; // i^th vertex in this_cycle 
+        int vtx_j; // j^th vertex in earlier_cycle
+        int this_cycle_depth = d_adjMtx_transform[offset_2] + 1;
+        int vtx_i1, vtx_j1; // i+1^th and j+1^th vertices in corresponding columns
+        int edge_i, edge_j; // edge id of edges (i,i+1) and (j,j+1) - edgeid is the index of edge in supply x demand matrix
+
+        for (int i = 1; i < this_cycle_depth + 1; i++) {
+            
+            vtx_i = d_pivot_cycles[offset_1+i] - numSupplies*(i%2);
+            vtx_i1 = d_pivot_cycles[offset_1+i+1] - numSupplies*((i+1)%2);
+            edge_i = (vtx_i*numDemands + vtx_i1)*((i+1)%2) + (vtx_i1*numDemands + vtx_i)*(i%2);
+
+            for (int j = 1; j < earlier_cycle_depth + 1; j++) {
+                
+                vtx_j = earlier_cycle[j] - numSupplies*(j%2);
+                vtx_j1 = earlier_cycle[j+1] - numSupplies*((j+1)%2);
+                edge_j = (vtx_j*numDemands + vtx_j1)*((j+1)%2) + (vtx_j1*numDemands + vtx_j)*(j%2);
+                // Note that we're looking up undirected edges, so we compare unique identifiers of both
+                
+                // Whenever the cycles intersect
+                if (edge_i == edge_j) {
+                    // set reduced cost of this_cycles as non-negative
+                    MatrixCell _nonNegative = {.row = row_indx, .col = col_indx, .cost = epsilon};
+                    d_reducedCosts_ptr[row_indx*numDemands + col_indx] = _nonNegative;
+                    return;
+                }
+            }
+        }
+    }
+}
+
 
 #endif

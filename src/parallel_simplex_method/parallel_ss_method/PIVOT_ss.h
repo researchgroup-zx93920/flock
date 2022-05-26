@@ -9,13 +9,9 @@ Todo:
 3. 
 */
 
-#include "parallel_structs.h"
-#include "parallel_kernels.h"
+#include "../parallel_structs.h"
+#include "../parallel_kernels.h"
 
-
-struct PivotTimer {
-    double cycle_discovery = 0, resolve_time = 0, adjustment_time = 0;
-};
 
 // ALLOCATE and DE-ALLOCATE RESOURCES
 __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands);

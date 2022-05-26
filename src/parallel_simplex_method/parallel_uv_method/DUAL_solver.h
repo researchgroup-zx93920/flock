@@ -7,8 +7,8 @@ Todo:
 1. Make a dual strategy selector - dual malloc will take strategy and assign it within a iterator in handler
 */
 
-#include "parallel_structs.h"
-#include "parallel_kernels.h"
+#include "../parallel_structs.h"
+#include "../parallel_kernels.h"
 
 // ALLOCATE and DE-ALLOCATE RESOURCES for dual based on appropriate strategy
 __host__ void dualMalloc(DualHandler &dual, int numSupplies, int numDemands);

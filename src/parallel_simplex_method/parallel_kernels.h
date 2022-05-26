@@ -122,4 +122,9 @@ __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, floa
 __global__ void _naive_floyd_warshall_kernel(const int k, const int V, int * d_adjMtx, int * path);
 
 __global__ void fill_adjMtx(int * d_adjMtx_transform, int * d_adjMtx_actual, int * d_pathMtx, int V);
+
+__global__ void expand_all_cycles(int * d_adjMtx_transform, int * d_pathMtx, int * d_pivot_cycles, int diameter, int numSupplies, int numDemands);
+
+__global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_cycles, MatrixCell * d_reducedCosts_ptr, int min_r_index, int diameter, int numSupplies, int numDemands);
+
 #endif
