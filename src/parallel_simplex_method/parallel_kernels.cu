@@ -26,7 +26,7 @@ appropriate place
 /*
 Kernel to convert float cost matrix to the MatrixCell objects
 */
-__global__ void createCostMatrix(MatrixCell *d_costMtx, float * d_costs_ptr, int n_supplies, int n_demands)
+__global__ void createCostMatrix(MatrixCell *d_costMtx, float * d_costs_ptr, const int n_supplies, const int n_demands)
 {
 
     int d = blockIdx.x * blockDim.x + threadIdx.x;
@@ -70,7 +70,7 @@ __global__ void create_initial_tree(flowInformation * d_flows_ptr, int * d_adjMt
 Reverse operation of generating a tree from the feasible flows - unordered allocation
 */
 __global__ void retrieve_final_tree(flowInformation * d_flows_ptr, int * d_adjMtx_ptr, float * d_flowMtx_ptr,
-        int numSupplies, int numDemands) 
+        const int numSupplies, const int numDemands) 
 {
 
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
@@ -101,7 +101,7 @@ Transfer flows on device and prepare an adjacency and flow matrix using the flow
 In case of sequencial pivoting - one would need a copy of adjMatrix on the host to traverse the graph
 */
 __host__ void create_IBF_tree_on_host_device(Graph &graph, flowInformation * feasible_flows, 
-    int numSupplies, int numDemands) {
+    const int numSupplies, const int numDemands) {
 
     int V = numSupplies+numDemands;
     int _utm_entries = (V*(V+1))/2; // Number of entries in upper triangular matrix 
@@ -146,7 +146,7 @@ __host__ void create_IBF_tree_on_host_device(Graph &graph, flowInformation * fea
 Given a feasible tree on device, load a feasible solution to transportation problem on the host
 */
 __host__ void retrieve_solution_on_current_tree(flowInformation * feasible_flows, Graph &graph,
-    int &active_flows, int numSupplies, int numDemands)
+    int &active_flows, const int numSupplies, const int numDemands)
 {
     
     // Recreate device flows using the current adjMatrix
@@ -192,7 +192,7 @@ __host__ void close_solver(Graph &graph)
 
 }
 
-__global__ void determine_length(int * length, int * d_adjMtx_ptr, int V) {
+__global__ void determine_length(int * length, int * d_adjMtx_ptr, const int V) {
         int L = 0;
         int i = blockIdx.x *blockDim.x + threadIdx.x;
         // No data re-use (this is a straight fwd kernel)
@@ -209,7 +209,7 @@ __global__ void determine_length(int * length, int * d_adjMtx_ptr, int V) {
         }
 }
 
-__global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, int V, int numSupplies) {
+__global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, const int V, const int numSupplies) {
         int i = blockIdx.x*blockDim.x + threadIdx.x;
         int offset = start[i];
         int L = 0;
@@ -227,7 +227,7 @@ __global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, int V, int nu
 /*
 DEBUG UTILITY : VIEW ADJACENCY LIST STRCTURE 
 */
-__host__ void __debug_view_adjList(int * start, int * length, int * Ea, int V) 
+__host__ void __debug_view_adjList(int * start, int * length, int * Ea, const int V) 
 {        
         int * h_length = (int *) malloc(sizeof(int)*V);
         int * h_start = (int *) malloc(sizeof(int)*V);
@@ -260,7 +260,7 @@ __host__ void __debug_view_adjList(int * start, int * length, int * Ea, int V)
 
 }
 
-__host__ void make_adjacency_list(Graph &graph, int numSupplies, int numDemands) {
+__host__ void make_adjacency_list(Graph &graph, const int numSupplies, const int numDemands) {
 
         // Kernel Dimensions >> 
         dim3 __blockDim(blockSize, 1, 1); 
@@ -296,7 +296,7 @@ APPROACH 1 :
 Kernels concerned with solving the UV System using a BFS Traversal Approach
 */
 
-__global__ void copy_row_shadow_prices(Variable * U_vars, float * u_vars_ptr, int numSupplies) 
+__global__ void copy_row_shadow_prices(Variable * U_vars, float * u_vars_ptr, const int numSupplies) 
 {    
     int gid = blockIdx.x*blockDim.x + threadIdx.x;
     if (gid < numSupplies) {
@@ -304,7 +304,7 @@ __global__ void copy_row_shadow_prices(Variable * U_vars, float * u_vars_ptr, in
     }
 }
 
-__global__ void copy_col_shadow_prices(Variable * V_vars, float * v_vars_ptr, int numDemands) 
+__global__ void copy_col_shadow_prices(Variable * V_vars, float * v_vars_ptr, const int numDemands) 
 {
     int gid = blockIdx.x*blockDim.x + threadIdx.x;
     if (gid < numDemands) {
@@ -312,7 +312,7 @@ __global__ void copy_col_shadow_prices(Variable * V_vars, float * v_vars_ptr, in
     }
 }
 
-__global__ void initialize_U_vars(Variable * U_vars, int numSupplies) {
+__global__ void initialize_U_vars(Variable * U_vars, const int numSupplies) {
     int gid = blockIdx.x*blockDim.x + threadIdx.x;
     Variable default_var;
     if (gid < numSupplies) {
@@ -320,7 +320,7 @@ __global__ void initialize_U_vars(Variable * U_vars, int numSupplies) {
     }
 }
 
-__global__ void initialize_V_vars(Variable * V_vars, int numDemands) {
+__global__ void initialize_V_vars(Variable * V_vars, const int numDemands) {
     int gid = blockIdx.x*blockDim.x + threadIdx.x;
     Variable default_var;
     if (gid < numDemands) {
@@ -332,7 +332,7 @@ __global__ void initialize_V_vars(Variable * V_vars, int numDemands) {
 Breadth First Traversal on UV
 */
 __global__ void assign_next(int * d_adjMtx_ptr, float * d_costs_ptr, 
-    Variable *u_vars, Variable *v_vars, int numSupplies, int numDemands) {
+    Variable *u_vars, Variable *v_vars, const int numSupplies, const int numDemands) {
     
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
     int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
@@ -368,7 +368,7 @@ __global__ void assign_next(int * d_adjMtx_ptr, float * d_costs_ptr,
 
 // Credits: https://github.com/siddharths2710/cuda_bfs/blob/master/cuda_bfs/kernel.cu
 __global__ void CUDA_BFS_KERNEL(int * start, int * length, int *Ea, bool * Fa, bool * Xa, 
-        float * variables, float * d_costs_ptr, bool * done, int numSupplies, int numDemands, int V)
+        float * variables, float * d_costs_ptr, bool * done, const int numSupplies, const int numDemands, const int V)
 {
 
 	int id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -405,7 +405,7 @@ Kernels concerned with solving the UV System using a using a matrix solver
 */
 
 // Custom Fill kernel for csr row pointers
-__global__ void fill_csr_offset (int * d_csr_offsets, int length) {
+__global__ void fill_csr_offset (int * d_csr_offsets, const int length) {
         
         int idx = blockIdx.x*blockDim.x + threadIdx.x;
         if (idx < length) {
@@ -422,7 +422,7 @@ __global__ void fill_csr_offset (int * d_csr_offsets, int length) {
 Create a dense linear system in parallel by looking at current feasible tree 
 */
 __global__ void initialize_dense_u_v_system(float * d_A, float * d_b, int * d_adjMtx_ptr, 
-    float * d_costs_ptr, int numSupplies, int numDemands) {
+    float * d_costs_ptr, const int numSupplies, const int numDemands) {
         
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
     int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
@@ -444,7 +444,7 @@ __global__ void initialize_dense_u_v_system(float * d_A, float * d_b, int * d_ad
 Create a sparse linear system in parallel by looking at current feasible tree 
 */
 __global__ void initialize_sparse_u_v_system(int * d_csr_columns, float * d_b, int * d_adjMtx_ptr, 
-    float * d_costs_ptr, int numSupplies, int numDemands) {
+    float * d_costs_ptr, const int numSupplies, const int numDemands) {
         
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
     int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
@@ -465,7 +465,7 @@ __global__ void initialize_sparse_u_v_system(int * d_csr_columns, float * d_b, i
 /*
 Load the solution of system to the appropriate place
 */
-__global__ void retrieve_uv_solution(float * d_x, float * u_vars_ptr, float * v_vars_ptr, int numSupplies, int numDemands) 
+__global__ void retrieve_uv_solution(float * d_x, float * u_vars_ptr, float * v_vars_ptr, const int numSupplies, const int numDemands) 
 {
     int gid = blockIdx.x*blockDim.x + threadIdx.x;
     int V = numSupplies + numDemands;
@@ -488,7 +488,7 @@ __global__ void retrieve_uv_solution(float * d_x, float * u_vars_ptr, float * v_
 Kernel to compute Reduced Costs in the transportation table
 */
 __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, float * d_costs_ptr, float * d_reducedCosts_ptr, 
-    int numSupplies, int numDemands)
+    const int numSupplies, const int numDemands)
 {
         int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
         int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
@@ -503,7 +503,7 @@ __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, floa
 
 /* Optimized function for the above kernel to compute reduced costs */
 __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, float * d_costs_ptr, MatrixCell * d_reducedCosts_ptr, 
-    int numSupplies, int numDemands)
+    const int numSupplies, const int numDemands)
 {
 
         __shared__ float U[blockSize];
@@ -556,7 +556,7 @@ __device__ int my_signum(const int x) {
 }
 
 /* Set initial values in adj Matrix and path matrix */
-__global__ void fill_adjMtx(int * d_adjMtx_transform, int * d_adjMtx_actual, int * d_pathMtx, int V) {
+__global__ void fill_adjMtx(int * d_adjMtx_transform, int * d_adjMtx_actual, int * d_pathMtx, const int V) {
     
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
     int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
@@ -581,7 +581,7 @@ __global__ void fill_adjMtx(int * d_adjMtx_transform, int * d_adjMtx_actual, int
 Recursively explore pathMtx and store all the discovered cycles in the expanded form 
 Can spped this up using a 3D grid? 
 */
-__global__ void expand_all_cycles(int * d_adjMtx_transform, int * d_pathMtx, int * d_pivot_cycles, int diameter, int numSupplies, int numDemands) {
+__global__ void expand_all_cycles(int * d_adjMtx_transform, int * d_pathMtx, int * d_pivot_cycles, const int diameter, const int numSupplies, const int numDemands) {
 
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;  // demand point
     int row_indx = blockIdx.y*blockDim.y + threadIdx.y;  // supply point 
@@ -615,7 +615,7 @@ Check if a cycle is still feasible if any of the edges of the cycle located at m
 If it is infeasible then set the reduced cost of this cell as non-negative to deactivate pivot here
 */
 __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_cycles, 
-    MatrixCell * d_reducedCosts_ptr, int min_r_index, int diameter, int numSupplies, int numDemands) {
+    MatrixCell * d_reducedCosts_ptr, const int min_r_index, const int diameter, const int numSupplies, const int numDemands) {
 
     // Nomenclature : 
     // this_cycle - cycle located on this thread
@@ -692,7 +692,7 @@ Check if a cycle is still feasible if any of the edges of the cycle located at m
 If it is infeasible then set the reduced cost of this cell as non-negative to deactivate pivot here
 */
 __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_cycles, 
-    float * d_opportunity_costs, int min_r_index, int diameter, int numSupplies, int numDemands) {
+    float * d_opportunity_costs, int min_r_index, const int diameter, const int numSupplies, const int numDemands) {
 
     // Nomenclature : 
     // this_cycle - cycle located on this thread
@@ -772,7 +772,7 @@ Logic : For each edge retreive cost and flow -
 */
 __global__ void compute_opportunity_cost_and_delta(int * d_adjMtx_ptr, float * d_flowMtx_ptr, float * d_costs_ptr, 
     int * d_adjMtx_transform, int * d_pivot_cycles, float * d_opportunity_costs, 
-    int diameter, int numSupplies, int numDemands) {
+    const int diameter, const int numSupplies, const int numDemands) {
 
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;  // demand point
     int row_indx = blockIdx.y*blockDim.y + threadIdx.y;  // supply point 
@@ -782,26 +782,30 @@ __global__ void compute_opportunity_cost_and_delta(int * d_adjMtx_ptr, float * d
 
     if (row_indx < numSupplies && col_indx < numDemands) {
 
-        int id_graph, id_costs, _from = -1, _to = -1;
-        int this_cycle_depth = d_adjMtx_transform[offset_2] + 1;
-        float _flow, min_flow = INT_MAX, opportunity_cost = 0.0f;
-        
-        for (int i = 0; i < this_cycle_depth + 1; i++) {
 
-            _from = d_pivot_cycles[offset_1+i];
-            _to = d_pivot_cycles[offset_1+i+1];
-            id_costs = (_from*numDemands + _to)*((i+1)%2) + (_from*numDemands + _to)*(i%2);
+        int this_cycle_depth = d_adjMtx_transform[offset_2] + 1;
+
+        int id_graph, id_costs, _from, _to, vtx_i, vtx_i1;
+        float _flow, min_flow = INT_MAX, opportunity_cost = 0;
+        
+        for (int i = 0; i < this_cycle_depth; i++) {
+
+            vtx_i = d_pivot_cycles[offset_1+i];
+            vtx_i1 = d_pivot_cycles[offset_1+i+1];
             
             // ########### PART - 1 | Finding the opportunity costs >>
             // Add evens and substract odds
-            opportunity_cost = opportunity_cost + pow(-1, i%2)*d_costs_ptr[id_costs];
+            _from = vtx_i - numSupplies*(i%2);
+            _to = vtx_i1 - numSupplies*((i+1)%2);
+            id_costs = (_from*numDemands + _to)*((i+1)%2) + (_to*numDemands + _from)*(i%2);
+            opportunity_cost = opportunity_cost + ((int) pow(-1, (int)i%2))*d_costs_ptr[id_costs];
 
             // ########### PART - 2 | Finding the minimum flow >>
             // Traverse the loop find the minimum flow that could be increased
             // on the incoming edge - (Look for minimum of flows on odd indexed edges)
             if (i%2==1) 
             {
-                id_graph = d_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
+                id_graph = d_adjMtx_ptr[TREE_LOOKUP(vtx_i, vtx_i1, V)] - 1;
                 _flow = d_flowMtx_ptr[id_graph];
                 
                 if (_flow < min_flow) 
@@ -825,7 +829,7 @@ Logic : For each edge retreive costs -
 */
 __global__ void compute_opportunity_cost(int * d_adjMtx_ptr, float * d_flowMtx_ptr, float * d_costs_ptr, 
     int * d_adjMtx_transform, int * d_pivot_cycles, float * d_opportunity_costs, 
-    int diameter, int numSupplies, int numDemands) {
+    const int diameter, const int numSupplies, const int numDemands) {
 
     int col_indx = blockIdx.x*blockDim.x + threadIdx.x;  // demand point
     int row_indx = blockIdx.y*blockDim.y + threadIdx.y;  // supply point 
@@ -839,16 +843,15 @@ __global__ void compute_opportunity_cost(int * d_adjMtx_ptr, float * d_flowMtx_p
         int this_cycle_depth = d_adjMtx_transform[offset_2] + 1;
         float opportunity_cost = 0.0f;
         
-        for (int i = 0; i < this_cycle_depth + 1; i++) {
+        for (int i = 0; i < this_cycle_depth; i++) {
 
-            _from = d_pivot_cycles[offset_1+i];
-            _to = d_pivot_cycles[offset_1+i+1];
-            id_costs = (_from*numDemands + _to)*((i+1)%2) + (_from*numDemands + _to)*(i%2);
-            
             // Finding the opprotunity costs >>
             // Traverse the loop find the minimum flow that could be increased
             // on the incoming edge - (Look for minimum of flows on odd indexed edges)
-            opportunity_cost = opportunity_cost + pow(-1, i%2)*d_costs_ptr[id_costs];
+            _from = d_pivot_cycles[offset_1+i] - numSupplies*(i%2);
+            _to = d_pivot_cycles[offset_1+i+1] - numSupplies*((i+1)%2);
+            id_costs = (_from*numDemands + _to)*((i+1)%2) + (_to*numDemands + _from)*(i%2);
+            opportunity_cost = opportunity_cost + ((int) pow(-1, (int)i%2))*d_costs_ptr[id_costs];
         }
 
         // Load the values the in books for next kernel

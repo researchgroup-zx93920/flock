@@ -224,7 +224,7 @@ __host__ static void _debug_print_APSP(int * d_adjMtx, int * d_pathMtx, int V) {
 
 __host__ static void _debug_view_discovered_cycles(PivotHandler &pivot, int diameter, int numSupplies, int numDemands) {
 
-    std::cout<<"Viewing Expanded cycles!"<<std::endl;
+    std::cout<<" ************* Viewing Expanded cycles!"<<std::endl;
 
     int V = numSupplies + numDemands;
     int simplex_gridDim = V*V;
@@ -252,6 +252,23 @@ __host__ static void _debug_view_discovered_cycles(PivotHandler &pivot, int diam
     free(h_depth);
     free(h_pivot_cycles);
 }
+
+__host__ static void debug_viewOpportunity_costs(PivotHandler &pivot, float * d_costs_ptr, int numSupplies, int numDemands) {
+
+    std::cout<<"\nViewing Computed Reduced Costs"<<std::endl;
+    float * opp_costs = (float *) malloc(numSupplies*numDemands*sizeof(float));
+    float * h_costs = (float *) malloc(numSupplies*numDemands*(sizeof(float)));
+    cudaMemcpy(opp_costs, pivot.opportunity_cost, numSupplies*numDemands*sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_costs, d_costs_ptr, numSupplies*numDemands*sizeof(float), cudaMemcpyDeviceToHost);
+
+    for (int i=0; i<numSupplies; i++) {
+        for (int j=0; j<numDemands; j++) {
+            int key = i*numDemands + j;
+            std::cout<<"ReducedCost["<<key<<"] = "<<opp_costs[key]<<std::endl;
+        }
+    }
+}
+
 
 namespace SS_METHOD {
 /*
@@ -302,7 +319,7 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     }
 
     // DEBUG UTILITY : view floyd warshall output >>
-    _debug_print_APSP(pivot.d_adjMtx_transform, pivot.d_pathMtx, graph.V);
+    // _debug_print_APSP(pivot.d_adjMtx_transform, pivot.d_pathMtx, graph.V);
 
     // std::cout<<"Finding diameter of graph"<<std::endl;
     // Get the diameter of tree and allocate memory for storing cycles
@@ -326,7 +343,7 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     gpuErrchk(cudaDeviceSynchronize());
 
     // DEBUG UTILITY : view cycles in expanded form >>
-    _debug_view_discovered_cycles(pivot, diameter, numSupplies, numDemands);
+    // _debug_view_discovered_cycles(pivot, diameter, numSupplies, numDemands);
     
     if (PARALLEL_PIVOTING_METHOD=="delta") {
 
@@ -344,11 +361,18 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     
     } 
 
+    else {
+    
+        std::cout<<"Invalid parallel pivoting method! - try [r] or [delta]"<<std::endl;
+    
+    }
+
+
     _pivot_end = std::chrono::high_resolution_clock::now();
     _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     timer.cycle_discovery += _pivot_duration.count();
 
-    
+    // DEBUG : View computed opportunity costs
     _pivot_start = std::chrono::high_resolution_clock::now();
 
     // Get most opportunistic flow index - 
@@ -360,13 +384,18 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
 
         // std::cout<<min_reduced_cost.cost<<std::endl;
         // Check if any cycles still remain untouched and if yes then get the best one
-        float min_opprtunity_cost;
+        float min_opportunity_cost;
         int min_indx = thrust::min_element(thrust::device,
                 pivot.opportunity_cost, pivot.opportunity_cost + (numSupplies*numDemands)) - pivot.opportunity_cost;
-        gpuErrchk(cudaMemcpy(&min_opprtunity_cost, &pivot.opportunity_cost[min_indx], sizeof(float), cudaMemcpyDeviceToHost));
+        gpuErrchk(cudaMemcpy(&min_opportunity_cost, &pivot.opportunity_cost[min_indx], sizeof(float), cudaMemcpyDeviceToHost));
 
-        if (!(min_opprtunity_cost < 0 && std::abs(min_opprtunity_cost) > epsilon2)) {
+        if (!(min_opportunity_cost < 0 && std::abs(min_opportunity_cost) > epsilon2)) {
             search_complete = true;
+            if (deconflicted_cycles_count == 0) {
+                result = true;
+                std::cout<<"Pivoting Complete!"<<std::endl;
+                return;
+            }
         }
 
         pivot.deconflicted_cycles[deconflicted_cycles_count] = min_indx;

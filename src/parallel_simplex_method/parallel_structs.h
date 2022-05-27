@@ -33,7 +33,7 @@
 #define UV_STRUCTS
 
 // PARAMETERS
-#define blockSize 8
+#define blockSize 32
 
 // Degeneracy resolve
 #define epsilon 0.000001f
@@ -101,7 +101,7 @@ Just consider at most 2(M + N) negative reduced costs
 Idea to use from above 1/2
 */
 
-#define PARALLEL_PIVOTING_METHOD "delta"
+#define PARALLEL_PIVOTING_METHOD "r"
 /*
 r : deconflict pivots purely based on reduced costs
 delta : deconflict parallel pivots based on delta -> currently appliable to stepping stone method
