@@ -33,7 +33,7 @@
 #define UV_STRUCTS
 
 // PARAMETERS
-#define blockSize 32
+#define blockSize 8
 
 // Degeneracy resolve
 #define epsilon 0.000001f
@@ -107,7 +107,7 @@ r : deconflict pivots purely based on reduced costs
 delta : deconflict parallel pivots based on delta -> currently appliable to stepping stone method
 */
 
-#define MAX_ITERATIONS 30000
+#define MAX_ITERATIONS 10000
 
 /* Upper bound on max number of independent pivots */
 #define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)

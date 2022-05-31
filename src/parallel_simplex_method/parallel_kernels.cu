@@ -645,7 +645,7 @@ __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_
     // Load the earlier cycle in parallel 
     int _stride = blockDim.x*blockDim.y; 
     int _local_index = threadIdx.y*blockDim.x + threadIdx.x;
-    int offset_3 = diameter*(_pivot_row*numSupplies + _pivot_col); // offset for earlier_cycle_store
+    int offset_3 = diameter*(_pivot_row*numDemands + _pivot_col); // offset for earlier_cycle_store
     while (_local_index < earlier_cycle_depth + 1) {
         earlier_cycle[_local_index] = d_pivot_cycles[offset_3 + _local_index];
         _local_index = _local_index + _stride;
@@ -722,7 +722,7 @@ __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_
     // Load the earlier cycle in parallel 
     int _stride = blockDim.x*blockDim.y; 
     int _local_index = threadIdx.y*blockDim.x + threadIdx.x;
-    int offset_3 = diameter*(_pivot_row*numSupplies + _pivot_col); // offset for earlier_cycle_store
+    int offset_3 = diameter*(_pivot_row*numDemands + _pivot_col); // offset for earlier_cycle_store
     while (_local_index < earlier_cycle_depth + 1) {
         earlier_cycle[_local_index] = d_pivot_cycles[offset_3 + _local_index];
         _local_index = _local_index + _stride;
@@ -858,5 +858,75 @@ __global__ void compute_opportunity_cost(int * d_adjMtx_ptr, float * d_flowMtx_p
         d_opportunity_costs[row_indx*numDemands + col_indx] = opportunity_cost;  
     }
 }
+
+/*
+Check if a cycle is still feasible if any of the edges of the cycle located at min_indx has been used
+If it is infeasible then set the reduced cost of this cell as non-negative to deactivate pivot here
+*/
+__global__ void check_pivot_feasibility_dfs(int * depth, int * backtracker, 
+    MatrixCell * d_reducedCosts_ptr, const int min_r_index, 
+    const int numSupplies, const int numDemands, const int num_threads_launching) {
+
+    // Nomenclature : 
+    // this_cycle - cycle located on this thread
+    // earlier_cycle - cycle located on the min_r_index 
+    // Context : Edges in earlier cycle will be used by pivot (because min_reduced cost)
+    //      Then if there are any common edges between this_cycle and earlier_cycle
+    //      then this_cycle conflicts with earlier_cycle and it has to die
+    //      Set reduced cost = non_negative for this cycle
+    int V = numSupplies + numDemands;
+    int indx = blockIdx.x*blockDim.x + threadIdx.x; 
+    
+    // Load the earlier cycle and it's depth - enough memory is available through diameter
+    extern __shared__ int earlier_cycle[];
+
+    int earlier_cycle_depth = depth[min_r_index]; // depth of earlier_cycle
+    // Set reduced cost of earlier_cycle nonNegative >>
+    d_reducedCosts_ptr[min_r_index].cost = epsilon;
+    // all threads in block load the same value
+
+    // Load the earlier cycle in parallel 
+    int _stride = blockDim.x; 
+    int _local_index = threadIdx.x;
+    int offset_3 = V*(min_r_index); // offset for earlier_cycle_store
+    while (_local_index < earlier_cycle_depth) {
+        earlier_cycle[_local_index] = backtracker[offset_3 + _local_index];
+        _local_index = _local_index + _stride;
+    }
+    __syncthreads();
+
+    // Now earlier cycle is available in shared memory - traverse this_cycle and check for common edges
+    if (indx < num_threads_launching) {
+
+        int vtx_i; // i^th vertex in this_cycle 
+        int vtx_j; // j^th vertex in earlier_cycle
+        int this_cycle_depth = depth[indx];
+        int vtx_i1, vtx_j1; // i+1^th and j+1^th vertices in corresponding columns
+        int edge_i, edge_j; // edge id of edges (i,i+1) and (j,j+1) - edgeid is the index of edge in supply x demand matrix
+
+        for (int i = 1; i < this_cycle_depth; i++) {
+            
+            vtx_i = backtracker[V*indx+i] - numSupplies*(i%2);
+            vtx_i1 = backtracker[V*indx+i+1] - numSupplies*((i+1)%2);
+            edge_i = (vtx_i*numDemands + vtx_i1)*((i+1)%2) + (vtx_i1*numDemands + vtx_i)*(i%2);
+
+            for (int j = 1; j < earlier_cycle_depth; j++) {
+                
+                vtx_j = earlier_cycle[j] - numSupplies*(j%2);
+                vtx_j1 = earlier_cycle[j+1] - numSupplies*((j+1)%2);
+                edge_j = (vtx_j*numDemands + vtx_j1)*((j+1)%2) + (vtx_j1*numDemands + vtx_j)*(j%2);
+                // Note that we're looking up undirected edges, so we compare unique identifiers of both
+                
+                // Whenever the cycles intersect
+                if (edge_i == edge_j) {
+                    // set reduced cost of this_cycles as non-negative
+                    d_reducedCosts_ptr[indx].cost = epsilon;
+                    return;
+                }
+            }
+        }
+    }
+}
+
 
 #endif

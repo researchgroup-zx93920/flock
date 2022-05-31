@@ -130,6 +130,10 @@ __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_
 __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_cycles, 
     float * d_opportunity_costs, int min_r_index, const int diameter, const int numSupplies, const int numDemands);
 
+__global__ void check_pivot_feasibility_dfs(int * depth, int * backtracker, 
+    MatrixCell * d_reducedCosts_ptr, const int min_r_index, 
+    const int numSupplies, const int numDemands, const int num_threads_launching);
+
 __global__ void compute_opportunity_cost_and_delta(int * d_adjMtx_ptr, float * d_flowMtx_ptr, float * d_costs_ptr, 
     int * d_adjMtx_transform, int * d_pivot_cycles, float * d_opportunity_costs, 
     const int diameter, const int numSupplies, const int numDemands);

@@ -76,7 +76,7 @@ uvModel_parallel::~uvModel_parallel()
 
     // FREE GPU MEMORY CREATED IN INITIALIZATION
     gpuErrchk(cudaFree(d_costs_ptr));
-    gpuErrchk(cudaFree(device_costMatrix_ptr));
+    // gpuErrchk(cudaFree(device_costMatrix_ptr)); 
 }
 
 /*

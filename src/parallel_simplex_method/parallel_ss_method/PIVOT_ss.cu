@@ -408,7 +408,7 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
 
     }
 
-    // std::cout<<"Found "<<deconflicted_cycles_count<<" independent cycles to be pivoted"<<std::endl;
+    // std::cout<<"Found "<<deconflicted_cycles_count<<" deconflicted cycles to be pivoted"<<std::endl;
     
     _pivot_end = std::chrono::high_resolution_clock::now();
     _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
