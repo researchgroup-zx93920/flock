@@ -307,15 +307,48 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
 
-    // Initialize the grid and block dimensions here
-    dim3 dimGrid2((graph.V - 1) / blockSize + 1, (graph.V - 1) / blockSize + 1, 1);
-    dim3 dimBlock2(blockSize, blockSize, 1);
+    if (FW_KERNEL=="naive") {
+        // Initialize the grid and block dimensions here
+        dim3 dimGrid2((graph.V - 1) / blockSize + 1, (graph.V - 1) / blockSize + 1, 1);
+        dim3 dimBlock2(blockSize, blockSize, 1);
 
-    // /* cudaFuncSetCacheConfig(_naive_fw_kernel, cudaFuncCachePreferL1); */
-    for (int vertex = 0; vertex < graph.V; ++vertex) {
-        _naive_floyd_warshall_kernel <<< dimGrid2, dimBlock2 >>> (vertex, graph.V, pivot.d_adjMtx_transform, pivot.d_pathMtx);
-        gpuErrchk(cudaPeekAtLastError());
-        gpuErrchk(cudaDeviceSynchronize());
+        /* cudaFuncSetCacheConfig(_naive_fw_kernel, cudaFuncCachePreferL1); */
+        for (int vertex = 0; vertex < graph.V; ++vertex) {
+            _naive_floyd_warshall_kernel <<< dimGrid2, dimBlock2 >>> (vertex, graph.V, numSupplies, numDemands, 
+                pivot.d_adjMtx_transform, pivot.d_pathMtx);
+            gpuErrchk(cudaPeekAtLastError());
+            gpuErrchk(cudaDeviceSynchronize());
+        }
+
+    }
+
+    else if (FW_KERNEL=="blocked") {
+        
+        dim3 gridPhase1(1 ,1, 1);
+        dim3 gridPhase2((graph.V - 1) / blockSize + 1, 2 , 1);
+        dim3 gridPhase3((graph.V - 1) / blockSize + 1, (graph.V - 1) / blockSize + 1 , 1);
+        dim3 dimBlockSize(blockSize, blockSize, 1);
+
+        int numBlock = (graph.V - 1) / blockSize + 1;
+
+        for(int blockID = 0; blockID < numBlock; blockID++) {
+            // Start dependent phase
+            _blocked_fw_dependent_ph<<<gridPhase1, dimBlockSize>>>
+                    (blockID, graph.V, graph.V, pivot.d_adjMtx_transform, pivot.d_pathMtx);
+
+            // Start partially dependent phase
+            _blocked_fw_partial_dependent_ph<<<gridPhase2, dimBlockSize>>>
+                    (blockID, graph.V, graph.V, pivot.d_adjMtx_transform, pivot.d_pathMtx);
+
+            // Start independent phase
+            _blocked_fw_independent_ph<<<gridPhase3, dimBlockSize>>>
+                    (blockID, graph.V, graph.V, pivot.d_adjMtx_transform, pivot.d_pathMtx);
+        }
+    }
+    
+    else {
+        std::cout<<"ERROR: Invalid Floyd warshall kernel selected!";
+        exit(-1);
     }
 
     // DEBUG UTILITY : view floyd warshall output >>
@@ -327,7 +360,7 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     int diameter;
     int * diameter_ptr = thrust::max_element(thrust::device, pivot.d_adjMtx_transform, pivot.d_adjMtx_transform + simplex_gridDim);
     gpuErrchk(cudaMemcpy(&diameter, diameter_ptr, sizeof(int), cudaMemcpyDeviceToHost));
-    diameter++; // Length of cycle = length of path + 1
+    diameter+=2; // Length of cycle = length of path + 1
     // std::cout<<"Diameter = "<<diameter<<std::endl;
     
     // Allocate memory for cycles

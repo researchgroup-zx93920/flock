@@ -29,14 +29,14 @@ import random
 
 # >>>>>>>>>>>> Set Configuration Here >>>>>>>>>>>>>>
 randomize = True # Creates a new instance on every run
-r_seed = 1 # related to randomization
+r_seed = 3 # related to randomization
 
 exportEx = "dat" # Export file extension (.dat)
 balancedProblem = True
 assignmnetCase = False
 
-matrix_demands = 25
-matrix_supplies = 5
+matrix_demands = 125
+matrix_supplies = 10
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # DO NOT CHANGE ANYTHING BEYOND THIS LINE

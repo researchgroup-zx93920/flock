@@ -101,6 +101,12 @@ Just consider at most 2(M + N) negative reduced costs
 Idea to use from above 1/2
 */
 
+#define FW_KERNEL "blocked"
+/*
+naive: Use naive cuda implementation 
+blocked: Use blocked cuda implementation
+*/
+
 #define PARALLEL_PIVOTING_METHOD "r"
 /*
 r : deconflict pivots purely based on reduced costs

@@ -119,7 +119,7 @@ __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, floa
 // PARALLEL PIVOTING UTILITY KERNELS >>
 // ##################################################
 
-__global__ void _naive_floyd_warshall_kernel(const int k, const int V, int * d_adjMtx, int * path);
+__global__ void _naive_floyd_warshall_kernel(const int k, const int V, const int numSupplies, const int numDemands, int * d_adjMtx, int * path);
 
 __global__ void fill_adjMtx(int * d_adjMtx_transform, int * d_adjMtx_actual, int * d_pathMtx, const int V);
 
@@ -141,5 +141,14 @@ __global__ void compute_opportunity_cost_and_delta(int * d_adjMtx_ptr, float * d
 __global__ void compute_opportunity_cost(int * d_adjMtx_ptr, float * d_flowMtx_ptr, float * d_costs_ptr, 
     int * d_adjMtx_transform, int * d_pivot_cycles, float * d_opportunity_costs, 
     const int diameter, const int numSupplies, const int numDemands);
+
+// Blocked Floyd Warshall kernels
+// Sourced through : https://github.com/MTB90/cuda-floyd_warshall/blob/master/lib/cuda/cuda_apsp.cu
+
+__global__ void _blocked_fw_dependent_ph(const int blockId, size_t pitch, const int nvertex, int* const graph, int* const pred);
+
+__global__ void _blocked_fw_partial_dependent_ph(const int blockId, size_t pitch, const int nvertex, int* const graph, int* const pred);
+
+__global__ void _blocked_fw_independent_ph(const int blockId, size_t pitch, const int nvertex, int* const graph, int* const pred);
 
 #endif
