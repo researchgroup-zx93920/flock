@@ -9,16 +9,16 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands) 
 
     int V = numSupplies + numDemands;
 
-    if (PIVOTING_STRATEGY=="sequencial_dfs") {
-        std::cout<<"sequencial DFS - Not Implemented for Stepping Stone Method, try parallel_fw!"<<std::endl;
-        exit(-1);
-    }
-    else if (PIVOTING_STRATEGY=="parallel_dfs") {
-        std::cout<<"parallel DFS - Not Implemented for Stepping Stone Method, try parallel_fw!"<<std::endl;
-        exit(-1);
-    }
+    // if (PIVOTING_STRATEGY=="sequencial_dfs") {
+    //     std::cout<<"sequencial DFS - Not Implemented for Stepping Stone Method, try parallel_fw!"<<std::endl;
+    //     // exit(-1);
+    // }
+    // else if (PIVOTING_STRATEGY=="parallel_dfs") {
+    //     std::cout<<"parallel DFS - Not Implemented for Stepping Stone Method, try parallel_fw!"<<std::endl;
+    //     // exit(-1);
+    // }
 
-    else if (PIVOTING_STRATEGY == "parallel_fw") {
+    // else if (PIVOTING_STRATEGY == "parallel_fw") {
 
         // Allocate Resources for floydwarshall cycle discovery strategy
         gpuErrchk(cudaMalloc((void **) &pivot.d_adjMtx_transform, V*V*sizeof(int)));
@@ -34,7 +34,7 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands) 
         // Each cycle has a size less than max possible diameter
         pivot.deconflicted_cycles_backtracker = (int *) malloc(V*sizeof(int));
 
-    }
+    // }
 }
 
 /* 
@@ -42,8 +42,8 @@ Free up acquired resources for pivoting on host device
 */
 __host__ void pivotFree(PivotHandler &pivot) {
 
-    if (PIVOTING_STRATEGY == "parallel_fw")
-    {
+    // if (PIVOTING_STRATEGY == "parallel_fw")
+    // {
         // Free up space >>
         gpuErrchk(cudaFree(pivot.d_adjMtx_transform));
         gpuErrchk(cudaFree(pivot.d_pathMtx));
@@ -52,7 +52,7 @@ __host__ void pivotFree(PivotHandler &pivot) {
         free(pivot.deconflicted_cycles_backtracker);
         free(pivot.deconflicted_cycles_depth);
 
-    }
+    // }
 }
 
 }
@@ -345,7 +345,7 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
                     (blockID, graph.V, graph.V, pivot.d_adjMtx_transform, pivot.d_pathMtx);
         }
     }
-    
+
     else {
         std::cout<<"ERROR: Invalid Floyd warshall kernel selected!";
         exit(-1);
