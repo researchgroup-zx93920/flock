@@ -390,8 +390,6 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
     thrust::device_vector<vogelDifference> differences_vector(numSupplies + numDemands);
 
     vogelDifference *vect = thrust::raw_pointer_cast(differences_vector.data());
-    MatrixCell *row_book = device_costMatrixRowBook;
-    MatrixCell *col_book = device_costMatrixColBook;
 
     // Some more book-keeping -
     float _d = 1.0 * INT_MIN;
@@ -424,12 +422,12 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         if (counter == 0) {
 
             // Initialize row differences
-            computeDifferences<<< dimGrid, dimBlock >>>(vect, row_book, col_book, numSupplies, numDemands, numSupplies+numDemands);
+            computeDifferences<<< dimGrid, dimBlock >>>(vect, device_costMatrixRowBook, device_costMatrixColBook, numSupplies, numDemands, numSupplies+numDemands);
             gpuErrchk(cudaPeekAtLastError());
             gpuErrchk(cudaDeviceSynchronize());
 
             // Initialize column differences
-            computeDifferences<<< dimGrid, dimBlock >>>(vect, row_book, col_book, numSupplies, numDemands, -1);
+            computeDifferences<<< dimGrid, dimBlock >>>(vect, device_costMatrixRowBook, device_costMatrixColBook, numSupplies, numDemands, -1);
             gpuErrchk(cudaPeekAtLastError());
             gpuErrchk(cudaDeviceSynchronize());
 
@@ -437,7 +435,7 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
 
         else {
         
-            computeDifferences<<< dimGrid, dimBlock >>>(vect, row_book, col_book, numSupplies, numDemands, prev_eliminated);
+            computeDifferences<<< dimGrid, dimBlock >>>(vect, device_costMatrixRowBook, device_costMatrixColBook, numSupplies, numDemands, prev_eliminated);
             gpuErrchk(cudaPeekAtLastError());
             gpuErrchk(cudaDeviceSynchronize());
         
