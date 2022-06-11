@@ -113,7 +113,7 @@ r : deconflict pivots purely based on reduced costs
 delta : deconflict parallel pivots based on delta -> currently appliable to stepping stone method
 */
 
-#define MAX_ITERATIONS 10000
+#define MAX_ITERATIONS 0
 
 /* Upper bound on max number of independent pivots */
 #define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
@@ -212,7 +212,7 @@ ileast_1 and ileast2 are indexes
 of min-2 values (minimum and second minimum)
 */
 struct vogelDifference {
-        int idx, ileast_1, ileast_2;
+        int idx, ileast_1 = 0, ileast_2 = 1;
         float diff;
 };
 
