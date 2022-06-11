@@ -518,7 +518,7 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
 void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costMatrix, 
         flowInformation * flows, int numSupplies, int numDemands) {
     
-    std::cout<<"Vogel's Approximation sequencial BFS Method"<<std::endl;
+    std::cout <<"FINDING BFS : Vogel Host Kernel - Step 0 : Setting up book-keeping structures" << std::endl;
     // Book-keeping stuff >>
     int coveredRows = 0 , coveredColumns = 0;
     int * residual_supply = (int *) malloc(numSupplies*sizeof(int));
@@ -530,9 +530,8 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
     int * rowCovered = (int *) calloc(numSupplies, sizeof(int));
     int * colCovered = (int *) calloc(numDemands, sizeof(int));    
     int * differences = (int *) calloc(numSupplies + numDemands, sizeof(int));
-    std::cout<<"\tSTEP 0 : Setting-up book-keeping structs"<<std::endl;
 
-    std::cout<<"\tSTEP 1 : Running Vogel's Heuristic"<<std::endl;
+    std::cout<<"FINDING BFS : Vogel Host Kernel - Step 1 : Running initial assignment"<<std::endl;
     bool prev_row = true, prev_col = true; // Denotes if a row/col was eliminated in previous iteration
 
     while ((coveredRows + coveredColumns) < (numDemands+numSupplies-1)) {
@@ -546,11 +545,11 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
 
         // Re/Calculate row differences >> 
         if (prev_row) {
-            for (int i=0; i< numSupplies; i++){
+            for (int i=0; i < numSupplies; i++){
                 if (rowCovered[i] == 0) {
                     temp1 = INT_MAX;
                     temp2 = INT_MAX;
-                    for (int j=0; j< numDemands; j++) {
+                    for (int j=0; j < numDemands; j++) {
                         // Only look at columns not covered >> 
                         if (colCovered[j] == 0) {
                             float entry = costMatrix[i*numDemands + j].cost;
@@ -566,7 +565,7 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
                     differences[i] = temp2 - temp1;
                 }
                 else {
-                    differences[i] = INT_MIN;
+                    differences[i] = -1;
                 }
             }
             prev_row = false;
@@ -575,12 +574,12 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
 
         // Re/Calculate col differences >> 
         if (prev_col) {
-            for (int j=0; j< numDemands; j++){
+            for (int j=0; j< numDemands; j++) {
                 if (colCovered[j] == 0) {
                     temp1 = INT_MAX;
                     temp2 = INT_MAX;
                     // Only look at rows not covered >>
-                    for (int i=0; i< numSupplies; i++) {
+                    for (int i=0; i < numSupplies; i++) {
                         if (rowCovered[i] == 0) {
                             float entry = costMatrix[i*numDemands + j].cost;
                             if (entry <= temp1) {
@@ -595,7 +594,7 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
                     differences[numSupplies + j] = temp2 - temp1;
                 }
                 else {
-                    differences[numSupplies + j] = INT_MIN;
+                    differences[numSupplies + j] = -1;
                 }
             }
             prev_col = false;
@@ -604,8 +603,8 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
         // Determine the maximum of differences - (Reduction)
         tempDiff = INT_MIN;
         i_tempDiff = -1;
-        for (int i=0; i < numSupplies + numDemands; i++) {
-            if (differences[i] > tempDiff) {
+        for (int i = 0; i < numSupplies + numDemands; i++) {
+            if (differences[i] >= tempDiff) {
                 // tie broken by first seen
                 tempDiff = differences[i];
                 i_tempDiff = i;
@@ -621,7 +620,7 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
             i_tempDiff -= numSupplies;
             // In this column index find the min cost
             costTemp = INT_MAX;
-            for (int i=0; i<numSupplies; i++) {
+            for (int i=0; i < numSupplies; i++) {
                 float entry = costMatrix[i*numDemands + i_tempDiff].cost;
                 if (entry < costTemp && rowCovered[i] == 0) {
                     costTemp = entry;
@@ -677,7 +676,7 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
 
             if (residual_demand[i_minCost] > residual_supply[i_tempDiff]){
                 flows[counter] = {.source = i_tempDiff, .destination = i_minCost, 
-                                    .qty = 1.0f*residual_supply[i_tempDiff]};
+                                    .qty = max(1.0f*residual_supply[i_tempDiff], epsilon)};
                 residual_demand[i_minCost] -= residual_supply[i_tempDiff];
                 residual_supply[i_tempDiff] = 0;
                 rowCovered[i_tempDiff] = 1;
@@ -686,7 +685,7 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
             }
             else {
                 flows[counter] = {.source = i_tempDiff, .destination = i_minCost,
-                                    .qty = 1.0f*residual_demand[i_minCost]};
+                                    .qty = max(1.0f*residual_demand[i_minCost], epsilon)};
                 residual_supply[i_tempDiff] -= residual_demand[i_minCost];
                 residual_demand[i_minCost] = 0;
                 colCovered[i_minCost] = 1;
@@ -695,5 +694,6 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
             }  
         }
     }
-    std::cout<<"\tVogel's Heuristic Completed!"<<std::endl;
+
+    std::cout<<"FINDING BFS : Vogel Host Kernel - END : Initial Assignment Complete"<<std::endl;
 }

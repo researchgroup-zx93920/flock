@@ -45,7 +45,7 @@
 1 : Verbose model
 */
 
-#define BFS_METHOD "vam_device"
+#define BFS_METHOD "vam_host"
 /*
 ALL THESE METHODS/KERNELS ARE IMPLEMENTED COLLECTIVELY IN - BFS_* PREFIXED FILES
 
@@ -113,7 +113,7 @@ r : deconflict pivots purely based on reduced costs
 delta : deconflict parallel pivots based on delta -> currently appliable to stepping stone method
 */
 
-#define MAX_ITERATIONS 0
+#define MAX_ITERATIONS 1000
 
 /* Upper bound on max number of independent pivots */
 #define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
