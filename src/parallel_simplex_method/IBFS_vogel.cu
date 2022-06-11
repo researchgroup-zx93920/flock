@@ -6,7 +6,7 @@ __global__ void computeDifferences(vogelDifference * minima, MatrixCell * row_bo
 
     int indx = blockIdx.x * blockDim.x + threadIdx.x;
     float _diff;
-    int min_idx;
+    int current_second_min;
     vogelDifference min_indexes = minima[indx];
     if (indx < n_rows && prev_eliminated >= n_rows)
     {
@@ -37,7 +37,7 @@ __global__ void computeDifferences(vogelDifference * minima, MatrixCell * row_bo
             {
                 // Loop will keep moving untill - covered = false is found for the corresponding column
                 min_indexes.ileast_2 += 1;
-                if (minima[n_rows + min_indexes.ileast_2].ileast_1 < n_cols) {
+                if (minima[n_rows + row_book[indx * (n_cols +2) + min_indexes.ileast_2].col].ileast_1 < n_rows) {
                     break;
                 }
             }
@@ -50,7 +50,7 @@ __global__ void computeDifferences(vogelDifference * minima, MatrixCell * row_bo
             {
                 // Loop will keep moving untill - covered = false is found for the corresponding column
                 min_indexes.ileast_2 += 1;
-                if (minima[n_rows + min_indexes.ileast_2].ileast_1 < n_cols) {
+                if (minima[n_rows + row_book[indx * (n_cols +2) + min_indexes.ileast_2].col].ileast_1 < n_rows) {
                     break;
                 }
             }
@@ -59,9 +59,8 @@ __global__ void computeDifferences(vogelDifference * minima, MatrixCell * row_bo
 
         // Computing New Row differences
         _diff = least2.cost - least1.cost;
-        min_idx = least1.col;
+        min_indexes.idx = least1.col;
         min_indexes.diff = _diff;
-        min_indexes.idx = min_idx;
         minima[indx] = min_indexes;
     }
 
@@ -89,11 +88,11 @@ __global__ void computeDifferences(vogelDifference * minima, MatrixCell * row_bo
             // assign ileast2 to ileast1 and increment ileast2 to next uncovered
             min_indexes.ileast_1 = min_indexes.ileast_2;
             least1 = least2;
-            while (min_indexes.ileast_2 < n_cols - 1)
+            while (min_indexes.ileast_2 < n_rows - 1)
             {
-                // Loop will keep moving untill - covered = false is found for the corresponding column
+                // Loop will keep moving untill - covered = false is found for the corresponding row
                 min_indexes.ileast_2 += 1;
-                if (minima[min_indexes.ileast_2].ileast_1 < n_cols) {
+                if (minima[col_book[(indx - n_rows) * (n_rows+2) + min_indexes.ileast_2].row].ileast_1 < n_cols) {
                     break;
                 }
             }
@@ -103,11 +102,11 @@ __global__ void computeDifferences(vogelDifference * minima, MatrixCell * row_bo
         else if (least2.row == rejectRowIdx)
         {
             // let ileast1 stay what it is and increment ileast2 to next uncovered
-            while (min_indexes.ileast_2 < n_cols - 1)
+            while (min_indexes.ileast_2 < n_rows - 1)
             {
-                // Loop will keep moving untill - covered = false is found for the corresponding column
+                // Loop will keep moving untill - covered = false is found for the corresponding row
                 min_indexes.ileast_2 += 1;
-                if (minima[min_indexes.ileast_2].ileast_1 < n_cols) {
+                if (minima[col_book[(indx - n_rows) * (n_rows+2) + min_indexes.ileast_2].row].ileast_1 < n_cols) {
                     break;
                 }
             }
@@ -116,9 +115,8 @@ __global__ void computeDifferences(vogelDifference * minima, MatrixCell * row_bo
 
         // Computing Column differences
         _diff = least2.cost - least1.cost;
-        min_idx = least1.row;
+        min_indexes.idx  = least1.row;
         min_indexes.diff = _diff;
-        min_indexes.idx = min_idx;
         minima[indx] = min_indexes;
     }
 }
@@ -422,6 +420,7 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         // ************************
         // Map Step
         // ************************
+
         if (counter == 0) {
 
             // Initialize row differences
@@ -452,12 +451,6 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         int max_index = _iter - differences_vector.begin();
         vogelDifference host_maxDiff = differences_vector[max_index];
 
-        // std::cout<<"Max Diff = " << host_maxDiff << std::endl;
-
-        // for (size_t i = 0; i < differences_vector.size(); i++) {
-        //         std::cout << "differences_vector[" << i << "] = " << differences_vector[i] << std::endl;
-        // }
-
         // Following are all constant time ops, everything is happening on host -
         if (max_index >= numSupplies)
         {
@@ -471,9 +464,6 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
                 flow_row = max_index;
                 flow_col = host_maxDiff.idx;
         }
-
-        // std::cout<<"Flow Row : "<<flow_row<<std::endl;
-        // std::cout<<"Flow Col : "<<flow_col<<std::endl;
 
         // ************************
         // Allocation Step
@@ -513,6 +503,8 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         // !! DEBUGGGING UTILITY !!
         // Print Current Minima vector and allocations at the end of each iteration
         // *****************************
+        // std::cout<<"Flow Row : "<<flow_row<<std::endl;
+        // std::cout<<"Flow Col : "<<flow_col<<std::endl;
         // std::cout<<"Counter : "<<counter<<std::endl;
         // std::cout<<"Qty Allocated : "<<_this_flow.qty<<std::endl;
         // for (size_t i = 0; i < differences_vector.size(); i++) {
