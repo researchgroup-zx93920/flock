@@ -1,6 +1,6 @@
 // #include <cuda_runtime.h>
 #include <iostream>
-#include <chrono>
+
 
 #include "logger.h"
 #include "utils.h"
@@ -56,15 +56,54 @@ int main(int argc, char **argv)
     lpModel model = lpModel(&problem, flows);
     model.execute();
     model.create_flows();
+    BOOST_LOG_TRIVIAL(info)<<">>>> BASIC STATISTICS | Objective: "<<model.objVal<<" | Iterations: "<<model.totalIterations<<" | Time: "<<model.totalSolveTime \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
   }
   else if (problem.algo == ProblemInstance::my_algo::parallel_uv)
   {
     uvModel_parallel model = uvModel_parallel(&problem, flows);
     model.execute();
     model.create_flows();
+    BOOST_LOG_TRIVIAL(info)<<">>>> BASIC STATISTICS | Objective: "<<model.objVal<<" | Iterations: "<<model.totalIterations<<" | Time: "<<model.totalSolveTime \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
+
+    BOOST_LOG_TRIVIAL(info)<<">>>> LVL1 STATISTICS | Total Time: "<<model.totalSolveTime \
+    <<" | UV Time: "<<round(model.uv_time/1000)                                          \
+    <<" | R Time: "<<round(model.reduced_cost_time/1000)                                 \
+    <<" | PIVOT Time: "<<round(model.pivot_time/1000)                                    \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
+
+    BOOST_LOG_TRIVIAL(info)<<">>>> LVL2 PIVOT STATISTICS | Total Pivot Time: "<<round(model.pivot_time/1000)  \
+    <<" | CYCLE Time: "<<round(model.cycle_discovery_time/1000)                                      \
+    <<" | RESOLVE Time: "<<round(model.resolve_time/1000)                              \
+    <<" | ADJUST Time: "<<round(model.adjustment_time/1000)                            \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
+  }
+  else if (problem.algo == ProblemInstance::my_algo::parallel_ss)
+  {
+    ssModel_parallel model = ssModel_parallel(&problem, flows);
+    model.execute();
+    model.create_flows();
+    BOOST_LOG_TRIVIAL(info)<<">>>> BASIC STATISTICS | Objective: "<<model.objVal<<" | Iterations: "<<model.totalIterations<<" | Time: "<<model.totalSolveTime \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
+
+    BOOST_LOG_TRIVIAL(info)<<">>>> LVL1 STATISTICS | Total Time: "<<model.totalSolveTime \
+    <<" | PIVOT Time: "<<round(model.pivot_time/1000)                                    \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
+
+    BOOST_LOG_TRIVIAL(info)<<">>>> LVL2 PIVOT STATISTICS | Total Pivot Time: "<<round(model.pivot_time/1000)  \
+    <<" | CYCLE Time: "<<round(model.cycle_discovery_time/1000)                                      \
+    <<" | RESOLVE Time: "<<round(model.resolve_time/1000)                              \
+    <<" | ADJUST Time: "<<round(model.adjustment_time/1000)                            \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
   }
 
-  std::cout << "Flows created successfully!" << std::endl;
+  BOOST_LOG_TRIVIAL(info) << "Flows created successfully!";
+
+  // for (int i=0; i<(problem.active_flows); i++) {
+  //   std::cout<<flows[i]<<std::endl;
+  // }
+  
   free(flows);
-  std::cout << "Flows freed successfully!" << std::endl;
+  BOOST_LOG_TRIVIAL(info) <<"Flows freed successfully!";
 }

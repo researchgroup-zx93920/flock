@@ -14,13 +14,18 @@ class ProblemInstance
 public:
     bool read_mode;
     std::string filename;
-    enum my_algo {cpu_lp_solve, parallel_uv};
+    enum my_algo {cpu_lp_solve, parallel_uv, parallel_ss};
     my_algo algo;
-    int numDemands, numSupplies, *demands, *supplies;
-    float readTime, preprocessTime, solveTime, postprocessTime;
+    int numDemands, numSupplies, *demands, *supplies, active_flows;
+    
+    // Statistics >>
+    double readTime, preprocessTime, solveTime, postprocessTime;
     double totalFlowCost;
+    
     float *costs;
+
     void allocate_memory();
+    ProblemInstance();
     ~ProblemInstance();
 };
 
@@ -32,7 +37,8 @@ struct flowInformation
     // from source - supply index
     // to destination - demand index
     // move this many units - qty
-    int source, destination, qty;
+    int source, destination;
+    float qty;
 };
 
 std::ostream& operator << (std::ostream& o, const flowInformation& x);

@@ -11,6 +11,11 @@ lpModel::lpModel(ProblemInstance *problem, flowInformation *flows)
 	optimal_flows = flows; // Might require a malloc
 						   // construction provision - perform some-more future things here :
 	BOOST_LOG_TRIVIAL(debug) << "An LP model object was successfully created";
+	
+	// Initialize statistics
+	objVal = 0.0;
+    totalIterations = 0;
+    totalSolveTime = 0.0;
 }
 
 lpModel::~lpModel()
@@ -87,12 +92,16 @@ void lpModel::get_dual_costs()
 void lpModel::solve()
 {
 	BOOST_LOG_TRIVIAL(debug) << "Starting Solver";
-	auto start = std::chrono::high_resolution_clock::now();
-	model->set(GRB_DoubleParam_TimeLimit, 10);
+	
+	model->set(GRB_DoubleParam_TimeLimit, GRB_TIMEOUT);
+	
+	if (DISABLE_AUTOGRB == 1){
+		// Enforce dual simplex 
+		model->set(GRB_IntParam_Method, 0);
+		model->set(GRB_IntParam_Sifting, 0);
+	}
+
 	model->optimize();
-	auto end = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-	data->solveTime = duration.count();
 
 	int optim_status = model->get(GRB_IntAttr_Status);
 	if (optim_status == 9)
@@ -107,6 +116,9 @@ void lpModel::solve()
 		// fetch solution >>
 		BOOST_LOG_TRIVIAL(debug) << "Solver Success! Optimal value: " << model->get(GRB_DoubleAttr_ObjVal) << std::endl;
 		solved = true;
+		objVal = model->get(GRB_DoubleAttr_ObjVal);
+		data->totalFlowCost = objVal;
+		totalIterations = int(model->get(GRB_DoubleAttr_IterCount));
 	}
 }
 
@@ -119,6 +131,8 @@ void lpModel::create_flows()
 	if (solved)
 	{	
 		BOOST_LOG_TRIVIAL(debug) << "verified model = solved";
+		auto start = std::chrono::high_resolution_clock::now();
+		
 		int _counter = 0;
 		for (int i = 0; i < data->numSupplies; i++)
 		{
@@ -128,24 +142,41 @@ void lpModel::create_flows()
 				std::map<int, GRBVar>::iterator _iter = x_ij.find(_key);
 				if (_iter->second.get(GRB_DoubleAttr_X) > 0)
 				{
-					flowInformation this_flow = {.source = i, .destination = j, .qty = int(_iter->second.get(GRB_DoubleAttr_X))};
+					flowInformation this_flow = {.source = i, .destination = j, .qty = float(_iter->second.get(GRB_DoubleAttr_X))};
 					optimal_flows[_counter] = this_flow;
 					_counter++;
 				}
 			}
 		}
+
+		auto end = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+		data->postprocessTime += duration.count();
+		data->active_flows = _counter;
+	
 	}
-	else {
+	else 
+	{
 		BOOST_LOG_TRIVIAL(error) << "Model is not yet solved";
 	}
+
 }
 
 void lpModel::execute()
 {
 	BOOST_LOG_TRIVIAL(info) << "Executing LP Model ... ";
+
+	auto start = std::chrono::high_resolution_clock::now();
+
 	create_variables();
 	add_constraints();
 	add_objective();
 	solve();
+
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	data->solveTime += duration.count();
+	totalSolveTime = data->solveTime;
+
 	BOOST_LOG_TRIVIAL(debug) << "LP Model was successfully solved!";
 }

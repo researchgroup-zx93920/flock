@@ -35,9 +35,8 @@ exportEx = "dat" # Export file extension (.dat)
 balancedProblem = True
 assignmnetCase = False
 
-matrix_demands = 500
-matrix_supplies = 500
-
+matrix_demands = 125
+matrix_supplies = 10
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # DO NOT CHANGE ANYTHING BEYOND THIS LINE
@@ -67,7 +66,7 @@ print("Creating Cost Matrix variables")
 for i in range(matrix_supplies):
     varRows = []
     for j in range(matrix_demands):
-        varRows.append(random.randint(10,99))
+        varRows.append(round(random.uniform(100,999),2))
     vars.append(varRows)
 
 
@@ -102,7 +101,7 @@ if balancedProblem:
         diff = totalD - totalS
         supplies = runConsumption(diff, const_diff,supplies)
         
-    
+
     if totalS > totalD:
         const_diff = totalS - totalD
         diff = totalS - totalD
@@ -111,7 +110,7 @@ if balancedProblem:
     assert sum(demands) == sum(supplies)
 
 print("Exporting File .. ")
-outfile = open(f"../data/TransportModel_{matrix_supplies}_{matrix_demands}_{r_seed}_equalityConstr.{exportEx}", "w+")
+outfile = open(f"../tests/test_TransportModel_{matrix_supplies}_{matrix_demands}_{r_seed}.{exportEx}", "w+")
 outfile.write(f"{matrix_supplies} {matrix_demands}\n")
 for s in supplies:
     outfile.write(f"{s}\t")

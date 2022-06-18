@@ -1,6 +1,7 @@
 
 # include "./gurobi_lp_method/lp_model.h"
-# include "./parallel_uv_method/uv_model_parallel.h"
+# include "./parallel_simplex_method/parallel_uv_method/uv_model_parallel.h"
+#include "./parallel_simplex_method/parallel_ss_method/ss_model_parallel.h"
 
 template <typename T>
 void printLocalDebugArray(T * d_array, int rows, int columns, const char *name) {

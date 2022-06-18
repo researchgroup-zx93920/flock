@@ -55,6 +55,9 @@ void get_algorithm(InputParser input, ProblemInstance &problem)
     else if (user_algo == "parallel_uv"){
         problem.algo = ProblemInstance::my_algo::parallel_uv;
     }
+    else if (user_algo == "parallel_ss"){
+        problem.algo = ProblemInstance::my_algo::parallel_ss;
+    }
     else
     {
         BOOST_LOG_TRIVIAL(error) << "Invalid Algorithm!";
@@ -131,6 +134,8 @@ void readCosts(ProblemInstance &problem)
 void make_problem(InputParser input, ProblemInstance &problem)
 {
 
+    auto start = std::chrono::high_resolution_clock::now();
+    
     get_input_mode_and_filename(input, problem);
     // does filePath actually exist?
     if (boost::filesystem::exists(problem.filename))
@@ -150,4 +155,10 @@ void make_problem(InputParser input, ProblemInstance &problem)
     }
 
     get_algorithm(input, problem);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    problem.readTime += duration.count();
+    problem.active_flows = problem.numSupplies + problem.numDemands - 1; 
+
 }

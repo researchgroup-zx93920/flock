@@ -1,5 +1,13 @@
 #include "structs.h"
 
+ProblemInstance::ProblemInstance(void)
+{
+    readTime = 0;
+    preprocessTime = 0;
+    solveTime = 0;
+    postprocessTime = 0;
+}
+
 void ProblemInstance::allocate_memory(void)
 {
     supplies = (int *)malloc(sizeof(int) * numSupplies);
