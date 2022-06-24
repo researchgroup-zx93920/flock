@@ -80,12 +80,12 @@ echo " ******************** TEST 11 | GPU UV METHOD COMPLETE ***************** "
 ./bin/flock -i  ./data/TransportModel_250_1000_1_equalityConstr.dat  -a parallel_ss
 echo " ******************** TEST 11 | GPU SS METHOD COMPLETE ***************** "
 
-./bin/flock -i  ./data/TransportModel_500_100_1_equalityConstr.dat  -a cpu_lp_solve
-echo " ******************** TEST 12 | LP SOLVER COMPLETE ***************** "
-./bin/flock -i  ./data/TransportModel_500_100_1_equalityConstr.dat  -a parallel_uv
-echo " ******************** TEST 12 | GPU UV METHOD COMPLETE ***************** "
-./bin/flock -i  ./data/TransportModel_500_100_1_equalityConstr.dat  -a parallel_ss
-echo " ******************** TEST 12 | GPU SS METHOD COMPLETE ***************** "
+# ./bin/flock -i  ./data/TransportModel_500_100_1_equalityConstr.dat  -a cpu_lp_solve
+# echo " ******************** TEST 12 | LP SOLVER COMPLETE ***************** "
+# ./bin/flock -i  ./data/TransportModel_500_100_1_equalityConstr.dat  -a parallel_uv
+# echo " ******************** TEST 12 | GPU UV METHOD COMPLETE ***************** "
+# ./bin/flock -i  ./data/TransportModel_500_100_1_equalityConstr.dat  -a parallel_ss
+# echo " ******************** TEST 12 | GPU SS METHOD COMPLETE ***************** "
 
 ./bin/flock -i  ./data/TransportModel_500_250_1_equalityConstr.dat  -a cpu_lp_solve
 echo " ******************** TEST 13 | LP SOLVER COMPLETE ***************** "

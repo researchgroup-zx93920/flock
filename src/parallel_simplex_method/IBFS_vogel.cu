@@ -233,8 +233,14 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         int numSupplies, int numDemands)
 {
 
+    double map_time = 0, reduction_time = 0, allocation_time = 0, init_time = 0;
+    auto _start = std::chrono::high_resolution_clock::now();
+    auto _end = std::chrono::high_resolution_clock::now();
+    auto _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+
     // Step 0 :
     std::cout << "FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures" << std::endl;
+    _start = std::chrono::high_resolution_clock::now();
     thrust::device_vector<MatrixCell> device_costMatrix(costMatrix, costMatrix + (numSupplies * numDemands));
     MatrixCell * device_costMatrix_ptr = thrust::raw_pointer_cast(device_costMatrix.data());
 
@@ -369,10 +375,13 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
     // *********************************
 
     // Freeup Some Memory
-    // device_rowSegments.clear();
-    // device_colSegments.clear();
+    device_rowSegments.clear();
+    device_colSegments.clear();
+    _end = std::chrono::high_resolution_clock::now();
+    _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+    init_time += _duration.count();
     std::cout << "FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment" << std::endl;
-
+    
     /*
     Illustration:
 
@@ -418,7 +427,8 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         // ************************
         // Map Step
         // ************************
-
+        _start = std::chrono::high_resolution_clock::now();
+        
         if (counter == 0) {
 
             // Initialize row differences
@@ -441,9 +451,14 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         
         }
 
+        _end = std::chrono::high_resolution_clock::now();
+        _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+        map_time += _duration.count();
+
         // ************************
         // Reduction Step
         // ************************
+        _start = std::chrono::high_resolution_clock::now();
 
         thrust::device_vector<vogelDifference>::iterator _iter = thrust::max_element(differences_vector.begin(), differences_vector.end(), compareDiff());
         int max_index = _iter - differences_vector.begin();
@@ -463,9 +478,14 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
                 flow_col = host_maxDiff.idx;
         }
 
+        _end = std::chrono::high_resolution_clock::now();
+        _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+        reduction_time += _duration.count();
+
         // ************************
         // Allocation Step
         // ************************
+        _start = std::chrono::high_resolution_clock::now();
 
         if (res_demands[flow_col] > res_supplies[flow_row])
         {       
@@ -494,6 +514,10 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
                 differences_vector[prev_eliminated] = default_diff;
         }
 
+        _end = std::chrono::high_resolution_clock::now();
+        _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+        allocation_time += _duration.count();
+
         // Device adopts the assignment
         counter++;
 
@@ -509,15 +533,26 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
         //         std::cout << "differences_vector[" << i << "] = " << differences_vector[i] << std::endl;
         // }
 
+
     }
 
     std::cout << "FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete" << std::endl;
+    std::cout << "FINDING BFS : Step timing (microsecs) | Map Time = "<<map_time<<" | Reduction Time = "<<reduction_time;
+    std::cout<< " | Allocation Time = "<<allocation_time<<std::endl;
+    std::cout<<"FINDING BFS : init time : "<<init_time<<std::endl;
 }
 
 
 void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costMatrix, 
         flowInformation * flows, int numSupplies, int numDemands) {
-    
+
+    double map_time = 0, reduction_time = 0, allocation_time = 0, init_time = 0;
+    auto _start = std::chrono::high_resolution_clock::now();
+    auto _end = std::chrono::high_resolution_clock::now();
+    auto _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+
+    _start = std::chrono::high_resolution_clock::now();
+
     std::cout <<"FINDING BFS : Vogel Host Kernel - Step 0 : Setting up book-keeping structures" << std::endl;
     // Book-keeping stuff >>
     int coveredRows = 0 , coveredColumns = 0;
@@ -534,6 +569,10 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
     std::cout<<"FINDING BFS : Vogel Host Kernel - Step 1 : Running initial assignment"<<std::endl;
     bool prev_row = true, prev_col = true; // Denotes if a row/col was eliminated in previous iteration
 
+    _end = std::chrono::high_resolution_clock::now();
+    _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+    init_time = _duration.count();
+
     while ((coveredRows + coveredColumns) < (numDemands+numSupplies-1)) {
         
         // std::cout<<"Iteration - "<<coveredColumns+coveredRows<<std::endl;
@@ -542,6 +581,8 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
         int i_tempDiff, i_minCost;
         // std::cout<<"prev_row = "<<prev_row<<std::endl;
         // std::cout<<"prev_col = "<<prev_col<<std::endl;
+
+        _start = std::chrono::high_resolution_clock::now();
 
         // Re/Calculate row differences >> 
         if (prev_row) {
@@ -599,8 +640,14 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
             }
             prev_col = false;
         }
+
+        _end = std::chrono::high_resolution_clock::now();
+        _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+        map_time += _duration.count();
         
         // Determine the maximum of differences - (Reduction)
+        _start = std::chrono::high_resolution_clock::now();
+
         tempDiff = INT_MIN;
         i_tempDiff = -1;
         for (int i = 0; i < numSupplies + numDemands; i++) {
@@ -611,6 +658,7 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
             }
         }
         
+
         int counter = coveredRows + coveredColumns;
         // Check if row or col difference and determine corresponding min cost
         // Now we have Basic row and col
@@ -628,12 +676,17 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
                 }
             }
 
+            _end = std::chrono::high_resolution_clock::now();
+            _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+            reduction_time += _duration.count();
+
             // std::cout<<"Col: Index-1 "<<i_tempDiff<<std::endl;
             // std::cout<<"Col: Index-2 "<<i_minCost<<std::endl;
 
             // std::cout<<" Res-Sup "<<residual_supply[i_minCost]<<std::endl;
             // std::cout<<" Res-Demand "<<residual_demand[i_tempDiff]<<std::endl;
-            
+            _start = std::chrono::high_resolution_clock::now();
+
             // Min cost row is i_minCost
             if (residual_demand[i_tempDiff] > residual_supply[i_minCost]){
                 
@@ -654,6 +707,11 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
                 prev_col = true;
                 coveredColumns += 1;
             }
+
+            _end = std::chrono::high_resolution_clock::now();
+            _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+            allocation_time += _duration.count();
+
         }
         else {
             // Then this is a row difference
@@ -670,9 +728,13 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
             // minCost column is i_minCost
             // std::cout<<"Row: Index-1 "<<i_tempDiff<<std::endl;
             // std::cout<<"Row: Index-2 "<<i_minCost<<std::endl;
+            _end = std::chrono::high_resolution_clock::now();
+            _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+            reduction_time += _duration.count();
 
             // std::cout<<" Res-Sup "<<residual_supply[i_tempDiff]<<std::endl;
             // std::cout<<" Res-Demand "<<residual_demand[i_minCost]<<std::endl;
+            _start = std::chrono::high_resolution_clock::now();
 
             if (residual_demand[i_minCost] > residual_supply[i_tempDiff]){
                 flows[counter] = {.source = i_tempDiff, .destination = i_minCost, 
@@ -691,9 +753,17 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
                 colCovered[i_minCost] = 1;
                 prev_col = true;
                 coveredColumns += 1;
-            }  
+            } 
+
+            _end = std::chrono::high_resolution_clock::now();
+            _duration = std::chrono::duration_cast<std::chrono::microseconds>(_end - _start);
+            allocation_time += _duration.count();
+
         }
     }
 
     std::cout<<"FINDING BFS : Vogel Host Kernel - END : Initial Assignment Complete"<<std::endl;
+    std::cout << "FINDING BFS : Step timing (microsecs) | Map Time = "<<map_time<<" | Reduction Time = "<<reduction_time;
+    std::cout<< " | Allocation Time = "<<allocation_time<<std::endl;
+    std::cout<<"FINDING BFS : init time : "<<init_time<<std::endl;
 }

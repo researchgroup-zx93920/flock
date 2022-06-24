@@ -19,7 +19,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/transform.h>
 #include <thrust/sort.h>
-#include <thrust/scan.h>
+#include <thrust/scan.h> 
 #include <thrust/extrema.h>
 #include <thrust/remove.h>
 #include <thrust/execution_policy.h>
@@ -45,7 +45,7 @@
 1 : Verbose model
 */
 
-#define BFS_METHOD "vam_host"
+#define BFS_METHOD "vam_device"
 /*
 ALL THESE METHODS/KERNELS ARE IMPLEMENTED COLLECTIVELY IN - BFS_* PREFIXED FILES
 
@@ -71,7 +71,7 @@ device_dense_linear_solver : solve system of dense lin_equations (dense linear a
 qr, chol
 */
 
-#define PIVOTING_STRATEGY "sequencial_dfs"
+#define PIVOTING_STRATEGY "parallel_fw"
 /*
 sequencial_dfs : perform pivoting one at a time based on dantzig's rule
 parallel_dfs : perform parallel pivoting by DFS strategy to build cycles
@@ -101,10 +101,11 @@ Just consider at most 2(M + N) negative reduced costs
 Idea to use from above 1/2
 */
 
-#define FW_KERNEL "blocked"
+#define APSP_KERNEL "fw_naive"
 /*
-naive: Use naive cuda implementation 
-blocked: Use blocked cuda implementation
+fw_naive: Use naive floyd warshall cuda implementation 
+fw_blocked: Use blocked floyd warshall cuda implementation
+t_closure : Use triadic closure strategy
 */
 
 #define PARALLEL_PIVOTING_METHOD "r"
@@ -113,7 +114,7 @@ r : deconflict pivots purely based on reduced costs
 delta : deconflict parallel pivots based on delta -> currently appliable to stepping stone method
 */
 
-#define MAX_ITERATIONS 1000
+#define MAX_ITERATIONS 100
 
 /* Upper bound on max number of independent pivots */
 #define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
@@ -304,7 +305,7 @@ struct PivotTimer {
 
 struct DualHandler {
 
-        // Commons:
+        // Commons ::
         // - dual costs towards supply constraints (u_vars_ptr)
         //  - dual costs towards demand constraints (v_vars_ptr)
         float * u_vars_ptr = NULL, * v_vars_ptr = NULL;

@@ -1,4 +1,6 @@
-CPP=g++ -std=c++14 -DBOOST_LOG_DYN_LINK 
+CPP=g++ -std=c++14 -DBOOST_LOG_DYN_LINK
+PROFILE_FLAGS=-lineinfo
+DEBUG_FLAGS=-G -g
 CUDA_COMPILER=nvcc -arch=sm_75 -w -std=c++14 -Xcompiler -fopenmp -O3 
 SRC=./src
 

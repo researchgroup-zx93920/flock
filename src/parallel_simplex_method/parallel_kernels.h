@@ -151,4 +151,6 @@ __global__ void _blocked_fw_partial_dependent_ph(const int blockId, size_t pitch
 
 __global__ void _blocked_fw_independent_ph(const int blockId, size_t pitch, const int nvertex, int* const graph, int* const pred);
 
+__global__ void analyse_t_closures(int k, int * d_pathMtx, int * d_adjMtx_transform, const int V);
+
 #endif

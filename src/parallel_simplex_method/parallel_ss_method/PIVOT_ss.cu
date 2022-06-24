@@ -307,7 +307,9 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
 
-    if (FW_KERNEL=="naive") {
+    // These kernels populate d_adjMtx_transform (path_length) and d_pathMtx
+
+    if (APSP_KERNEL=="fw_naive") {
         // Initialize the grid and block dimensions here
         dim3 dimGrid2((graph.V - 1) / blockSize + 1, (graph.V - 1) / blockSize + 1, 1);
         dim3 dimBlock2(blockSize, blockSize, 1);
@@ -322,7 +324,7 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
 
     }
 
-    else if (FW_KERNEL=="blocked") {
+    else if (APSP_KERNEL=="fw_blocked") {
         
         dim3 gridPhase1(1 ,1, 1);
         dim3 gridPhase2((graph.V - 1) / blockSize + 1, 2 , 1);
@@ -335,24 +337,47 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
             // Start dependent phase
             _blocked_fw_dependent_ph<<<gridPhase1, dimBlockSize>>>
                     (blockID, graph.V, graph.V, pivot.d_adjMtx_transform, pivot.d_pathMtx);
+            gpuErrchk(cudaPeekAtLastError());
+            gpuErrchk(cudaDeviceSynchronize());
 
             // Start partially dependent phase
             _blocked_fw_partial_dependent_ph<<<gridPhase2, dimBlockSize>>>
                     (blockID, graph.V, graph.V, pivot.d_adjMtx_transform, pivot.d_pathMtx);
+            gpuErrchk(cudaPeekAtLastError());
+            gpuErrchk(cudaDeviceSynchronize());
 
             // Start independent phase
             _blocked_fw_independent_ph<<<gridPhase3, dimBlockSize>>>
                     (blockID, graph.V, graph.V, pivot.d_adjMtx_transform, pivot.d_pathMtx);
+            gpuErrchk(cudaPeekAtLastError());
+            gpuErrchk(cudaDeviceSynchronize());
+                
         }
     }
 
+    else if (APSP_KERNEL=="t_closure") { 
+
+        dim3 dimBlock_closure(blockSize, blockSize, blockSize);
+        dim3 dimGrid_closure(ceil(1.0*graph.V/blockSize),ceil(1.0*graph.V/blockSize),ceil(1.0*graph.V/blockSize));
+
+        for (int k=0; k< graph.V; k++){
+            
+            analyse_t_closures<<<dimGrid_closure, dimBlock_closure>>>(k, pivot.d_pathMtx, pivot.d_adjMtx_transform, graph.V);
+            gpuErrchk(cudaPeekAtLastError());
+            gpuErrchk(cudaDeviceSynchronize());
+
+        }
+
+    }
+
     else {
-        std::cout<<"ERROR: Invalid Floyd warshall kernel selected!";
+        std::cout<<"ERROR: Invalid kernel selected for all pair shortest path!";
         exit(-1);
     }
 
-    // DEBUG UTILITY : view floyd warshall output >>
-    // _debug_print_APSP(pivot.d_adjMtx_transform, pivot.d_pathMtx, graph.V);
+    // DEBUG UTILITY : view path output >>
+    _debug_print_APSP(pivot.d_adjMtx_transform, pivot.d_pathMtx, graph.V);
+    exit(0);
 
     // std::cout<<"Finding diameter of graph"<<std::endl;
     // Get the diameter of tree and allocate memory for storing cycles

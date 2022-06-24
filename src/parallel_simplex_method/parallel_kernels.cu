@@ -282,7 +282,7 @@ __host__ void make_adjacency_list(Graph &graph, const int numSupplies, const int
         //                     Ea, is_nonzero_entry()); // --> need col indices of non-zeros
 
         // DEBUG :: 
-        // __debug_view_adjList(start, &length[1], Ea, V);
+        __debug_view_adjList(graph.d_vertex_start, &graph.d_vertex_degree[1], graph.d_adjVertices, graph.V);
         // exit(0);
 }
 
@@ -1174,6 +1174,38 @@ __global__ void _blocked_fw_independent_ph(const int blockId, size_t pitch, cons
    }
 }
 
+/* 
+Kernel to determine a feasible triadic closure in feasible tree
+ If there exsit edges such that x - z and z - y then, this kernel sets pathMtx[x][y] = z
+*/
+__global__ void analyse_t_closures(int k, int * d_pathMtx, int * d_adjMtx_transform, const int V) {
 
+    int tx = blockIdx.x*blockDim.x + threadIdx.x;
+    int ty = blockIdx.y*blockDim.y + threadIdx.y;
+    int tz = blockIdx.z*blockDim.z + threadIdx.z;
+
+    bool in_domain = tx < V && ty < V && tz < V;
+
+    // if in-domain and x and y are distinct
+    if (in_domain && !(tx == ty)) {
+        
+        bool xTOz = d_pathMtx[tx*V + tz] >= 0;
+        bool zTOy = d_pathMtx[tz*V + ty] >= 0;
+        bool not_xTOy = d_pathMtx[tx*V + ty] == -1;
+
+        // No direct path between x - y and x - z, z - y exist 
+        // reach x - y via z and read y - x via z
+        // Triadic closure exist
+        if (not_xTOy && xTOz && zTOy) {
+            // Update path - (x -> y via (z)) >>
+            d_pathMtx[tx*V + ty] = tz;
+            d_adjMtx_transform[tx*V + ty] = k+2;
+
+            // Update path - (y -> x via (z)) >>
+            d_pathMtx[ty*V + tx] = tz;
+            d_adjMtx_transform[tx*V + ty] = k+2;
+        }
+    }
+}
 
 #endif

@@ -201,6 +201,7 @@ void ssModel_parallel::execute()
 
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
+        // make_adjacency_list(graph, data->numSupplies, data->numDemands);
         // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
         // view_tree();
         
