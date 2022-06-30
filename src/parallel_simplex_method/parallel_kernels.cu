@@ -193,20 +193,33 @@ __host__ void close_solver(Graph &graph)
 }
 
 __global__ void determine_length(int * length, int * d_adjMtx_ptr, const int V) {
-        int L = 0;
-        int i = blockIdx.x *blockDim.x + threadIdx.x;
-        // No data re-use (this is a straight fwd kernel)
-        if (i < V) 
-        {    
-                for (int j=0; j<V; j++) {
-                        int idx = TREE_LOOKUP(i, j, V);
-                        if (d_adjMtx_ptr[idx] > 0) {
-                                L++;
-                        }
+
+    __shared__ int L;
+    int location;
+    
+    if (threadIdx.x == 0) {
+        L = 0;
+        length[0] = 0;
+    }
+    __syncthreads();
+
+    if (blockIdx.x < V) {
+            int j = threadIdx.x;
+            while (j < V) {
+                int idx = TREE_LOOKUP(blockIdx.x, j, V);
+                if (d_adjMtx_ptr[idx] > 0) {
+                    location = atomicAdd(&L, 1);
                 }
-                length[i+1] = L;
-                length[0] = 0;
-        }
+                j = j + blockDim.x;
+            }
+    }
+    __syncthreads();
+    
+    if (threadIdx.x == 0) {
+
+        length[blockIdx.x+1] = L;
+    }
+    
 }
 
 __global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, const int V, const int numSupplies) {
@@ -222,6 +235,30 @@ __global__ void fill_Ea(int * start, int * Ea, int * d_adjMtx_ptr, const int V, 
                         }
                 }
         }
+}
+
+
+__global__ void fill_Ea2(int * start, int * Ea, int * d_adjMtx_ptr, const int V, const int numSupplies) {
+    
+    // int i = blockIdx.x*blockDim.x + threadIdx.x;
+    int offset = start[blockIdx.x];
+    __shared__ int L;
+    if (threadIdx.x == 0) {
+        L = 0;
+    }
+    __syncthreads();
+
+    if (blockIdx.x < V) {
+            int j = threadIdx.x;
+            while (j < V) {
+                int idx = TREE_LOOKUP(blockIdx.x, j, V);
+                if (d_adjMtx_ptr[idx] > 0) {
+                    int location = atomicAdd(&L, 1);
+                    Ea[offset + location] = j;
+                }
+                j = j + blockDim.x;
+            }
+    }
 }
 
 /*
@@ -263,8 +300,8 @@ __host__ void __debug_view_adjList(int * start, int * length, int * Ea, const in
 __host__ void make_adjacency_list(Graph &graph, const int numSupplies, const int numDemands) {
 
         // Kernel Dimensions >> 
-        dim3 __blockDim(blockSize, 1, 1); 
-        dim3 __gridDim(ceil(1.0*graph.V/blockSize), 1, 1);
+        dim3 __blockDim(64, 1, 1); 
+        dim3 __gridDim(graph.V, 1, 1);
 
         determine_length <<< __gridDim, __blockDim >>> (graph.d_vertex_degree, graph.d_adjMtx_ptr, graph.V);
         gpuErrchk(cudaPeekAtLastError());
@@ -272,7 +309,8 @@ __host__ void make_adjacency_list(Graph &graph, const int numSupplies, const int
         
         thrust::inclusive_scan(thrust::device, graph.d_vertex_degree, graph.d_vertex_degree + graph.V, graph.d_vertex_start);
         
-        fill_Ea <<< __gridDim, __blockDim >>> (graph.d_vertex_start, graph.d_adjVertices, graph.d_adjMtx_ptr, graph.V, numSupplies);
+        // fill_Ea <<< __gridDim, __blockDim >>> (graph.d_vertex_start, graph.d_adjVertices, graph.d_adjMtx_ptr, graph.V, numSupplies);
+        fill_Ea2 <<< __gridDim, __blockDim >>> (graph.d_vertex_start, graph.d_adjVertices, graph.d_adjMtx_ptr, graph.V, numSupplies);
         gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
 
@@ -282,7 +320,7 @@ __host__ void make_adjacency_list(Graph &graph, const int numSupplies, const int
         //                     Ea, is_nonzero_entry()); // --> need col indices of non-zeros
 
         // DEBUG :: 
-        __debug_view_adjList(graph.d_vertex_start, &graph.d_vertex_degree[1], graph.d_adjVertices, graph.V);
+        // __debug_view_adjList(graph.d_vertex_start, &graph.d_vertex_degree[1], graph.d_adjVertices, graph.V);
         // exit(0);
 }
 
@@ -506,20 +544,26 @@ __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, floa
     const int numSupplies, const int numDemands)
 {
 
-        __shared__ float U[blockSize];
-        __shared__ float V[blockSize];
+        __shared__ float U[reducedcostBlock];
+        __shared__ float V[reducedcostBlock];
         
         int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
         int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
 
         if (row_indx < numSupplies && col_indx < numDemands) {
             // r =  C_ij - (u_i + v_j);
-            U[threadIdx.y] =  u_vars_ptr[row_indx];
+            U[threadIdx.y] = u_vars_ptr[row_indx];
             V[threadIdx.x] = v_vars_ptr[col_indx];
-            __syncthreads();
+        }
+        
+        __syncthreads();
+        
+        if (row_indx < numSupplies && col_indx < numDemands) {
+
             float r = d_costs_ptr[row_indx*numDemands+col_indx] - U[threadIdx.y] - V[threadIdx.x];
             MatrixCell _m = {.row = row_indx, .col = col_indx, .cost = r};
             d_reducedCosts_ptr[row_indx*numDemands+col_indx] = _m;
+        
         }
 }
 
@@ -1207,5 +1251,210 @@ __global__ void analyse_t_closures(int k, int * d_pathMtx, int * d_adjMtx_transf
         }
     }
 }
+
+__global__ void init_multisource_bfs_frontier(vertexPin * empty_frontier, int * d_vertex_start, 
+    int * d_vertex_degree, int * d_adjVertices, int V) {
+
+    int idx = blockIdx.x*blockDim.x + threadIdx.x;
+    int idy = blockIdx.y*blockDim.y + threadIdx.y;
+
+    if (idx < V) {
+        int degree = d_vertex_degree[idx];
+        if (idy < degree) {
+            // Parallely load the neighbourhood of idx 
+            int start = d_vertex_start[idx];
+            int this_vertex = d_adjVertices[start + idy];
+            vertexPin _pin = {.from = idx, .via = this_vertex, .to = this_vertex, .skip = idx};
+            // Load the pin in the frontier
+            empty_frontier[start + idy] = _pin;
+        }
+    }
+}
+
+
+/* This is BFS Kernel with localized block atomics */
+__global__ void update_distance_path_and_create_next_frontier(
+                                        int * pathMtx,
+                                        int * d_adjMtx_transform,
+                                        int * d_vertex_start,
+                                        int * d_vertex_length,
+                                        int * d_adjVertices,
+                                        vertexPin * currLevelNodes,
+                                        vertexPin * nextLevelNodes,
+                                        int * numCurrLevelNodes,
+                                        int * numNextLevelNodes,
+                                        const int V,
+                                        const int iteration_number) 
+{
+
+    // Update the pathMatrix and distance
+    int idx = blockIdx.x*blockDim.x + threadIdx.x;
+    vertexPin this_vertex;
+    if (idx < *numCurrLevelNodes) {
+
+        // Path for this vertex is updated and neighbors of this_vertex are queued >>
+        this_vertex = currLevelNodes[idx];
+
+        int path_idx = this_vertex.to*V + this_vertex.from;
+        pathMtx[path_idx] = this_vertex.via;
+        d_adjMtx_transform[path_idx] = iteration_number+1;
+    }
+
+    // Now next frontier is prepared >> 
+
+    // Initialize shared memory queue
+    __shared__ vertexPin bqNodes[BQ_CAPACITY];
+    __shared__ int block_location, gq_location, bq_size;
+
+    if (threadIdx.x == 0) {
+        block_location = 0;
+        gq_location    = 0;
+        bq_size        = 0;
+    }
+    __syncthreads();
+
+    // For all nodes in the curent level -> get all neighbors of the node
+    // Except the skip add rest to the block queue
+    // If full, add it to the global queue
+    // vertexPin this_vertex = currLevelNodes[idx];
+    int current = this_vertex.to;
+    int current_skip = this_vertex.skip;
+    // Can try threads in y for this
+    if (idx < *numCurrLevelNodes) {
+
+        for (int j = d_vertex_start[current]; j < d_vertex_start[current] + d_vertex_length[current]; j++) {
+      
+            int neighbor = d_adjVertices[j];
+
+            // set the neighbor to 1 and check if it was not already visited -
+            if (!(neighbor==current_skip)) {
+
+                int location = atomicAdd(&block_location, 1);
+                this_vertex.skip = current;
+                this_vertex.to = neighbor;
+                
+                if (location < BQ_CAPACITY) {
+                    bqNodes[location] = this_vertex;
+                }
+                
+                else {
+                    location = atomicAdd(numNextLevelNodes, 1);
+                    nextLevelNodes[location] = this_vertex;
+                }
+            }
+        }
+    }
+
+    __syncthreads();
+    // Calculate space for block queue to go into global queue
+    if (threadIdx.x == 0) {
+        // no race condition on bq_size here
+        bq_size     = (BQ_CAPACITY < block_location) ? BQ_CAPACITY : block_location;
+        gq_location = atomicAdd(numNextLevelNodes, bq_size);
+    }
+    __syncthreads();
+
+    // Store block queue in global queue
+    for (unsigned int i = threadIdx.x; i < bq_size; i += blockDim.x) {
+        nextLevelNodes[gq_location + i] = bqNodes[i];
+    }
+}
+
+
+
+__global__ void update_distance_path_and_create_next_frontier_block_per_vertex(
+                                        int * pathMtx,
+                                        int * d_adjMtx_transform,
+                                        int * d_vertex_start,
+                                        int * d_vertex_length,
+                                        int * d_adjVertices,
+                                        vertexPin * currLevelNodes,
+                                        vertexPin * nextLevelNodes,
+                                        int * numCurrLevelNodes,
+                                        int * numNextLevelNodes,
+                                        const int V,
+                                        const int iteration_number) 
+{
+
+    int idx = blockIdx.x*blockDim.x + threadIdx.x;
+    __shared__ vertexPin this_vertex;
+
+    // Now next frontier is prepared >> 
+
+    // Initialize shared memory queue
+    __shared__ vertexPin bqNodes[BQ_CAPACITY];
+    __shared__ int block_location, gq_location, bq_size;
+
+    if (threadIdx.x == 0) {
+
+        block_location = 0;
+        gq_location    = 0;
+        bq_size        = 0;
+
+        if (blockIdx.x < *numCurrLevelNodes) {
+
+        // Update the pathMatrix and distance
+        // Path for this vertex is updated and neighbors of this_vertex are queued >>
+        this_vertex = currLevelNodes[blockIdx.x];
+
+        int path_idx = this_vertex.to*V + this_vertex.from;
+        pathMtx[path_idx] = this_vertex.via;
+        d_adjMtx_transform[path_idx] = iteration_number+1;
+        
+        }
+    }
+
+    __syncthreads();
+
+    // For all nodes in the curent level -> get all neighbors of the node
+    // Except the skip add rest to the block queue
+    // If full, add it to the global queue
+    vertexPin new_vertex = this_vertex;
+    int current = new_vertex.to;
+    int current_skip = new_vertex.skip;
+    // Can try threads in y for this
+    if (blockIdx.x < *numCurrLevelNodes) {
+
+        int j = d_vertex_start[current] + threadIdx.x;
+
+        while (j < d_vertex_start[current] + d_vertex_length[current]) {
+      
+            int neighbor = d_adjVertices[j];
+
+            // set the neighbor to 1 and check if it was not already visited -
+            if (!(neighbor==current_skip)) {
+
+                int location = atomicAdd(&block_location, 1);
+                new_vertex.skip = current;
+                new_vertex.to = neighbor;
+                
+                if (location < BQ_CAPACITY) {
+                    bqNodes[location] = new_vertex;
+                }
+                
+                else {
+                    location = atomicAdd(numNextLevelNodes, 1);
+                    nextLevelNodes[location] = new_vertex;
+                }
+            }
+            j = j + blockDim.x;
+        }
+    }
+
+    __syncthreads();
+    // Calculate space for block queue to go into global queue
+    if (threadIdx.x == 0) {
+        // no race condition on bq_size here
+        bq_size     = (BQ_CAPACITY < block_location) ? BQ_CAPACITY : block_location;
+        gq_location = atomicAdd(numNextLevelNodes, bq_size);
+    }
+    __syncthreads();
+
+    // Store block queue in global queue
+    for (unsigned int i = threadIdx.x; i < bq_size; i += blockDim.x) {
+        nextLevelNodes[gq_location + i] = bqNodes[i];
+    }
+}
+
 
 #endif

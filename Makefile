@@ -1,7 +1,7 @@
 CPP=g++ -std=c++14 -DBOOST_LOG_DYN_LINK
 PROFILE_FLAGS=-lineinfo
 DEBUG_FLAGS=-G -g
-CUDA_COMPILER=nvcc -arch=sm_75 -w -std=c++14 -Xcompiler -fopenmp -O3 
+CUDA_COMPILER=nvcc -arch=sm_75 -w -std=c++14 -Xcompiler -fopenmp -O3 $(PROFILE_FLAG)
 SRC=./src
 
 BOOST_INCLUDE_PATH=/home/mohitm3/cpp_libs/boost_1_78_0
@@ -16,7 +16,7 @@ LIB_CUDA=-lcudart -lnvToolsExt -lcusparse -lcusolver
 
 all: flock clean
 
-flock: ensureDir lpMethod.o parallel_uv_method.o parallel_ss_method.o parallel_commons.o
+flock: ensureDir lpMethod.o parallel_uv_method.o parallel_ss_method.o switch_hybrid_method.o parallel_commons.o
 	$(CPP) $(SRC)/*.cpp ./bin/*.o -I$(GUROBI_HOME)/include/ -I$(BOOST_INCLUDE_PATH)/ -I$(CUDA)/include/ -L$(GUROBI_HOME)/lib/ -L$(BOOST_LIB_PATH)/lib/ -L$(CUDA)/lib64/ $(LIB_GUROBI) $(LIB_BOOST) $(LIB_CUDA) -lgomp -o ./bin/flock
 
 lpMethod.o:
@@ -30,6 +30,9 @@ parallel_uv_method.o:
 parallel_ss_method.o:
 	$(CUDA_COMPILER) -c $(SRC)/parallel_simplex_method/parallel_ss_method/PIVOT_ss.cu -o ./bin/PIVOT_ss.o
 	$(CUDA_COMPILER) -c $(SRC)/parallel_simplex_method/parallel_ss_method/ss_model_parallel.cu -o ./bin/ss_model_parallel.o
+
+switch_hybrid_method.o:
+	$(CUDA_COMPILER) -c $(SRC)/parallel_simplex_method/switch/switch_model_parallel.cu -o ./bin/switch_model_parallel.o
 	
 parallel_commons.o:
 	$(CUDA_COMPILER) -c $(SRC)/parallel_simplex_method/IBFS_nwc.cu -o ./bin/IBFS_nwc.o

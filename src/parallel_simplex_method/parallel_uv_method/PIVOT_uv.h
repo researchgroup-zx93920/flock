@@ -16,9 +16,9 @@ Todo:
 namespace UV_METHOD {
 
 // ALLOCATE and DE-ALLOCATE RESOURCES
-__host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands);
+__host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands, char * pivoting_strategy);
 
-__host__ void pivotFree(PivotHandler &pivot);
+__host__ void pivotFree(PivotHandler &pivot, char * pivoting_strategy);
 
 
 // Sequencial Pivoting API >>>

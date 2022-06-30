@@ -15,9 +15,9 @@ Todo:
 namespace SS_METHOD 
 {
     // ALLOCATE and DE-ALLOCATE RESOURCES
-__host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands);
+__host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands, char * pivoting_strategy);
 
-__host__ void pivotFree(PivotHandler &pivot);
+__host__ void pivotFree(PivotHandler &pivot, char * pivoting_strategy);
 
 
 // Sequencial Pivoting API >>>
@@ -29,7 +29,7 @@ __host__ void pivotFree(PivotHandler &pivot);
 //     Graph &graph, bool &result, int numSupplies, int numDemands, int iteration);
 
 __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, PivotTimer &timer, 
-    Graph &graph, float * d_costs_ptr, bool &result, int numSupplies, int numDemands, int iteration);
+    Graph &graph, float * d_costs_ptr, bool &result, int numSupplies, int numDemands, int iteration, int &num_pivots);
 
-}
+} // End of NAMESPACE
 

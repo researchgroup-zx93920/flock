@@ -5,22 +5,18 @@ DISCLAIMER :
 
 TODO:
 1. Testing methods for both kinds of DFS (CPU and GPU)
-2. Efficient Data Structure for micro_DFS instead of adjMtx
-3. Can avoid memcpy opertion of device_CostMatrix_ptr between constructor and vogel call
-4. int to Unsigned int
-5. Change adjacency matrix and flow matrix struct documentation
-6. VOGEL is missing some flows in some specific degenerate cases !! - Need a diagnosis here!
+2. Can avoid memcpy opertion of device_CostMatrix_ptr between constructor and vogel call
 */
 
-#include "uv_model_parallel.h"
+#include "switch_model_parallel.h"
 
 /*
 Constructor - Maintaining consistancy across algorithm modes
 */
-uvModel_parallel::uvModel_parallel(ProblemInstance *problem, flowInformation *flows)
+switchModel_parallel::switchModel_parallel(ProblemInstance *problem, flowInformation *flows)
 {
 
-    std::cout << std::endl <<"Initializing UV Model (parallel)" << std::endl;
+    std::cout << std::endl <<"Initializing Stepping Stone Model (parallel)" << std::endl;
     data = problem; // Get problem instance in this class
     optimal_flows = flows; // Flows are still on the CPU memory 
 
@@ -52,8 +48,6 @@ uvModel_parallel::uvModel_parallel(ProblemInstance *problem, flowInformation *fl
 
     // Initialize model statistics >>
     deviceCommunicationTime = 0.0;
-    uv_time = 0.0; 
-    reduced_cost_time = 0.0; 
     pivot_time = 0.0;
     cycle_discovery_time = 0.0;
     resolve_time = 0.0;
@@ -68,7 +62,7 @@ uvModel_parallel::uvModel_parallel(ProblemInstance *problem, flowInformation *fl
 /*
 Destructor - Low Prioirity Issue (Handle Later)
 */
-uvModel_parallel::~uvModel_parallel()
+switchModel_parallel::~switchModel_parallel()
 {
     // On thrust layer - replace by thrust eqv. of free
     free(costMatrix);
@@ -76,7 +70,7 @@ uvModel_parallel::~uvModel_parallel()
 
     // FREE GPU MEMORY CREATED IN INITIALIZATION
     gpuErrchk(cudaFree(d_costs_ptr));
-    // gpuErrchk(cudaFree(device_costMatrix_ptr)); 
+    // gpuErrchk(cudaFree(device_costMatrix_ptr));
 }
 
 /*
@@ -84,7 +78,7 @@ Generate initial basic feasible solution using the selected method
 This function populates the feasible_flows attribute of the parent class, that is subject
 to updates by the subsequent improvement techniques
 */
-void uvModel_parallel::generate_initial_BFS()
+void switchModel_parallel::generate_initial_BFS()
 {
     // Data is available on the class objects - Call one of the IBFS methods on these
     
@@ -127,7 +121,7 @@ the U_vars and V_vars attributes
     1. Use a bfs method for dual (trickle down approach)
     2. Use a off-the-shelf solver for linear equation 
 */
-void uvModel_parallel::solve_uv()
+void switchModel_parallel::solve_uv()
 {
     /* 
     solve_uv method - Need to populate u_vars_ptr and v_vars_ptr attributes of this class 
@@ -222,69 +216,38 @@ void uvModel_parallel::solve_uv()
 Pretty generic method to compute reduced 
 costs provided a cost-matrix and u_vars, v_vars and cost Matrix on device
 */
-void uvModel_parallel::get_reduced_costs() 
+void switchModel_parallel::get_reduced_costs() 
 {
-    if (REDUCED_COST_MODE == "parallel") {
-
-
-        dim3 __dimBlock(reducedcostBlock, reducedcostBlock, 1); // Refine this based on device query
-        dim3 __dimGrid(ceil(1.0*data->numDemands/reducedcostBlock), ceil(1.0*data->numSupplies/reducedcostBlock), 1);
-        
-        computeReducedCosts<<< __dimGrid, __dimBlock >>>(dual.u_vars_ptr, dual.v_vars_ptr, d_costs_ptr, d_reducedCosts_ptr, 
-            data->numSupplies, data->numDemands);
-        gpuErrchk(cudaPeekAtLastError());
-        gpuErrchk(cudaDeviceSynchronize());
-
-    }
-
-    else if (REDUCED_COST_MODE == "sequencial") {
-
-        float * h_u_vars = &dual.h_variables[0];
-        float * h_v_vars = &dual.h_variables[data->numSupplies];
-        float min_r = INT_MAX*1.0f;
-        int selected_pivot_row = -1;
-        int selected_pivot_column = -1;
-
-        for (int i = 0; i < data->numSupplies; i ++) {
-            for (int j = 0; j < data-> numDemands; j++) {
-                int indx = i*data->numDemands + j;
-                float r = costMatrix[indx].cost - h_u_vars[i] - h_v_vars[j];
-                if (r < min_r) {
-                    min_r = r;
-                    selected_pivot_row = i;
-                    selected_pivot_column = j;
-                }
-            }
-        }
-        MatrixCell _cost = {.row = selected_pivot_row, .col = selected_pivot_column, .cost = min_r};
-        cudaMemcpy(d_reducedCosts_ptr, &_cost, sizeof(MatrixCell), cudaMemcpyHostToDevice);
-
-    }
+    dim3 __dimBlock(32, 32, 1); // Refine this based on device query
+    dim3 __dimGrid(ceil(1.0*data->numDemands/32), ceil(1.0*data->numSupplies/32), 1);
+    computeReducedCosts<<< __dimGrid, __dimBlock >>>(dual.u_vars_ptr, dual.v_vars_ptr, d_costs_ptr, d_reducedCosts_ptr, 
+        data->numSupplies, data->numDemands);
+    gpuErrchk(cudaPeekAtLastError());
+    gpuErrchk(cudaDeviceSynchronize());
 }
 
 
+
 /* Perform pivot using a appropriate opterations as selected */
-void uvModel_parallel::perform_pivot(bool &result, int iteration) 
+void switchModel_parallel::perform_pivot(bool &result, int iteration, int &mode) 
 {
     // Find a negative reduced cost and pivot along >>
-    if (PIVOTING_STRATEGY == "sequencial_dfs") 
+    // Fixed Pivoting Strategy 
+    if (mode == 1) 
     {
         UV_METHOD::perform_a_sequencial_pivot(pivot, timer, graph, d_reducedCosts_ptr, result,
             data->numSupplies, data->numDemands);
     }
-
-    else if (PIVOTING_STRATEGY == "parallel_dfs") 
+    else if (mode == 0) 
     {
-        UV_METHOD::perform_a_parallel_pivot_dfs(pivot, timer, graph, d_reducedCosts_ptr, result,
-            data->numSupplies, data->numDemands, iteration);
-    }
+        int num_pivots = 0;
+        SS_METHOD::perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, d_costs_ptr, result,
+            data->numSupplies, data->numDemands, iteration, num_pivots);
 
-    else if (PIVOTING_STRATEGY == "parallel_fw") 
-    {
-        UV_METHOD::perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, d_reducedCosts_ptr, result,
-            data->numSupplies, data->numDemands, iteration);
+        if (num_pivots < round(0.02175*data->numSupplies + 0.03414*data->numDemands - 0.06368)/5) {
+            mode = 1;
+        }
     }
-    
     else
     {
         std::cout<<"Invalid selection of pivoting strategy"<<std::endl;
@@ -293,13 +256,11 @@ void uvModel_parallel::perform_pivot(bool &result, int iteration)
 }
 
 
-void uvModel_parallel::execute() 
+void switchModel_parallel::execute() 
 {
     // SIMPLEX ALGORITHM >>
-    std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nCALCULATE_DUAL: ";
-    std::cout<<CALCULATE_DUAL<<"\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY<<"\n-------------------------------------"<<std::endl;
-    std::cout<<"------------- PARAMS L2 -------------\nSPARSE_SOLVER: "<<SPARSE_SOLVER;
-    std::cout<<"\nPARALLEL PIVOTING METHOD: "<<PARALLEL_PIVOTING_METHOD<<"\n-------------------------------------"<<std::endl;
+    std::cout<<"------------- PARAMS L1 -------------\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY;
+    std::cout<<"\n-------------------------------------"<<std::endl;
 
     // **************************************
     // STEP 1: Finding BFS
@@ -316,10 +277,9 @@ void uvModel_parallel::execute()
     totalSolveTime += solution_time;
     
     /* **************************************
-    STEP 2: Modified Distribution Method (u-v method) - parallel/hybrid (improve the BFS solution)
+    STEP 2: Stepping Stone Method (ss-method) - parallel
     **************************************
     LOOP THORUGH - 
-        2.1 Use the current tree on device and solve u's and v's
         2.2 Compute Reduced costs
             2.3.1 If no - negative reduced costs - break the loop
             2.3.2 If there exist negative reduced costs -
@@ -338,18 +298,9 @@ void uvModel_parallel::execute()
     std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
     
     // Follow DUAL_solver for the following
-    dualMalloc(dual, data->numSupplies, data->numDemands);
-    std::cout<<"\tSuccessfully allocated Resources for DUAL ..."<<std::endl;
-
-    // Follow PIVOTING_dfs for the following
-    UV_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, PIVOTING_STRATEGY);
+    SS_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, PIVOTING_STRATEGY);
     std::cout<<"\tSuccessfully allocated Resources for PIVOTING ..."<<std::endl;
     
-    // Container for reduced costs
-    // gpuErrchk(cudaMalloc((void **) &d_reducedCosts_ptr, sizeof(MatrixCell)*data->numSupplies*data->numDemands));
-    d_reducedCosts_ptr = device_costMatrix_ptr;
-    std::cout<<"\tSuccessfully allocated Resources for Reduced costs ..."<<std::endl;
-
     // Create tree structure on host and device (for pivoting)
     create_IBF_tree_on_host_device(graph, feasible_flows, data->numSupplies, data->numDemands);
     std::cout<<"\tGenerated initial tree (on host & device) ..."<<std::endl;
@@ -357,62 +308,99 @@ void uvModel_parallel::execute()
     // **************************************
     // LOOP STEP 2 : SIMPLEX PROCEDURE
     // **************************************
-    std::cout<<"SIMPLEX PASS 2 :: find the dual -> reduced -> pivots -> repeat!"<<std::endl;
+    std::cout<<"SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!"<<std::endl;
     auto iter_start = std::chrono::high_resolution_clock::now();
     auto iter_end = std::chrono::high_resolution_clock::now();
     auto iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
+    int mode = 0;
+    int swiched_iteration = false;
 
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
+        make_adjacency_list(graph, data->numSupplies, data->numDemands);
         // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
         // view_tree();
         
-        /* This transformation step generate adj list for the current tree in each iteration
-        the output is used by dual as well as pivot because DFS will improve by elimination of zeros in sparse matrix
-        [ Note that this step is anyway performed in DUAL BFS but 
-        this is expected to be helpful in parallel pivot to supercharge DFS !! ]
-        */
-        make_adjacency_list(graph, data->numSupplies, data->numDemands);
-
         // 2.1 
-        iter_start = std::chrono::high_resolution_clock::now();
-        
-        solve_uv();
-        // view_uv();
-        // u_vars_ptr and v_vars ptr were populated on device
 
-        iter_end = std::chrono::high_resolution_clock::now();
-        iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
-        uv_time += iter_duration.count();
+        if (mode == 0) {
 
-        // 2.2 
-        iter_start = std::chrono::high_resolution_clock::now();
-        
-        get_reduced_costs();
-        // view_reduced_costs();
-        
-        // d_reducedCosts_ptr was populated on device
-        // count_negative_reduced_costs();
+            iter_start = std::chrono::high_resolution_clock::now();
+            
+            perform_pivot(result, iteration_counter, mode);
+            
+            iter_end = std::chrono::high_resolution_clock::now();
+            iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
+            pivot_time += iter_duration.count();
+            
+            swiched_iteration = (mode == 1);
 
-        iter_end = std::chrono::high_resolution_clock::now();
-        iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
-        reduced_cost_time += iter_duration.count();
-        
-        // DEBUG ::
-        // view_uv();
-        // view_tree();
-        // view_reduced_costs();
-        
-        // 2.3
-        iter_start = std::chrono::high_resolution_clock::now();
-        
-        perform_pivot(result, iteration_counter);
+        }
 
-        iter_end = std::chrono::high_resolution_clock::now();
-        iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
-        pivot_time += iter_duration.count();
+        // switch is guaranteed - the following is a one time operation
+        if (swiched_iteration) {
+
+            // Follow PIVOTING_dfs for the following
+            // Make some interchange
+            SS_METHOD::pivotFree(pivot, PIVOTING_STRATEGY);
+            UV_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, "sequencial_dfs");
+            std::cout<<"\tSuccessfully re-allocated Resources for PIVOTING ..."<<std::endl;
+
+            // Follow DUAL_solver for the following
+            dualMalloc(dual, data->numSupplies, data->numDemands);
+            std::cout<<"\tSuccessfully allocated Resources for DUAL ..."<<std::endl;
+
+            d_reducedCosts_ptr = device_costMatrix_ptr;
+            std::cout<<"\tSuccessfully allocated Resources for Reduced costs ..."<<std::endl;
+
+            swiched_iteration = false;
+
+        }
+
+        if (mode == 1) {
+
+            // 2.1 
+            iter_start = std::chrono::high_resolution_clock::now();
+        
+            solve_uv();
+            // view_uv();
+            // u_vars_ptr and v_vars ptr were populated on device
+
+            iter_end = std::chrono::high_resolution_clock::now();
+            iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
+            uv_time += iter_duration.count();
+
+            // 2.2 
+            iter_start = std::chrono::high_resolution_clock::now();
+            
+            get_reduced_costs();
+            // view_reduced_costs();
+            
+            // d_reducedCosts_ptr was populated on device
+            // count_negative_reduced_costs();
+
+            iter_end = std::chrono::high_resolution_clock::now();
+            iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
+            reduced_cost_time += iter_duration.count();
+        
+            // DEBUG ::
+            // view_uv();
+            // view_tree();
+            // view_reduced_costs();
+            
+            // 2.3
+            iter_start = std::chrono::high_resolution_clock::now();
+            
+            perform_pivot(result, iteration_counter, mode);
+
+            iter_end = std::chrono::high_resolution_clock::now();
+            iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
+            pivot_time += iter_duration.count();
+
+        }
 
         iteration_counter++;
+    
     }
 
     std::cout<<"SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU"<<std::endl;
@@ -425,7 +413,7 @@ void uvModel_parallel::execute()
 
     dualFree(dual);
     std::cout<<"\tSuccessfully de-allocated resources for DUAL ..."<<std::endl;
-    UV_METHOD::pivotFree(pivot, PIVOTING_STRATEGY);
+    UV_METHOD::pivotFree(pivot, "sequencial_dfs");
     std::cout<<"\tSuccessfully de-allocated Resources for PIVOT ..."<<std::endl;
     gpuErrchk(cudaFree(d_reducedCosts_ptr));
     std::cout<<"\tSuccessfully de-allocated Resources for Reduced costs ..."<<std::endl;
@@ -462,75 +450,18 @@ void uvModel_parallel::execute()
     adjustment_time = timer.adjustment_time;
 
     std::cout<<" ============ Current Objective Value = "<<objval<<std::endl<<std::endl;
-    
-
 }
 
-void uvModel_parallel::create_flows()
+void switchModel_parallel::create_flows()
 {
     memcpy(optimal_flows, feasible_flows, (data->active_flows)*sizeof(flowInformation));
 }
 
 
 /*
-For Debugging purposes view - u, v, r_costs and adjMatrix >> 
+For Debugging purposes view - adjMatrix >> 
 */
-void uvModel_parallel::view_uv() 
-{
-
-    std::cout<<"Viewing DUAL COSTS - U, V \n *******************************"<<std::endl;
-
-    // Print U >>
-    float * u_vector;
-    u_vector = (float *) malloc(data->numSupplies*sizeof(float));
-    gpuErrchk(cudaMemcpy(u_vector, dual.u_vars_ptr, data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < data->numSupplies; i++) {
-        std::cout << "U[" << i << "] = " << u_vector[i] << std::endl;
-    }
-
-    std::cout<<" *****************************"<<std::endl;
-
-    // Print V >>
-    float * v_vector;
-    v_vector = (float *) malloc(data->numDemands*sizeof(float));
-    gpuErrchk(cudaMemcpy(v_vector, dual.v_vars_ptr, data->numDemands*sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < data->numDemands; i++) {
-        std::cout << "V[" << i << "] = " << v_vector[i] << std::endl;
-    }
-}
-
-void uvModel_parallel::view_reduced_costs() 
-{
-
-    std::cout<<"Viewing Reduced Costs \n *******************************"<<std::endl;
-
-    // Print reduced costs
-    MatrixCell * h_reduced_costs;
-    h_reduced_costs = (MatrixCell *) malloc(data->numDemands*data->numSupplies*sizeof(MatrixCell));
-    gpuErrchk(cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, data->numDemands*data->numSupplies*sizeof(MatrixCell), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < data->numDemands*data->numSupplies; i++) {
-        std::cout << "ReducedCosts[" << i << "] = " << h_reduced_costs[i].cost << std::endl;
-    }
-
-}
-
-void uvModel_parallel::count_negative_reduced_costs() 
-{
-
-    // Print reduced costs
-    float * h_reduced_costs;
-    int _count = 0;
-    h_reduced_costs = (float *) malloc(data->numDemands*data->numSupplies*sizeof(float));
-    gpuErrchk(cudaMemcpy(h_reduced_costs, d_reducedCosts_ptr, data->numDemands*data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost));
-    for (int i = 0; i < data->numDemands*data->numSupplies; i++) {
-        if (h_reduced_costs[i] < 0 && abs(h_reduced_costs[i]) > 10e-3) {
-            _count++;
-        }
-    }
-    std::cout<<"Number of Negative Reduced Costs = "<<_count<<std::endl;
-}
-
-void uvModel_parallel::view_tree() 
+void switchModel_parallel::view_tree() 
 {
 
     std::cout<<"Viewing tree - adjMatrix & flowMatrix \n *******************************"<<std::endl;

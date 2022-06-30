@@ -27,13 +27,17 @@
 #include "../structs.h"
 
 // Profiling
-// #include <nvToolsExt.h>
+#include <nvToolsExt.h>
 
 #ifndef UV_STRUCTS
 #define UV_STRUCTS
 
 // PARAMETERS
 #define blockSize 8
+#define reducedcostBlock 16
+
+// Maximum number of elements that can be inserted into a block queue
+#define BQ_CAPACITY 256
 
 // Degeneracy resolve
 #define epsilon 0.000001f
@@ -71,7 +75,7 @@ device_dense_linear_solver : solve system of dense lin_equations (dense linear a
 qr, chol
 */
 
-#define PIVOTING_STRATEGY "parallel_fw"
+#define PIVOTING_STRATEGY "sequencial_dfs"
 /*
 sequencial_dfs : perform pivoting one at a time based on dantzig's rule
 parallel_dfs : perform parallel pivoting by DFS strategy to build cycles
@@ -101,8 +105,8 @@ Just consider at most 2(M + N) negative reduced costs
 Idea to use from above 1/2
 */
 
-#define APSP_KERNEL "fw_naive"
-/*
+#define APSP_KERNEL "t_closure"
+/* 
 fw_naive: Use naive floyd warshall cuda implementation 
 fw_blocked: Use blocked floyd warshall cuda implementation
 t_closure : Use triadic closure strategy
@@ -114,10 +118,16 @@ r : deconflict pivots purely based on reduced costs
 delta : deconflict parallel pivots based on delta -> currently appliable to stepping stone method
 */
 
-#define MAX_ITERATIONS 100
+#define MAX_ITERATIONS 30000
 
 /* Upper bound on max number of independent pivots */
 #define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
+
+#define REDUCED_COST_MODE "parallel"
+/*
+A mode for switching to pure sequencial algorithm
+change it to "sequencial" or "parallel"
+*/
 
 // >>>>>>>>>> END OF PARAMETERS // 
 
@@ -397,9 +407,13 @@ struct Graph {
 
 };
 
+struct vertexPin {
+    int from, via, to, skip;
+};
+
+std::ostream& operator << (std::ostream& o, const vertexPin& x);
 std::ostream& operator << (std::ostream& o, const MatrixCell& x);
 std::ostream& operator << (std::ostream& o, const vogelDifference& x);
 std::ostream& operator << (std::ostream& o, const Variable& x);
-
 
 #endif

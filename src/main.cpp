@@ -98,6 +98,25 @@ int main(int argc, char **argv)
     <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
   }
 
+  else if (problem.algo == ProblemInstance::my_algo::switch_hybrid)
+  {
+    switchModel_parallel model = switchModel_parallel(&problem, flows);
+    model.execute();
+    model.create_flows();
+    BOOST_LOG_TRIVIAL(info)<<">>>> BASIC STATISTICS | Objective: "<<model.objVal<<" | Iterations: "<<model.totalIterations<<" | Time: "<<model.totalSolveTime \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
+
+    BOOST_LOG_TRIVIAL(info)<<">>>> LVL1 STATISTICS | Total Time: "<<model.totalSolveTime \
+    <<" | PIVOT Time: "<<round(model.pivot_time/1000)                                    \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
+
+    BOOST_LOG_TRIVIAL(info)<<">>>> LVL2 PIVOT STATISTICS | Total Pivot Time: "<<round(model.pivot_time/1000)  \
+    <<" | CYCLE Time: "<<round(model.cycle_discovery_time/1000)                                      \
+    <<" | RESOLVE Time: "<<round(model.resolve_time/1000)                              \
+    <<" | ADJUST Time: "<<round(model.adjustment_time/1000)                            \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
+  }
+
   BOOST_LOG_TRIVIAL(info) << "Flows created successfully!";
 
   // for (int i=0; i<(problem.active_flows); i++) {

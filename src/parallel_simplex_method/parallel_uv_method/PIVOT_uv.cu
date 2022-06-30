@@ -5,11 +5,11 @@ namespace UV_METHOD {
 Setup necessary resources for pivoting 
 these resources are static and to be shared/overwritten between iterations
 */
-__host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands) {
+__host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands, char * pivoting_strategy) {
 
     int V = numSupplies + numDemands;
 
-    if (PIVOTING_STRATEGY=="sequencial_dfs") {
+    if (pivoting_strategy=="sequencial_dfs") {
 
         // Pivoting requires some book-keeping (for the DFS procedure)
         // BOOK 1: Stores the routes discovered for each thread -
@@ -20,7 +20,7 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands) 
         pivot.visited = (bool *) malloc(sizeof(bool)*V);
     }
     
-    else if (PIVOTING_STRATEGY == "parallel_dfs") {
+    else if (pivoting_strategy == "parallel_dfs") {
 
         // Allocate appropriate resources, Specific to parallel pivot >>
         int num_threads_launching = NUM_THREADS_LAUNCHING(numSupplies, numDemands, PARALLEL_PIVOT_IDEA);
@@ -47,7 +47,7 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands) 
 
     }
 
-    else if (PIVOTING_STRATEGY == "parallel_fw") {
+    else if (pivoting_strategy == "parallel_fw") {
 
         // Allocate Resources for floydwarshall cycle discovery strategy
         gpuErrchk(cudaMalloc((void **) &pivot.d_adjMtx_transform, V*V*sizeof(int)));
@@ -65,9 +65,9 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands) 
 /* 
 Free up acquired resources for pivoting on host device 
 */
-__host__ void pivotFree(PivotHandler &pivot) {
+__host__ void pivotFree(PivotHandler &pivot, char * pivoting_strategy) {
 
-    if (PIVOTING_STRATEGY == "sequencial_dfs") {
+    if (pivoting_strategy == "sequencial_dfs") {
         
         free(pivot.backtracker);
         free(pivot.stack);
@@ -75,7 +75,7 @@ __host__ void pivotFree(PivotHandler &pivot) {
     
     }
 
-    else if (PIVOTING_STRATEGY == "parallel_dfs")
+    else if (pivoting_strategy == "parallel_dfs")
     {
         // Free up space >>
         gpuErrchk(cudaFree(pivot.backtracker));
@@ -323,11 +323,21 @@ __host__ void perform_a_sequencial_pivot(PivotHandler &pivot, PivotTimer &timer,
     Graph &graph, MatrixCell * d_reducedCosts_ptr, bool &result, int numSupplies, int numDemands) {
 
     MatrixCell min_reduced_cost;
-    
+    int min_indx;
     // Find index of most negative reduced cost negative reduced cost >>
-    int min_indx = thrust::min_element(thrust::device,
+    if (REDUCED_COST_MODE=="parallel") {
+
+        min_indx = thrust::min_element(thrust::device,
                 d_reducedCosts_ptr, d_reducedCosts_ptr + (numSupplies*numDemands), compareCells()) - d_reducedCosts_ptr;
+
+    }
+
+    else if (REDUCED_COST_MODE=="sequencial") {
+        min_indx = 0;
+    }
+    
     gpuErrchk(cudaMemcpy(&min_reduced_cost, &d_reducedCosts_ptr[min_indx], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
+    
 
     if (min_reduced_cost.cost < 0 && std::abs(min_reduced_cost.cost) > epsilon2) {
 
@@ -820,6 +830,7 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     MatrixCell min_reduced_cost;
     
     // Find index of most negative reduced cost negative reduced cost >>
+    std::cout<<"FLOCK SCREAM :: SORT IS A REDUNDANT OPERATION - REMOVE IT !!"<<std::endl;
     thrust::sort(thrust::device,
             d_reducedCosts_ptr, d_reducedCosts_ptr + (numSupplies*numDemands), compareCells());
     gpuErrchk(cudaMemcpy(&min_reduced_cost, &d_reducedCosts_ptr[0], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
@@ -856,22 +867,17 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
 
     if (APSP_KERNEL=="naive") {
         
-        int * from_array, * current_array, * neighbourhood_counter;
-        cudaMalloc((void**) &from_array, sizeof(int)*graph.V*graph.V);
-        cudaMalloc((void**) &current_array, sizeof(int)*graph.V*graph.V);
-        cudaMalloc((void**) &neighbourhood_counter, sizeof(int)*graph.V*graph.V);
-
         // Initialize the grid and block dimensions here
-        dim3 dimBlock2(blockSize, 1, 1);
-        dim3 dimGrid2((1.0*graph.V*graph.V/blockSize), 1, 1);
+        dim3 dimGrid2((graph.V - 1) / blockSize + 1, (graph.V - 1) / blockSize + 1, 1);
+        dim3 dimBlock2(blockSize, blockSize, 1);
 
-        start_BFS <<< dimGrid2 , dimBlock2 >>> (d_reducedCosts_ptr, graph.d_vertex_degree, from_array, neighbourhood_counter, numSupplies*numDemands);
-        gpuErrchk(cudaPeekAtLastError());
-        gpuErrchk(cudaDeviceSynchronize());
-
-        for (int i = 0; i < graph.V-1; i++) {
-            
-        } 
+        /* cudaFuncSetCacheConfig(_naive_fw_kernel, cudaFuncCachePreferL1); */
+        for (int vertex = 0; vertex < graph.V; ++vertex) {
+            _naive_floyd_warshall_kernel <<< dimGrid2, dimBlock2 >>> (vertex, graph.V, numSupplies, numDemands, 
+                pivot.d_adjMtx_transform, pivot.d_pathMtx);
+            gpuErrchk(cudaPeekAtLastError());
+            gpuErrchk(cudaDeviceSynchronize());
+        }
     }
     else {
         std::cout<<"ERROR: Invalid Floyd warshall kernel selected!";
@@ -879,8 +885,8 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     }
 
     // DEBUG UTILITY : view floyd warshall output >>
-    _debug_print_APSP(pivot.d_adjMtx_transform, pivot.d_pathMtx, graph.V);
-    exit(0);
+    // _debug_print_APSP(pivot.d_adjMtx_transform, pivot.d_pathMtx, graph.V);
+    // exit(0);
 
     // std::cout<<"Finding diameter of graph"<<std::endl;
     // Get the diameter of tree and allocate memory for storing cycles
@@ -917,6 +923,7 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     bool search_complete = false;
     int shared_mem_requirement = sizeof(int)*diameter; // allocated cycle length 
     int deconflicted_cycles_count = 0;
+    int min_indx = 0;
 
     while (!search_complete) {
 

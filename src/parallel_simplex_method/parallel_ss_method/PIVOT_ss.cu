@@ -5,7 +5,7 @@ namespace SS_METHOD {
 Setup necessary resources for pivoting 
 these resources are static and to be shared/overwritten between iterations
 */
-__host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands) {
+__host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands, char * pivoting_strategy) {
 
     int V = numSupplies + numDemands;
 
@@ -40,7 +40,7 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands) 
 /* 
 Free up acquired resources for pivoting on host device 
 */
-__host__ void pivotFree(PivotHandler &pivot) {
+__host__ void pivotFree(PivotHandler &pivot, char * pivoting_strategy) {
 
     // if (PIVOTING_STRATEGY == "parallel_fw")
     // {
@@ -269,6 +269,30 @@ __host__ static void debug_viewOpportunity_costs(PivotHandler &pivot, float * d_
     }
 }
 
+/* Prints the current frontier in BFS intermediate iterations */
+__host__ static void debug_viewCurrentFrontier(vertexPin * d_bfs_frontier, int length_of_frontier) {
+
+    std::cout<<"Viewing Current Frontier"<<std::endl;
+
+    vertexPin * h_bfs_frontier = (vertexPin *) malloc(sizeof(vertexPin)*length_of_frontier);
+    cudaMemcpy(h_bfs_frontier, d_bfs_frontier, length_of_frontier*sizeof(vertexPin), cudaMemcpyDeviceToHost);
+
+    for (int i=0; i < length_of_frontier; i++) {
+        std::cout<<"Element : "<<i<<" ===> \n"<<h_bfs_frontier[i]<<std::endl;
+    }
+}
+
+__host__ static void swap_frontier(vertexPin * &a, vertexPin * &b){
+  vertexPin *temp = a;
+  a = b;
+  b = temp;
+}
+
+__host__ static void swap_lengths(int * &a, int * &b){
+  int *temp = a;
+  a = b;
+  b = temp;
+}
 
 namespace SS_METHOD {
 /*
@@ -280,7 +304,7 @@ Step 1: Find all point to all points shortest distance with Floyd Warshall using
 - Step 4: Perfrom flow adjustment on the paths
 */
 __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, PivotTimer &timer, 
-    Graph &graph, float * d_costs_ptr, bool &result, int numSupplies, int numDemands, int iteration) {
+    Graph &graph, float * d_costs_ptr, bool &result, int numSupplies, int numDemands, int iteration, int &num_pivots) {
     
     // Find index of most negative reduced cost negative reduced cost >>
 
@@ -357,17 +381,80 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
 
     else if (APSP_KERNEL=="t_closure") { 
 
-        dim3 dimBlock_closure(blockSize, blockSize, blockSize);
-        dim3 dimGrid_closure(ceil(1.0*graph.V/blockSize),ceil(1.0*graph.V/blockSize),ceil(1.0*graph.V/blockSize));
+        vertexPin * d_bfs_frontier_current, * d_bfs_frontier_next;
+        int * current_frontier_length, * next_frontier_length;
+        
+        gpuErrchk(cudaMalloc((void **) &d_bfs_frontier_current, sizeof(vertexPin)*graph.V*graph.V));
+        gpuErrchk(cudaMalloc((void **) &d_bfs_frontier_next, sizeof(vertexPin)*graph.V*graph.V));
+        gpuErrchk(cudaMalloc((void **) &current_frontier_length, sizeof(int)));
+        gpuErrchk(cudaMalloc((void **) &next_frontier_length, sizeof(int)));
 
-        for (int k=0; k< graph.V; k++){
+        dim3 dim_initGrid(ceil(1.0*graph.V/blockSize), ceil(1.0*graph.V/blockSize), 1);
+        dim3 dim_initBlock(blockSize, blockSize, 1);
+
+        init_multisource_bfs_frontier<<< dim_initGrid, dim_initBlock >>>(d_bfs_frontier_current, graph.d_vertex_start, &graph.d_vertex_degree[1], graph.d_adjVertices, graph.V);
+        gpuErrchk(cudaPeekAtLastError());
+        gpuErrchk(cudaDeviceSynchronize());
+
+        // length of initial frontier (2*edges) - remember this is a vertex frontier
+        // The BFS happens on the same tree from multiple source vertices
+        int length_of_frontier =  2*(graph.V-1); 
+        const int zero = 0;
+        int iteration_number = 0;
+        // debug_viewCurrentFrontier(d_bfs_frontier_current, length_of_frontier);
+
+        gpuErrchk(cudaMemcpy(current_frontier_length, &length_of_frontier, sizeof(int), cudaMemcpyHostToDevice));
+        gpuErrchk(cudaMemcpy(next_frontier_length, &zero, sizeof(int), cudaMemcpyHostToDevice));
+
+        int this_blockSize = 64;
+
+        dim3 dimBFSBlock(this_blockSize, 1, 1);
+        dim3 dimBFSGrid(ceil(1.0*graph.V*graph.V/this_blockSize),1,1);
+        // dim3 dimBFSGrid(graph.V*graph.V, 1, 1);
+
+        // BFS Kernel that updates the path Matrix and adjMatrix_transform //
+        while (length_of_frontier > 0) {
             
-            analyse_t_closures<<<dimGrid_closure, dimBlock_closure>>>(k, pivot.d_pathMtx, pivot.d_adjMtx_transform, graph.V);
+            update_distance_path_and_create_next_frontier<<< dimBFSGrid, dimBFSBlock >>>(pivot.d_pathMtx, pivot.d_adjMtx_transform, 
+                graph.d_vertex_start, &graph.d_vertex_degree[1], graph.d_adjVertices, 
+                d_bfs_frontier_current, d_bfs_frontier_next,
+                current_frontier_length, next_frontier_length, graph.V, iteration_number);
             gpuErrchk(cudaPeekAtLastError());
             gpuErrchk(cudaDeviceSynchronize());
 
+            // update_distance_path_and_create_next_frontier_block_per_vertex<<< dimBFSGrid, dimBFSBlock >>>(pivot.d_pathMtx, pivot.d_adjMtx_transform, 
+            //     graph.d_vertex_start, &graph.d_vertex_degree[1], graph.d_adjVertices, 
+            //     d_bfs_frontier_current, d_bfs_frontier_next,
+            //     current_frontier_length, next_frontier_length, graph.V, iteration_number);
+            // gpuErrchk(cudaPeekAtLastError());
+            // gpuErrchk(cudaDeviceSynchronize());
+            
+            // Post iteration >>
+            iteration_number++;
+            
+            // Swap next and current >>
+            swap_frontier(d_bfs_frontier_current, d_bfs_frontier_next);
+
+            // Reset Next Length >>
+            swap_lengths(current_frontier_length, next_frontier_length);
+            gpuErrchk(cudaMemcpy(next_frontier_length, &zero, sizeof(int), cudaMemcpyHostToDevice));
+
+            // gpuErrchk(cudaMemcpy(&length_of_frontier, current_frontier_length, sizeof(int), cudaMemcpyDeviceToHost));
+            // std::cout<<"Length of Frontier = "<<length_of_frontier<<std::endl;
+            // debug_viewCurrentFrontier(d_bfs_frontier_current, length_of_frontier);
+            // exit(0);
+
+            // After every 50 iterations check if the BFS is complete
+            if ((iteration_number+1)%50 == 0) {
+                gpuErrchk(cudaMemcpy(&length_of_frontier, current_frontier_length, sizeof(int), cudaMemcpyDeviceToHost));
+            }
         }
 
+        gpuErrchk(cudaFree(d_bfs_frontier_current));
+        gpuErrchk(cudaFree(d_bfs_frontier_next));
+        gpuErrchk(cudaFree(current_frontier_length));
+        gpuErrchk(cudaFree(next_frontier_length));
+    
     }
 
     else {
@@ -376,8 +463,8 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     }
 
     // DEBUG UTILITY : view path output >>
-    _debug_print_APSP(pivot.d_adjMtx_transform, pivot.d_pathMtx, graph.V);
-    exit(0);
+    // _debug_print_APSP(pivot.d_adjMtx_transform, pivot.d_pathMtx, graph.V);
+    // exit(0);
 
     // std::cout<<"Finding diameter of graph"<<std::endl;
     // Get the diameter of tree and allocate memory for storing cycles
@@ -386,7 +473,7 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     int * diameter_ptr = thrust::max_element(thrust::device, pivot.d_adjMtx_transform, pivot.d_adjMtx_transform + simplex_gridDim);
     gpuErrchk(cudaMemcpy(&diameter, diameter_ptr, sizeof(int), cudaMemcpyDeviceToHost));
     diameter+=2; // Length of cycle = length of path + 1
-    // std::cout<<"Diameter = "<<diameter<<std::endl;
+    // std::cout<<"\tDiameter = "<<diameter<<std::endl;
     
     // Allocate memory for cycles
     gpuErrchk(cudaMalloc((void **) &pivot.d_pivot_cycles, numSupplies*numDemands*(diameter)*sizeof(int)));
@@ -499,6 +586,7 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     _pivot_end = std::chrono::high_resolution_clock::now();
     _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
     timer.adjustment_time += _pivot_duration.count();
+    num_pivots = deconflicted_cycles_count;
 
     // Free memory allocated for cycles
     gpuErrchk(cudaFree(pivot.d_pivot_cycles));

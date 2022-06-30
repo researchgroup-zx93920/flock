@@ -153,4 +153,15 @@ __global__ void _blocked_fw_independent_ph(const int blockId, size_t pitch, cons
 
 __global__ void analyse_t_closures(int k, int * d_pathMtx, int * d_adjMtx_transform, const int V);
 
+__global__ void init_multisource_bfs_frontier(vertexPin * empty_frontier, int * d_vertex_start, 
+    int * d_vertex_degree, int * d_adjVertices, int V);
+
+__global__ void update_distance_path_and_create_next_frontier(int * pathMtx, int * d_adjMtx_transform, int * d_vertex_start,
+            int * d_vertex_length, int * d_adjVertices, vertexPin * currLevelNodes, vertexPin * nextLevelNodes,
+            int * numCurrLevelNodes, int * numNextLevelNodes, const int V, const int iteration_number);
+
+__global__ void update_distance_path_and_create_next_frontier_block_per_vertex(int * pathMtx, int * d_adjMtx_transform, int * d_vertex_start,
+            int * d_vertex_length, int * d_adjVertices, vertexPin * currLevelNodes, vertexPin * nextLevelNodes,
+            int * numCurrLevelNodes, int * numNextLevelNodes, const int V, const int iteration_number);
+
 #endif

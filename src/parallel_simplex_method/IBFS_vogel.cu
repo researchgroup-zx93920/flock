@@ -538,8 +538,8 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
 
     std::cout << "FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete" << std::endl;
     std::cout << "FINDING BFS : Step timing (microsecs) | Map Time = "<<map_time<<" | Reduction Time = "<<reduction_time;
-    std::cout<< " | Allocation Time = "<<allocation_time<<std::endl;
-    std::cout<<"FINDING BFS : init time : "<<init_time<<std::endl;
+    std::cout<< " | Allocation Time = "<<allocation_time;
+    std::cout<<" | Init Time = "<<init_time<<std::endl;
 }
 
 
@@ -764,6 +764,6 @@ void find_vogel_bfs_sequencial(int * supplies, int * demands, MatrixCell * costM
 
     std::cout<<"FINDING BFS : Vogel Host Kernel - END : Initial Assignment Complete"<<std::endl;
     std::cout << "FINDING BFS : Step timing (microsecs) | Map Time = "<<map_time<<" | Reduction Time = "<<reduction_time;
-    std::cout<< " | Allocation Time = "<<allocation_time<<std::endl;
-    std::cout<<"FINDING BFS : init time : "<<init_time<<std::endl;
+    std::cout<< " | Allocation Time = "<<allocation_time;
+    std::cout<<" | Init Time = "<<init_time<<std::endl;
 }

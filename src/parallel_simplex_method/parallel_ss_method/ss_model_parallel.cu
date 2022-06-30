@@ -131,8 +131,9 @@ void ssModel_parallel::perform_pivot(bool &result, int iteration)
     }
     else if (PIVOTING_STRATEGY == "parallel_fw") 
     {
+        int num_pivots = 0;
         SS_METHOD::perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, d_costs_ptr, result,
-            data->numSupplies, data->numDemands, iteration);
+            data->numSupplies, data->numDemands, iteration, num_pivots);
     }
     else
     {
@@ -184,7 +185,7 @@ void ssModel_parallel::execute()
     std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
     
     // Follow DUAL_solver for the following
-    SS_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands);
+    SS_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, PIVOTING_STRATEGY);
     std::cout<<"\tSuccessfully allocated Resources for PIVOTING ..."<<std::endl;
     
     // Create tree structure on host and device (for pivoting)
@@ -201,7 +202,7 @@ void ssModel_parallel::execute()
 
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
-        // make_adjacency_list(graph, data->numSupplies, data->numDemands);
+        make_adjacency_list(graph, data->numSupplies, data->numDemands);
         // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
         // view_tree();
         
@@ -226,7 +227,7 @@ void ssModel_parallel::execute()
     // **************************************
 
     
-    SS_METHOD::pivotFree(pivot);
+    SS_METHOD::pivotFree(pivot, PIVOTING_STRATEGY);
     std::cout<<"\tSuccessfully de-allocated Resources for PIVOT ..."<<std::endl;
 
     std::cout<<"\tProcessing Solution ..."<<std::endl;

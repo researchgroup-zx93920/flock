@@ -298,7 +298,9 @@ __host__ void find_dual_using_host_bfs(DualHandler &dual,  Graph &graph, float *
         }
 
         // Transfer back to GPU >> 
-        gpuErrchk(cudaMemcpy(dual.u_vars_ptr, &dual.h_variables[0], sizeof(int)*numSupplies, cudaMemcpyHostToDevice));
-        gpuErrchk(cudaMemcpy(dual.v_vars_ptr, &dual.h_variables[numSupplies], sizeof(int)*numDemands, cudaMemcpyHostToDevice));
+        if (REDUCED_COST_MODE == "parallel") {
 
+                gpuErrchk(cudaMemcpy(dual.u_vars_ptr, &dual.h_variables[0], sizeof(int)*numSupplies, cudaMemcpyHostToDevice));
+                gpuErrchk(cudaMemcpy(dual.v_vars_ptr, &dual.h_variables[numSupplies], sizeof(int)*numDemands, cudaMemcpyHostToDevice));
+        }
 }

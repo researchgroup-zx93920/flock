@@ -58,6 +58,9 @@ void get_algorithm(InputParser input, ProblemInstance &problem)
     else if (user_algo == "parallel_ss"){
         problem.algo = ProblemInstance::my_algo::parallel_ss;
     }
+    else if (user_algo == "switch_hybrid"){
+        problem.algo = ProblemInstance::my_algo::switch_hybrid;
+    }
     else
     {
         BOOST_LOG_TRIVIAL(error) << "Invalid Algorithm!";
