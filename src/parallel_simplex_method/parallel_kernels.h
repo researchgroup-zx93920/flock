@@ -141,7 +141,8 @@ __global__ void check_pivot_feasibility_dfs(int * depth, int * backtracker,
 __global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const int min_indx,
                 const int earlier_from, const int earlier_to, 
                 int * d_adjMtx_transform, int * d_pivot_cycles,
-                const int diameter, const int numSupplies, const int numDemands);
+                const int diameter, const int numSupplies, const int numDemands, 
+                const int stride, const int maxGridDim);
 
 __global__ void compute_opportunity_cost_and_delta(int * d_adjMtx_ptr, float * d_flowMtx_ptr, float * d_costs_ptr, 
     int * d_adjMtx_transform, int * d_pivot_cycles, float * d_opportunity_costs, 

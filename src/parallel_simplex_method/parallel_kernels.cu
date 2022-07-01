@@ -754,7 +754,8 @@ If it is infeasible then set the reduced cost of this cell as non-negative to de
 __global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const int min_indx,
                 const int earlier_from, const int earlier_to, 
                 int * d_adjMtx_transform, int * d_pivot_cycles,
-                const int diameter, const int numSupplies, const int numDemands) {
+                const int diameter, const int numSupplies, const int numDemands, 
+                const int stride, const int maxGridDim) {
 
     // Nomenclature : 
     // this_cycle - cycle located on this blockIdx.x
@@ -768,29 +769,28 @@ __global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const i
     __shared__ int earlier_cycle[blockSize];
     __shared__ bool conflict; // = false; 
     __shared__ MatrixCell this_cycleE;
-    __shared__ int this_cycle_depth ,earlier_cycle_depth, num_tiles_earlier;
+    __shared__ int this_cycle_depth ,earlier_cycle_depth, num_tiles_earlier, y_offset;
     
-
     // This cycle is available at offset - blockIdx.x*diameter  
     // Earlier cycle is available at offset - min_indx*diameter
     if (threadIdx.x ==0 && threadIdx.y == 0) {
-
-        this_cycleE = d_reducedCosts_ptr[blockIdx.y];
+        y_offset = maxGridDim*stride;
+        this_cycleE = d_reducedCosts_ptr[y_offset + blockIdx.y];
         this_cycle_depth = d_adjMtx_transform[this_cycleE.row*numDemands + this_cycleE.col];
         earlier_cycle_depth = d_adjMtx_transform[earlier_from*numDemands + earlier_to]; 
         num_tiles_earlier = ceil(1.0*earlier_cycle_depth/blockDim.x);
-    
     }
+    
     __syncthreads();
     
-    // First load this cycle in shared memory - 
+    // First loaded this cycle in shared memory - 
     if (this_cycleE.cost < 0) {
         
         // One time load per block
         int idx = blockDim.x*blockIdx.x + threadIdx.x;
 
         if (threadIdx.y == 0 && idx < this_cycle_depth) {
-            int offset = blockIdx.y*diameter + idx;
+            int offset = (y_offset + blockIdx.y)*diameter + idx;
             this_cycle[threadIdx.x] = d_pivot_cycles[offset];
         }
 
@@ -799,7 +799,7 @@ __global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const i
         // Tiling for earlier cycle >>
         // This cycle static
         for (int tile_no=0; tile_no < num_tiles_earlier; tile_no++) {
-            
+
             int load_from = min_indx*diameter + tile_no*blockDim.x;
             int load_upto = min_indx*diameter + earlier_cycle_depth;
 
@@ -810,13 +810,12 @@ __global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const i
             __syncthreads();
 
             // Comparison within block >> 
-            // threadidx.x
-            // threadIdx.y
             if (idx < this_cycle_depth && load_from + threadIdx.y < load_upto) {
 
                 if (this_cycle[threadIdx.x] == earlier_cycle[threadIdx.y]) {
-                    d_reducedCosts_ptr[blockIdx.y].cost = epsilon;
+                    d_reducedCosts_ptr[y_offset + blockIdx.y].cost = epsilon; // atomic not required - race is healthy! 
                 }
+            
             }
         }
     }

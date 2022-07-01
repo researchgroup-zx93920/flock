@@ -404,7 +404,7 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
         int * diameter_ptr = thrust::max_element(thrust::device, pivot.d_adjMtx_transform, pivot.d_adjMtx_transform + numSupplies*numDemands);
         gpuErrchk(cudaMemcpy(&diameter, diameter_ptr, sizeof(int), cudaMemcpyDeviceToHost));
         // diameter += 3;
-        std::cout<<"\tDiameter = "<<diameter<<std::endl;
+        // std::cout<<"\tDiameter = "<<diameter<<std::endl;
         
         // Allocate memory for storing cycles >> 
         gpuErrchk(cudaMalloc((void **) &pivot.d_pivot_cycles, h_num_NegativeCosts*(diameter)*sizeof(int)));
@@ -446,6 +446,7 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
     // Get most opportunistic flow index - 
     bool search_complete = false; 
     int deconflicted_cycles_count = 0;
+    std::cout<<"Num Negative R Costs :"<<h_num_NegativeCosts<<std::endl;
 
     while (!search_complete) {
 
@@ -457,30 +458,40 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
                 d_reducedCosts_ptr, d_reducedCosts_ptr + (h_num_NegativeCosts), compareCells()) - d_reducedCosts_ptr;
         gpuErrchk(cudaMemcpy(&min_opportunity_cost, &d_reducedCosts_ptr[min_indx], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
 
+        std::cout<<"Min Indx | Cost : "<<min_opportunity_cost.cost<<" | Row :"<<min_opportunity_cost.row<<" |  Col :"<<min_opportunity_cost.col<<std::endl;
+
         if (min_opportunity_cost.cost >= 0) {
             search_complete = true;
-            break;
         }
 
-        dim3 cf_Block(blockSize, blockSize, 1);
-        dim3 cf_Grid(ceil(1.0*diameter/blockSize), h_num_NegativeCosts, 1);
-        std::cout<<"Neg-costs = "<<h_num_NegativeCosts<<std::endl;
+        else {
 
-        pivot.deconflicted_cycles[deconflicted_cycles_count] = min_indx;
-        min_opportunity_cost.cost = epsilon;
-        gpuErrchk(cudaMemcpy(&d_reducedCosts_ptr[min_indx],&min_opportunity_cost, sizeof(MatrixCell), cudaMemcpyHostToDevice));
+            pivot.deconflicted_cycles[deconflicted_cycles_count] = min_indx;
+            min_opportunity_cost.cost = epsilon;
+            gpuErrchk(cudaMemcpy(&d_reducedCosts_ptr[min_indx],&min_opportunity_cost, sizeof(MatrixCell), cudaMemcpyHostToDevice));
+        
+            cudaDeviceProp prop;
+            gpuErrchk(cudaGetDeviceProperties(&prop, 0));
+            int num_strides = ceil(1.0*h_num_NegativeCosts/prop.maxGridSize[1]);
 
-        check_pivot_feasibility <<< cf_Grid, cf_Block >>> (d_reducedCosts_ptr, min_indx,
-                        min_opportunity_cost.row, min_opportunity_cost.col, 
-                        pivot.d_adjMtx_transform, pivot.d_pivot_cycles,
-                        diameter,numSupplies, numDemands);
+            for (int stride = 0; stride < num_strides; stride++) {
 
-        gpuErrchk(cudaPeekAtLastError());
-        gpuErrchk(cudaDeviceSynchronize());
-        deconflicted_cycles_count++;
+                dim3 cf_Block(64, 1, 1);
+                dim3 cf_Grid(ceil(1.0*diameter/64), min(h_num_NegativeCosts, 65535), 1);
+
+                check_pivot_feasibility <<< cf_Grid, cf_Block >>> (d_reducedCosts_ptr, min_indx,
+                                min_opportunity_cost.row, min_opportunity_cost.col, 
+                                pivot.d_adjMtx_transform, pivot.d_pivot_cycles,
+                                diameter,numSupplies, numDemands, stride, prop.maxGridSize[1]);
+                gpuErrchk(cudaPeekAtLastError());
+                gpuErrchk(cudaDeviceSynchronize());
+
+            }
+            deconflicted_cycles_count++;
+        }
 
     }
-
+    
     std::cout<<"Found "<<deconflicted_cycles_count<<" deconflicted cycles to be pivoted"<<std::endl;
     exit(0);
 
