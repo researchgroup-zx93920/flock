@@ -861,11 +861,11 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     dim3 dimBlock(blockSize, blockSize, 1);
     dim3 dimGrid(ceil(1.0*graph.V/blockSize),ceil(1.0*graph.V/blockSize),1);
     
-    fill_adjMtx <<< dimGrid, dimBlock >>> (pivot.d_adjMtx_transform, graph.d_adjMtx_ptr, pivot.d_pathMtx, graph.V);
-    gpuErrchk(cudaPeekAtLastError());
-    gpuErrchk(cudaDeviceSynchronize());
+    // fill_adjMtx <<< dimGrid, dimBlock >>> (pivot.d_adjMtx_transform, graph.d_adjMtx_ptr, pivot.d_pathMtx, graph.V);
+    // gpuErrchk(cudaPeekAtLastError());
+    // gpuErrchk(cudaDeviceSynchronize());
 
-    if (APSP_KERNEL=="naive") {
+    if (true) {
         
         // Initialize the grid and block dimensions here
         dim3 dimGrid2((graph.V - 1) / blockSize + 1, (graph.V - 1) / blockSize + 1, 1);
@@ -905,9 +905,9 @@ __host__ void perform_a_parallel_pivot_floyd_warshall(PivotHandler &pivot, Pivot
     dim3 dimGrid3(ceil(1.0*numDemands/blockSize), ceil(1.0*numSupplies/blockSize), 1);
     dim3 dimBlock3(blockSize, blockSize, 1);
 
-    expand_all_cycles<<<dimGrid3, dimBlock3>>>(pivot.d_adjMtx_transform, pivot.d_pathMtx, pivot.d_pivot_cycles, diameter, numSupplies, numDemands);
-    gpuErrchk(cudaPeekAtLastError());
-    gpuErrchk(cudaDeviceSynchronize());
+    // expand_all_cycles<<<dimGrid3, dimBlock3>>>(pivot.d_adjMtx_transform, pivot.d_pathMtx, pivot.d_pivot_cycles, diameter, numSupplies, numDemands);
+    // gpuErrchk(cudaPeekAtLastError());
+    // gpuErrchk(cudaDeviceSynchronize());
 
     // DEBUG UTILITY : view cycles in expanded form >>
     // _debug_view_discovered_cycles(pivot, diameter, numSupplies, numDemands);

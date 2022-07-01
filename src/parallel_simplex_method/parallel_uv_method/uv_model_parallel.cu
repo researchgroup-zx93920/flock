@@ -299,7 +299,7 @@ void uvModel_parallel::execute()
     std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nCALCULATE_DUAL: ";
     std::cout<<CALCULATE_DUAL<<"\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY<<"\n-------------------------------------"<<std::endl;
     std::cout<<"------------- PARAMS L2 -------------\nSPARSE_SOLVER: "<<SPARSE_SOLVER;
-    std::cout<<"\nPARALLEL PIVOTING METHOD: "<<PARALLEL_PIVOTING_METHOD<<"\n-------------------------------------"<<std::endl;
+    std::cout<<"\n-------------------------------------"<<std::endl;
 
     // **************************************
     // STEP 1: Finding BFS

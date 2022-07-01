@@ -597,51 +597,31 @@ __global__ void _naive_floyd_warshall_kernel(const int k, const int V, const int
 }
 
 
-__device__ int my_signum(const int x) {
-    return (((x) > 0)?(1):(INT16_MAX));
-}
-
-/* Set initial values in adj Matrix and path matrix */
-__global__ void fill_adjMtx(int * d_adjMtx_transform, int * d_adjMtx_actual, int * d_pathMtx, const int V) {
-    
-    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
-    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
-
-    if (row_indx < V && col_indx < V) {
-
-        int dist = my_signum(d_adjMtx_actual[TREE_LOOKUP(row_indx, col_indx, V)]);
-        
-        d_adjMtx_transform[row_indx*V + col_indx] = dist; // Setting B - A
-        d_adjMtx_transform[col_indx*V + row_indx] = dist; // setting A - B 
-        d_adjMtx_transform[row_indx*V + row_indx]  = 0; // setting the diagonal entries 0 
-        
-        if (dist == 1) {
-            d_pathMtx[row_indx*V + col_indx] = row_indx;
-            d_pathMtx[col_indx*V + row_indx] = col_indx;
-        }        
-    }
-}
-
-
 /*
 Recursively explore pathMtx and store all the discovered cycles in the expanded form 
 Can spped this up using a 3D grid? 
 */
-__global__ void expand_all_cycles(int * d_adjMtx_transform, int * d_pathMtx, int * d_pivot_cycles, const int diameter, const int numSupplies, const int numDemands) {
+__global__ void expand_all_cycles(int * d_pivot_cycles, int * d_adjMtx_transform, 
+    int * d_pathMtx, MatrixCell * d_reducedCosts_ptr,  int * d_numNegativeCosts, 
+    const int diameter, const int numSupplies, const int numDemands) 
+{
 
-    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;  // demand point
-    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;  // supply point 
-    int offset_1 = diameter*(row_indx*numDemands + col_indx); // offset for cycle store
-    int V = numSupplies + numDemands;
-    // Entering Edge is from supply - i to demand - j we discover a cycle by finding a shortest path from [j] -> [i]
-    int offset_2 = row_indx*V + (col_indx+numSupplies); // offset for path and adjMtx 
+    int idx = threadIdx.x + blockDim.x*blockIdx.x;
 
-    if (row_indx < numSupplies && col_indx < numDemands) {
+    if (idx < *d_numNegativeCosts) {
 
-        int depth = d_adjMtx_transform[offset_2] + 1;
+        MatrixCell pivot_cell = d_reducedCosts_ptr[idx];
+        int col_indx = pivot_cell.col;  // demand point
+        int row_indx = pivot_cell.row;  // supply point 
+        int offset_1 = diameter*idx; // offset for cycle store
+        int V = numSupplies + numDemands;
+        // Entering Edge is from supply - i to demand - j we discover a cycle by finding a shortest path from [j] -> [i]
+        int offset_path = row_indx*V + (col_indx + numSupplies); // offset for pathMtx
+        int offset_distance = row_indx*numDemands + col_indx;
+
+        int depth = d_adjMtx_transform[offset_distance] + 1;
         int current_vtx = col_indx + numSupplies; // backtrack from - j
         int target_vtx = row_indx; // reach - i 
-
         d_pivot_cycles[offset_1] = target_vtx;
         
         int d = 1;
@@ -653,8 +633,42 @@ __global__ void expand_all_cycles(int * d_adjMtx_transform, int * d_pathMtx, int
         }
 
         d_pivot_cycles[offset_1+depth] = target_vtx;
+
     }
 }
+
+__global__ void derive_cells_on_paths(int * d_pivot_cycles, int * d_adjMtx_transform, 
+    int * d_pathMtx, MatrixCell * d_reducedCosts_ptr,  int * d_numNegativeCosts, 
+    const int diameter, const int numSupplies, const int numDemands) 
+{
+
+    int idx = threadIdx.x + blockDim.x*blockIdx.x;
+
+    if (idx < *d_numNegativeCosts) {
+
+        MatrixCell pivot_cell = d_reducedCosts_ptr[idx];
+        int col_indx = pivot_cell.col;  // demand point
+        int row_indx = pivot_cell.row;  // supply point 
+        int offset_1 = diameter*idx; // offset for cycle store
+        int V = numSupplies + numDemands;
+        // Entering Edge is from supply - i to demand - j we discover a cycle by finding a shortest path from [j] -> [i]
+        int offset_path = row_indx*V + (col_indx + numSupplies); // offset for pathMtx
+        int offset_distance = row_indx*numDemands + col_indx;
+
+        int depth = d_adjMtx_transform[offset_distance];
+        int current_vtx = col_indx + numSupplies; // backtrack from - j
+        int target_vtx = row_indx; // reach - i 
+        int next_vtx;
+
+        for (int d = 0; d < depth; d++) {
+            next_vtx = d_pathMtx[target_vtx*V + current_vtx];
+            d_pivot_cycles[offset_1 + d] = (1 - d%2)*(next_vtx*numDemands + (current_vtx-numSupplies)) +
+                                        (d%2)*(current_vtx*numDemands + (next_vtx-numSupplies));
+            current_vtx = next_vtx;
+        }
+    }
+}
+
 
 /*
 Check if a cycle is still feasible if any of the edges of the cycle located at min_indx has been used
@@ -737,71 +751,71 @@ __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_
 Check if a cycle is still feasible if any of the edges of the cycle located at min_indx has been used
 If it is infeasible then set the reduced cost of this cell as non-negative to deactivate pivot here
 */
-__global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_cycles, 
-    float * d_opportunity_costs, int min_r_index, const int diameter, const int numSupplies, const int numDemands) {
+__global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const int min_indx,
+                const int earlier_from, const int earlier_to, 
+                int * d_adjMtx_transform, int * d_pivot_cycles,
+                const int diameter, const int numSupplies, const int numDemands) {
 
     // Nomenclature : 
-    // this_cycle - cycle located on this thread
-    // earlier_cycle - cycle located on the min_r_index 
+    // this_cycle - cycle located on this blockIdx.x
+    // earlier_cycle - cycle located on the min_index 
     // Context : Edges in earlier cycle will be used by pivot (because min_reduced cost)
     //      Then if there are any common edges between this_cycle and earlier_cycle
     //      then this_cycle conflicts with earlier_cycle and it has to die
     //      Set reduced cost = non_negative for this cycle
-
-    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;  // demand point
-    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;  // supply point 
-    int offset_1 = diameter*(row_indx*numDemands + col_indx); // offset for this_cycle store
-    int V = numSupplies + numDemands;
-    int offset_2 = row_indx*V + (col_indx+numSupplies); // offset for path and adjMtx 
     
-    // Load the earlier cycle and it's depth - enough memory is available through diameter
-    extern __shared__ int earlier_cycle[];
-
-    int _pivot_row =  min_r_index/numDemands;
-    int _pivot_col = min_r_index - (_pivot_row*numDemands);
-    int earlier_cycle_depth = d_adjMtx_transform[_pivot_row*V + (_pivot_col+numSupplies)] + 1; // depth of earlier_cycle
+    __shared__ int this_cycle[blockSize];
+    __shared__ int earlier_cycle[blockSize];
+    __shared__ bool conflict; // = false; 
+    __shared__ MatrixCell this_cycleE;
+    __shared__ int this_cycle_depth ,earlier_cycle_depth, num_tiles_earlier;
     
-    // Set opportunity cost of earlier_cycle nonNegative >>
-    d_opportunity_costs[_pivot_row*numDemands + _pivot_col] = epsilon;
-    // all threads in block load the same value
 
-    // Load the earlier cycle in parallel 
-    int _stride = blockDim.x*blockDim.y; 
-    int _local_index = threadIdx.y*blockDim.x + threadIdx.x;
-    int offset_3 = diameter*(_pivot_row*numDemands + _pivot_col); // offset for earlier_cycle_store
-    while (_local_index < earlier_cycle_depth + 1) {
-        earlier_cycle[_local_index] = d_pivot_cycles[offset_3 + _local_index];
-        _local_index = _local_index + _stride;
+    // This cycle is available at offset - blockIdx.x*diameter  
+    // Earlier cycle is available at offset - min_indx*diameter
+    if (threadIdx.x ==0 && threadIdx.y == 0) {
+
+        this_cycleE = d_reducedCosts_ptr[blockIdx.y];
+        this_cycle_depth = d_adjMtx_transform[this_cycleE.row*numDemands + this_cycleE.col];
+        earlier_cycle_depth = d_adjMtx_transform[earlier_from*numDemands + earlier_to]; 
+        num_tiles_earlier = ceil(1.0*earlier_cycle_depth/blockDim.x);
+    
     }
     __syncthreads();
+    
+    // First load this cycle in shared memory - 
+    if (this_cycleE.cost < 0) {
+        
+        // One time load per block
+        int idx = blockDim.x*blockIdx.x + threadIdx.x;
 
-    // Now earlier cycle is available in shared memory - traverse this_cycle and check for common edges
-    if (row_indx < numSupplies && col_indx < numDemands) {
+        if (threadIdx.y == 0 && idx < this_cycle_depth) {
+            int offset = blockIdx.y*diameter + idx;
+            this_cycle[threadIdx.x] = d_pivot_cycles[offset];
+        }
 
-        int vtx_i; // i^th vertex in this_cycle 
-        int vtx_j; // j^th vertex in earlier_cycle
-        int this_cycle_depth = d_adjMtx_transform[offset_2] + 1;
-        int vtx_i1, vtx_j1; // i+1^th and j+1^th vertices in corresponding columns
-        int edge_i, edge_j; // edge id of edges (i,i+1) and (j,j+1) - edgeid is the index of edge in supply x demand matrix
+        __syncthreads();
 
-        for (int i = 1; i < this_cycle_depth + 1; i++) {
+        // Tiling for earlier cycle >>
+        // This cycle static
+        for (int tile_no=0; tile_no < num_tiles_earlier; tile_no++) {
             
-            vtx_i = d_pivot_cycles[offset_1+i] - numSupplies*(i%2);
-            vtx_i1 = d_pivot_cycles[offset_1+i+1] - numSupplies*((i+1)%2);
-            edge_i = (vtx_i*numDemands + vtx_i1)*((i+1)%2) + (vtx_i1*numDemands + vtx_i)*(i%2);
+            int load_from = min_indx*diameter + tile_no*blockDim.x;
+            int load_upto = min_indx*diameter + earlier_cycle_depth;
 
-            for (int j = 1; j < earlier_cycle_depth + 1; j++) {
-                
-                vtx_j = earlier_cycle[j] - numSupplies*(j%2);
-                vtx_j1 = earlier_cycle[j+1] - numSupplies*((j+1)%2);
-                edge_j = (vtx_j*numDemands + vtx_j1)*((j+1)%2) + (vtx_j1*numDemands + vtx_j)*(j%2);
-                // Note that we're looking up undirected edges, so we compare unique identifiers of both
-                
-                // Whenever the cycles intersect
-                if (edge_i == edge_j) {
-                    // set opportunity cost of this_cycle as non-negative
-                    d_opportunity_costs[row_indx*numDemands + col_indx] = epsilon;
-                    return;
+            if (threadIdx.y == 0 && load_from + threadIdx.x < load_upto) {
+                earlier_cycle[threadIdx.x] = d_pivot_cycles[load_from + threadIdx.x];
+            }
+
+            __syncthreads();
+
+            // Comparison within block >> 
+            // threadidx.x
+            // threadIdx.y
+            if (idx < this_cycle_depth && load_from + threadIdx.y < load_upto) {
+
+                if (this_cycle[threadIdx.x] == earlier_cycle[threadIdx.y]) {
+                    d_reducedCosts_ptr[blockIdx.y].cost = epsilon;
                 }
             }
         }
@@ -1252,24 +1266,30 @@ __global__ void analyse_t_closures(int k, int * d_pathMtx, int * d_adjMtx_transf
     }
 }
 
-__global__ void init_multisource_bfs_frontier(vertexPin * empty_frontier, int * d_vertex_start, 
-    int * d_vertex_degree, int * d_adjVertices, int V) {
 
-    int idx = blockIdx.x*blockDim.x + threadIdx.x;
-    int idy = blockIdx.y*blockDim.y + threadIdx.y;
+/* Set initial values in adj Matrix and path matrix */
+__global__ void initialize_parallel_pivot(vertexPin * empty_frontier, 
+    int * d_vertex_start, int * d_vertex_degree, int * d_adjVertices,
+    float * d_costs_ptr, const int numSupplies, const int numDemands) {
+    
+    int col_indx = blockIdx.x*blockDim.x + threadIdx.x;
+    int row_indx = blockIdx.y*blockDim.y + threadIdx.y;
 
-    if (idx < V) {
-        int degree = d_vertex_degree[idx];
-        if (idy < degree) {
+    if (row_indx < numSupplies) {
+        int degree = d_vertex_degree[row_indx];
+        if (col_indx < degree) {
             // Parallely load the neighbourhood of idx 
-            int start = d_vertex_start[idx];
-            int this_vertex = d_adjVertices[start + idy];
-            vertexPin _pin = {.from = idx, .via = this_vertex, .to = this_vertex, .skip = idx};
+            int start = d_vertex_start[row_indx];
+            int this_vertex = d_adjVertices[start + col_indx];
+            float r_cost = 0; //-1.0f*d_costs_ptr[row_indx*numDemands + col_indx];
+            vertexPin _pin = {.from = row_indx, .via = this_vertex, .to = this_vertex, .skip = row_indx, .recirculation = r_cost};
             // Load the pin in the frontier
-            empty_frontier[start + idy] = _pin;
+            empty_frontier[start + col_indx] = _pin;
         }
-    }
+    }    
 }
+
+
 
 
 /* This is BFS Kernel with localized block atomics */
@@ -1297,7 +1317,9 @@ __global__ void update_distance_path_and_create_next_frontier(
 
         int path_idx = this_vertex.to*V + this_vertex.from;
         pathMtx[path_idx] = this_vertex.via;
-        d_adjMtx_transform[path_idx] = iteration_number+1;
+        if (iteration_number%2==0) {
+            d_adjMtx_transform[path_idx] = iteration_number+1;
+        }
     }
 
     // Now next frontier is prepared >> 
@@ -1372,34 +1394,42 @@ __global__ void update_distance_path_and_create_next_frontier_block_per_vertex(
                                         vertexPin * nextLevelNodes,
                                         int * numCurrLevelNodes,
                                         int * numNextLevelNodes,
-                                        const int V,
+                                        float * d_costs_ptr,
+                                        float * opportunity_cost,
+                                        const int numSupplies,
+                                        const int numDemands,
                                         const int iteration_number) 
 {
-
-    int idx = blockIdx.x*blockDim.x + threadIdx.x;
-    __shared__ vertexPin this_vertex;
-
-    // Now next frontier is prepared >> 
-
+ 
     // Initialize shared memory queue
-    __shared__ vertexPin bqNodes[BQ_CAPACITY];
-    __shared__ int block_location, gq_location, bq_size;
+    __shared__ int write_offset, read_offset, degree, skip_location;
+    __shared__ float update_recirculation;
+    vertexPin this_vertex = currLevelNodes[blockIdx.x];
+    int V = numSupplies + numDemands;
 
     if (threadIdx.x == 0) {
 
-        block_location = 0;
-        gq_location    = 0;
-        bq_size        = 0;
-
-        if (blockIdx.x < *numCurrLevelNodes) {
+        read_offset = d_vertex_start[this_vertex.to];
+        degree = d_vertex_length[this_vertex.to];
+        write_offset = atomicAdd(numNextLevelNodes, degree-1);
+        skip_location = V;
 
         // Update the pathMatrix and distance
         // Path for this vertex is updated and neighbors of this_vertex are queued >>
-        this_vertex = currLevelNodes[blockIdx.x];
+        int path_idx = this_vertex.from*V + this_vertex.to;
+        int i = (int) iteration_number%2;
+        pathMtx[path_idx] = this_vertex.skip;
 
-        int path_idx = this_vertex.to*V + this_vertex.from;
-        pathMtx[path_idx] = this_vertex.via;
-        d_adjMtx_transform[path_idx] = iteration_number+1;
+        // Update reduced cost accumulator >>
+        unsigned int cost_indx = (1 - i)*(this_vertex.skip*numDemands + (this_vertex.to - numSupplies)) 
+            + (i)*(this_vertex.to*numDemands + (this_vertex.skip - numSupplies));
+        update_recirculation = this_vertex.recirculation + ((int) pow(-1, i+1))*d_costs_ptr[cost_indx];
+
+        if (i==0) { // No divergence here - all threads in iteration execute the same
+            
+            int dist_indx = this_vertex.from*numDemands + (this_vertex.to - numSupplies);
+            d_adjMtx_transform[dist_indx] = iteration_number+1;
+            opportunity_cost[dist_indx] = opportunity_cost[dist_indx] + update_recirculation;
         
         }
     }
@@ -1409,52 +1439,59 @@ __global__ void update_distance_path_and_create_next_frontier_block_per_vertex(
     // For all nodes in the curent level -> get all neighbors of the node
     // Except the skip add rest to the block queue
     // If full, add it to the global queue
-    vertexPin new_vertex = this_vertex;
-    int current = new_vertex.to;
-    int current_skip = new_vertex.skip;
-    // Can try threads in y for this
-    if (blockIdx.x < *numCurrLevelNodes) {
+    this_vertex.recirculation =  update_recirculation;
+    int current = this_vertex.to;
+    int current_skip = this_vertex.skip;
+    
+    for (int j = threadIdx.x; j < degree; j += blockDim.x) {
 
-        int j = d_vertex_start[current] + threadIdx.x;
+        int neighbor = d_adjVertices[read_offset + j];
 
-        while (j < d_vertex_start[current] + d_vertex_length[current]) {
-      
-            int neighbor = d_adjVertices[j];
-
-            // set the neighbor to 1 and check if it was not already visited -
-            if (!(neighbor==current_skip)) {
-
-                int location = atomicAdd(&block_location, 1);
-                new_vertex.skip = current;
-                new_vertex.to = neighbor;
-                
-                if (location < BQ_CAPACITY) {
-                    bqNodes[location] = new_vertex;
-                }
-                
-                else {
-                    location = atomicAdd(numNextLevelNodes, 1);
-                    nextLevelNodes[location] = new_vertex;
-                }
-            }
-            j = j + blockDim.x;
+        // check the position of skip -
+        if (neighbor==current_skip) {
+            skip_location = j;
         }
+
+        __syncthreads();
+
+        // check the position of skip -
+        if (j < skip_location) {
+
+            this_vertex.skip = current;
+            this_vertex.to = neighbor;
+            nextLevelNodes[write_offset+j] = this_vertex;
+        
+        }
+
+        if (j > skip_location) {
+
+            this_vertex.skip = current;
+            this_vertex.to = neighbor;
+            nextLevelNodes[write_offset+j-1] = this_vertex;
+
+        }
+
     }
 
-    __syncthreads();
-    // Calculate space for block queue to go into global queue
-    if (threadIdx.x == 0) {
-        // no race condition on bq_size here
-        bq_size     = (BQ_CAPACITY < block_location) ? BQ_CAPACITY : block_location;
-        gq_location = atomicAdd(numNextLevelNodes, bq_size);
-    }
-    __syncthreads();
-
-    // Store block queue in global queue
-    for (unsigned int i = threadIdx.x; i < bq_size; i += blockDim.x) {
-        nextLevelNodes[gq_location + i] = bqNodes[i];
-    }
 }
 
+__global__ void collectNegativeReducedCosts(MatrixCell * d_reducedCosts_ptr, int * numNegativeCosts,
+    float * opportunity_costs, const int numSupplies, const int numDemands) 
+{
+    
+    int row_indx = threadIdx.y + blockIdx.y*blockDim.y;
+    int col_indx = threadIdx.x + blockIdx.x*blockDim.x;
+
+    if (row_indx < numSupplies && col_indx < numDemands) {
+
+        int gid = row_indx*numDemands + col_indx;
+        float r_cost = opportunity_costs[gid];
+        if (r_cost < 0 && abs(r_cost) > epsilon2) {
+            int position = atomicAdd(numNegativeCosts, 1);
+            MatrixCell cost_obj = {.row = row_indx, .col = col_indx, .cost = r_cost};
+             d_reducedCosts_ptr[position] = cost_obj;
+        }
+    }
+}
 
 #endif

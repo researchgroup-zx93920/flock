@@ -18,6 +18,7 @@ std::ostream& operator << (std::ostream& o, const Variable& x) {
 }
 
 std::ostream& operator << (std::ostream& o, const vertexPin& x) {
-    o << "********\nFrom : "<<x.from<<"\nVia : "<<x.via<<"\nTo : "<<x.to<<"\nSkip : "<<x.skip<<"\n********"<<std::endl;
+    o << "********\nFrom : "<<x.from<<"\nVia : "<<x.via<<"\nTo : "<<x.to<<"\nSkip : "<<x.skip;
+    std::cout<<"\nAccumualated : "<<x.recirculation<<"\n********"<<std::endl;
     return o;
 }

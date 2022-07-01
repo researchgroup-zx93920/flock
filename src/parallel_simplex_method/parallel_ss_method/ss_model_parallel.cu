@@ -56,7 +56,7 @@ ssModel_parallel::ssModel_parallel(ProblemInstance *problem, flowInformation *fl
     objVal = 0.0;
     totalIterations = 0;
     totalSolveTime = 0.0;
-    std::cout << "An uv_model_parallel object was successfully created" << std::endl; 
+    std::cout << "A ss_model_parallel object was successfully created" << std::endl; 
 }
 
 /*
@@ -119,25 +119,15 @@ void ssModel_parallel::generate_initial_BFS()
 void ssModel_parallel::perform_pivot(bool &result, int iteration) 
 {
     // Find a negative reduced cost and pivot along >>
-    if (PIVOTING_STRATEGY == "sequencial_dfs") 
-    {
-        std::cout<<"sequencial DFS - Not Implemented for Stepping Stone Method, try parallel_fw!"<<std::endl;
-        exit(-1);
-    }
-    else if (PIVOTING_STRATEGY == "parallel_dfs") 
-    {
-        std::cout<<"parallel DFS - Not Implemented for Stepping Stone Method, try parallel_fw!"<<std::endl;
-        exit(-1);
-    }
-    else if (PIVOTING_STRATEGY == "parallel_fw") 
-    {
+    if (PIVOTING_STRATEGY == "parallel_bfs")
+    { 
         int num_pivots = 0;
-        SS_METHOD::perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, d_costs_ptr, result,
+        SS_METHOD::perform_a_parallel_pivot(pivot, timer, graph, d_costs_ptr, result,
             data->numSupplies, data->numDemands, iteration, num_pivots);
     }
     else
     {
-        std::cout<<"Invalid selection of pivoting strategy"<<std::endl;
+        std::cout<<"Invalid selection of pivoting strategy for ss Model"<<std::endl;
         exit(-1);
     }    
 }
@@ -226,7 +216,6 @@ void ssModel_parallel::execute()
     // Post process operation after pivoting
     // **************************************
 
-    
     SS_METHOD::pivotFree(pivot, PIVOTING_STRATEGY);
     std::cout<<"\tSuccessfully de-allocated Resources for PIVOT ..."<<std::endl;
 

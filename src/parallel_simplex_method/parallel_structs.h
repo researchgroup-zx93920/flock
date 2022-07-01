@@ -35,6 +35,7 @@
 // PARAMETERS
 #define blockSize 8
 #define reducedcostBlock 16
+#define parallelBFSBlock 64
 
 // Maximum number of elements that can be inserted into a block queue
 #define BQ_CAPACITY 256
@@ -75,11 +76,10 @@ device_dense_linear_solver : solve system of dense lin_equations (dense linear a
 qr, chol
 */
 
-#define PIVOTING_STRATEGY "sequencial_dfs"
+#define PIVOTING_STRATEGY "parallel_bfs"
 /*
 sequencial_dfs : perform pivoting one at a time based on dantzig's rule
-parallel_dfs : perform parallel pivoting by DFS strategy to build cycles
-parallel_fw : perform parallel pivoting by floyd warshall strategy to build cycles
+parallel_bfs : perform parallel pivoting by floyd warshall strategy to build cycles
 */
 
 #define COMPACTION_FACTOR 3
@@ -95,30 +95,17 @@ We'll discover COMPACTION_FACTOR * k parallel pivots and resolve conflicts withi
 in the hope that we'll get the most of the deconflicted cycles from the 
 top cream of negative reduced costs
 
-IDEA 2 : 
+IDEA 2 :
 Follow this paper's parameter - DOI: 10.1080/10556788.2016.1260568 
 Just consider at most 2(M + N) negative reduced costs 
 */
 
-#define PARALLEL_PIVOT_IDEA 2
+#define PARALLEL_PIVOT_IDEA 1
 /*
 Idea to use from above 1/2
 */
 
-#define APSP_KERNEL "t_closure"
-/* 
-fw_naive: Use naive floyd warshall cuda implementation 
-fw_blocked: Use blocked floyd warshall cuda implementation
-t_closure : Use triadic closure strategy
-*/
-
-#define PARALLEL_PIVOTING_METHOD "r"
-/*
-r : deconflict pivots purely based on reduced costs
-delta : deconflict parallel pivots based on delta -> currently appliable to stepping stone method
-*/
-
-#define MAX_ITERATIONS 30000
+#define MAX_ITERATIONS 10
 
 /* Upper bound on max number of independent pivots */
 #define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
@@ -312,6 +299,10 @@ struct PivotTimer {
     double cycle_discovery = 0, resolve_time = 0, adjustment_time = 0;
 };
 
+struct vertexPin {
+    int from, via, to, skip;
+    float recirculation;
+};
 
 struct DualHandler {
 
@@ -363,6 +354,8 @@ struct PivotHandler {
 
     // Stepping stone specific pointers (this method also uses some of the fw pointers)
     float * opportunity_cost;
+    vertexPin * d_bfs_frontier_current, * d_bfs_frontier_next;
+    int * current_frontier_length, * next_frontier_length;
     // Oppotunity cost - Cost Improvement observed per unit along the cycle
     // Delta - Possible Recirculation along the cycle 
     // (computation of delta requires communication of flows to device - this is time taking)
@@ -405,10 +398,6 @@ struct Graph {
     int * d_vertex_start, * d_vertex_degree, * d_adjVertices;
     int * h_vertex_start, * h_vertex_degree, * h_adjVertices; 
 
-};
-
-struct vertexPin {
-    int from, via, to, skip;
 };
 
 std::ostream& operator << (std::ostream& o, const vertexPin& x);

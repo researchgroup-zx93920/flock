@@ -121,9 +121,13 @@ __global__ void computeReducedCosts(float * u_vars_ptr, float * v_vars_ptr, floa
 
 __global__ void _naive_floyd_warshall_kernel(const int k, const int V, const int numSupplies, const int numDemands, int * d_adjMtx, int * path);
 
-__global__ void fill_adjMtx(int * d_adjMtx_transform, int * d_adjMtx_actual, int * d_pathMtx, const int V);
+__global__ void expand_all_cycles(int * d_pivot_cycles, int * d_adjMtx_transform, 
+    int * d_pathMtx, MatrixCell * d_reducedCosts_ptr,  int * d_numNegativeCosts, 
+    const int diameter, const int numSupplies, const int numDemands);
 
-__global__ void expand_all_cycles(int * d_adjMtx_transform, int * d_pathMtx, int * d_pivot_cycles, const int diameter, const int numSupplies, const int numDemands);
+__global__ void derive_cells_on_paths(int * d_pivot_cycles, int * d_adjMtx_transform, 
+    int * d_pathMtx, MatrixCell * d_reducedCosts_ptr,  int * d_numNegativeCosts, 
+    const int diameter, const int numSupplies, const int numDemands);
 
 __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_cycles, MatrixCell * d_reducedCosts_ptr, int min_r_index, const int diameter, const int numSupplies, const int numDemands);
 
@@ -133,6 +137,11 @@ __global__ void check_pivot_feasibility(int * d_adjMtx_transform, int * d_pivot_
 __global__ void check_pivot_feasibility_dfs(int * depth, int * backtracker, 
     MatrixCell * d_reducedCosts_ptr, const int min_r_index, 
     const int numSupplies, const int numDemands, const int num_threads_launching);
+
+__global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const int min_indx,
+                const int earlier_from, const int earlier_to, 
+                int * d_adjMtx_transform, int * d_pivot_cycles,
+                const int diameter, const int numSupplies, const int numDemands);
 
 __global__ void compute_opportunity_cost_and_delta(int * d_adjMtx_ptr, float * d_flowMtx_ptr, float * d_costs_ptr, 
     int * d_adjMtx_transform, int * d_pivot_cycles, float * d_opportunity_costs, 
@@ -153,15 +162,18 @@ __global__ void _blocked_fw_independent_ph(const int blockId, size_t pitch, cons
 
 __global__ void analyse_t_closures(int k, int * d_pathMtx, int * d_adjMtx_transform, const int V);
 
-__global__ void init_multisource_bfs_frontier(vertexPin * empty_frontier, int * d_vertex_start, 
-    int * d_vertex_degree, int * d_adjVertices, int V);
+__global__ void initialize_parallel_pivot(vertexPin * empty_frontier, 
+    int * d_vertex_start, int * d_vertex_degree, int * d_adjVertices,
+    float * d_costs_ptr, const int numSupplies, const int numDemands);
 
-__global__ void update_distance_path_and_create_next_frontier(int * pathMtx, int * d_adjMtx_transform, int * d_vertex_start,
-            int * d_vertex_length, int * d_adjVertices, vertexPin * currLevelNodes, vertexPin * nextLevelNodes,
-            int * numCurrLevelNodes, int * numNextLevelNodes, const int V, const int iteration_number);
 
 __global__ void update_distance_path_and_create_next_frontier_block_per_vertex(int * pathMtx, int * d_adjMtx_transform, int * d_vertex_start,
             int * d_vertex_length, int * d_adjVertices, vertexPin * currLevelNodes, vertexPin * nextLevelNodes,
-            int * numCurrLevelNodes, int * numNextLevelNodes, const int V, const int iteration_number);
+            int * numCurrLevelNodes, int * numNextLevelNodes,
+            float * d_costs_ptr, float * opporutnity_cost, 
+            const int numSupplies, const int numDemands, const int iteration_number);
+
+__global__ void collectNegativeReducedCosts(MatrixCell * d_reducedCosts_ptr, int * numNegativeCosts,
+    float * opportunity_costs, const int numSupplies, const int numDemands);
 
 #endif

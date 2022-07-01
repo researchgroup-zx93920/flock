@@ -241,7 +241,7 @@ void switchModel_parallel::perform_pivot(bool &result, int iteration, int &mode)
     else if (mode == 0) 
     {
         int num_pivots = 0;
-        SS_METHOD::perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, d_costs_ptr, result,
+        SS_METHOD::perform_a_parallel_pivot(pivot, timer, graph, d_costs_ptr, result,
             data->numSupplies, data->numDemands, iteration, num_pivots);
 
         if (num_pivots < round(0.02175*data->numSupplies + 0.03414*data->numDemands - 0.06368)/5) {
