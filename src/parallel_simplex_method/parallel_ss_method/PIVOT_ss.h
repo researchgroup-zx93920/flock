@@ -23,5 +23,5 @@ __host__ void pivotFree(PivotHandler &pivot, char * pivoting_strategy);
 __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer, 
     Graph &graph, float * d_costs_ptr, bool &result, int numSupplies, int numDemands, int iteration, int &num_pivots);
 
-} // End of NAMESPACE
+} // End of namespace
 

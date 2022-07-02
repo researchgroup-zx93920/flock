@@ -30,8 +30,8 @@
 // Profiling
 #include <nvToolsExt.h>
 
-#ifndef UV_STRUCTS
-#define UV_STRUCTS
+#ifndef PARALLEL_STRUCTS
+#define PARALLEL_STRUCTS
 
 // PARAMETERS
 #define blockSize 8
@@ -39,18 +39,9 @@
 #define parallelBFSBlock 64
 #define resolveBlockSize 64
 
-// Maximum number of elements that can be inserted into a block queue
-#define BQ_CAPACITY 256
-
 // Degeneracy resolve
 #define epsilon 0.000001f
 #define epsilon2 10e-3
-
-#define DETAILED_LOGS 1
-/*
-0 : Silent model
-1 : Verbose model
-*/
 
 #define BFS_METHOD "vam_device"
 /*
@@ -73,44 +64,26 @@ device_sparse_linear_solver : solve system of sparse lin_equations on device (sp
 device_dense_linear_solver : solve system of dense lin_equations (dense linear algebra :: cublas)
 */
 
-#define SPARSE_SOLVER "qr"
-/*
-qr, chol
-*/
-
 #define PIVOTING_STRATEGY "parallel_bfs"
 /*
 sequencial_dfs : perform pivoting one at a time based on dantzig's rule
 parallel_bfs : perform parallel pivoting by floyd warshall strategy to build cycles
 */
 
-#define COMPACTION_FACTOR 3
-/*
-Lets the solver decide how many parallel cycles need to be discovered in one case
-*/
 
-#define NUM_THREADS_LAUNCHING(M, N, strategy) (strategy==1?((floor((M + N - 1)/3))*(COMPACTION_FACTOR)):2*(M+N))
+#define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
 /* 
-IDEA 1 :
+IDEA:
 Theoretically k = FLOOR[(M + N - 1)/3] deconflcited cycles can exist
 We'll discover COMPACTION_FACTOR * k parallel pivots and resolve conflicts within them
 in the hope that we'll get the most of the deconflicted cycles from the 
 top cream of negative reduced costs
-
-IDEA 2 :
-Follow this paper's parameter - DOI: 10.1080/10556788.2016.1260568 
-Just consider at most 2(M + N) negative reduced costs 
-*/
-
-#define PARALLEL_PIVOT_IDEA 1
-/*
-Idea to use from above 1/2
 */
 
 #define MAX_ITERATIONS 10000
 
 /* Upper bound on max number of independent pivots */
-#define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
+
 
 #define REDUCED_COST_MODE "parallel"
 /*
@@ -216,34 +189,9 @@ struct vogelDifference {
         float diff;
 };
 
-struct Variable {
-
-    bool assigned = false;
-    float value = -99999;
-
-    __host__ __device__ Variable& operator=(const float& x)
-    {
-        value=x;
-        assigned=true;
-        return *this;
-    }
-};
-
 struct stackNode {
     int index, depth;
 };
-
-struct pathEdge {
-    int index;
-    pathEdge * next;
-};
-
-
-typedef union  {
-  float floats[2];                 // floats[0] = lowest savings on this loop
-  int ints[2];                     // ints[1] = index -> thread-gid
-  unsigned long long int ulong;    // for atomic update
-} vertex_conflicts;
 
 struct is_zero
 {
@@ -311,28 +259,18 @@ struct DualHandler {
         // Commons ::
         // - dual costs towards supply constraints (u_vars_ptr)
         //  - dual costs towards demand constraints (v_vars_ptr)
-        float * u_vars_ptr = NULL, * v_vars_ptr = NULL;
-
-        // DUAL :: Solving system of equations 
-        float u_0 = 0, u_0_coef = 1;
-        int * d_csr_offsets, * d_csr_columns;
-        float * d_csr_values, * d_x, * d_A, * d_b;
-        int64_t nnz;
-
-        // DUAL :: Solving using a breadth first traversal on Tree
-        float * variables;
-        bool * Xa, * Fa;
+        float * u_vars_ptr, * v_vars_ptr;
 
         // DUAL :: Sequencial BFS >>
         bool * h_visited;
         float * h_variables;
-
 };
 
 struct PivotHandler {
     
     // Useful for the sequencial strategy >>
     int pivot_row, pivot_col;
+    float reduced_cost;
         
     // Useful for both seq and parallel strategy >>
     
@@ -340,31 +278,20 @@ struct PivotHandler {
     int * backtracker, * depth; 
     bool * visited;
     stackNode * stack;
-
-    // Flow adjustment on pivot - 
-    // ******** DEPRECATED 
-    // int * loop_min_from, * loop_min_to, * loop_min_id;
-    // float * loop_minimum;
-    
-    // Resolving conflicts in parallel pivoting
-    // vertex_conflicts * v_conflicts;
-
-    // Floyd warshall specific pointers ->
+     
+    // SS Method specific pointers ->
     int * d_adjMtx_transform, * d_pathMtx;
     int * d_pivot_cycles, * deconflicted_cycles; 
     int * deconflicted_cycles_depth, * deconflicted_cycles_backtracker;
 
-    // Stepping stone specific pointers (this method also uses some of the fw pointers)
     float * opportunity_cost;
     vertexPin * d_bfs_frontier_current, * d_bfs_frontier_next;
     int * current_frontier_length, * next_frontier_length;
     MatrixCell * d_reducedCosts_ptr;
     int * d_num_NegativeCosts;
 
-    // Oppotunity cost - Cost Improvement observed per unit along the cycle
-    // Delta - Possible Recirculation along the cycle 
-    // (computation of delta requires communication of flows to device - this is time taking)
-
+    // Oppotunity cost - reduced cost - float version that stores the .cost attribute
+    // Used when row col indexes are not needed --> like bfs and parallel reduced cost compute
 };
 
 /* 
@@ -408,6 +335,6 @@ struct Graph {
 std::ostream& operator << (std::ostream& o, const vertexPin& x);
 std::ostream& operator << (std::ostream& o, const MatrixCell& x);
 std::ostream& operator << (std::ostream& o, const vogelDifference& x);
-std::ostream& operator << (std::ostream& o, const Variable& x);
+
 
 #endif

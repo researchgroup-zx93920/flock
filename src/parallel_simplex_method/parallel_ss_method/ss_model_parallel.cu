@@ -47,7 +47,6 @@ ssModel_parallel::ssModel_parallel(ProblemInstance *problem, flowInformation *fl
     graph.V = data->numSupplies+data->numDemands;
 
     // Initialize model statistics >>
-    deviceCommunicationTime = 0.0;
     pivot_time = 0.0;
     cycle_discovery_time = 0.0;
     resolve_time = 0.0;
@@ -136,7 +135,7 @@ void ssModel_parallel::perform_pivot(bool &result, int iteration)
 void ssModel_parallel::execute() 
 {
     // SIMPLEX ALGORITHM >>
-    std::cout<<"------------- PARAMS L1 -------------\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY;
+    std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY;
     std::cout<<"\n-------------------------------------"<<std::endl;
 
     // **************************************
@@ -192,8 +191,8 @@ void ssModel_parallel::execute()
 
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
-        make_adjacency_list(graph, data->numSupplies, data->numDemands);
         // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
+        make_adjacency_list(graph, data->numSupplies, data->numDemands);
         // view_tree();
         
         // 2.1 

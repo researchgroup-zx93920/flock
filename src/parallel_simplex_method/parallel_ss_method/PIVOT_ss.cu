@@ -32,6 +32,16 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands, 
     // Each cycle has a size less than max possible diameter
     pivot.deconflicted_cycles_backtracker = (int *) malloc(V*sizeof(int));
 
+    // Todo >> Print size of memory allocated on device / Prior Estimatation
+    // bytes 
+    size_t size_of_memory = (numSupplies*numDemands*sizeof(int)) + numSupplies*(V)*sizeof(int) + 
+        sizeof(vertexPin)*numSupplies*numDemands*2 + sizeof(int)*3 + sizeof(MatrixCell)*numSupplies*numDemands +
+        numSupplies*numDemands*sizeof(float);
+    
+    // MegaBytes
+    size_of_memory = size_of_memory/(1024*1024);
+    std::cout<<"SS PIVOT MALLOC : "<<size_of_memory<<" MB of device memory allocated!";
+ 
 }
 
 /* 
@@ -360,7 +370,7 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
         // gpuErrchk(cudaMalloc((void **) &sm_profile, sizeof(unsigned long long int)*68));
         // gpuErrchk(cudaMemset(sm_profile, 0, sizeof(unsigned long long int)*68));
 
-        update_distance_path_and_create_next_frontier_block_per_vertex<<< dimBFSGrid, dimBFSBlock >>>(pivot.d_pathMtx, pivot.d_adjMtx_transform, 
+        update_distance_path_and_create_next_frontier<<< dimBFSGrid, dimBFSBlock >>>(pivot.d_pathMtx, pivot.d_adjMtx_transform, 
             graph.d_vertex_start, &graph.d_vertex_degree[1], graph.d_adjVertices, 
             pivot.d_bfs_frontier_current, pivot.d_bfs_frontier_next,
             pivot.current_frontier_length, pivot.next_frontier_length,
@@ -575,5 +585,5 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
     gpuErrchk(cudaFree(pivot.d_pivot_cycles));
 }
 
-}
+} // End of namespace
 
