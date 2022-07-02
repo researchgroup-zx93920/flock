@@ -122,9 +122,9 @@ __host__ void perform_dfs_sequencial_on_i(int * adjMtx, int * vertex_start, int 
     }
 }
 
-__host__ static void do_flow_adjustment_on_host(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
-        int * d_adjMtx_ptr, float * d_flowMtx_ptr, int * backtracker, float min_flow, int min_from, int min_to, int min_flow_id,
-        int pivot_row, int pivot_col, int depth, int V, int numSupplies, int numDemands) {
+__host__ static void do_flow_adjustment_on_host(Graph &graph,
+        int * backtracker, float min_flow, int min_from, int min_to, int min_flow_id,
+        int pivot_row, int pivot_col, int depth, int numSupplies, int numDemands) {
 
     /* *************************** 
         DEBUG UTILITY // Print the discovered loop and pivoting parameters
@@ -149,28 +149,33 @@ __host__ static void do_flow_adjustment_on_host(int * h_adjMtx_ptr, float * h_fl
     {
         _from = backtracker[i];
         _to = backtracker[i+1];
-        id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
+        id = graph.h_adjMtx_ptr[TREE_LOOKUP(_from, _to, graph.V)] - 1;
         _flow = ((int) pow(-1, (int)i%2))*min_flow;
-        h_flowMtx_ptr[id] += _flow;
+        graph.h_flowMtx_ptr[id] += _flow;
 
     }
 
     // Do the replacment between exiting i - entering j on host
 
     // Remove edge >>
-    id = TREE_LOOKUP(min_from, min_to, V);
-    h_adjMtx_ptr[id] = 0;
+    id = TREE_LOOKUP(min_from, min_to, graph.V);
+    graph.h_adjMtx_ptr[id] = 0;
+    std::remove(graph.h_Graph[min_from].begin(),graph.h_Graph[min_from].end(), min_to);
+    std::remove(graph.h_Graph[min_to].begin(),graph.h_Graph[min_to].end(), min_from); 
+    
     // Insert edge >>
-    id = TREE_LOOKUP(pivot_row, pivot_col+ numSupplies, V);
-    h_adjMtx_ptr[id] = min_flow_id + 1;
+    id = TREE_LOOKUP(pivot_row, pivot_col+ numSupplies, graph.V);
+    graph.h_adjMtx_ptr[id] = min_flow_id + 1;
+    graph.h_Graph[pivot_row].push_back(pivot_col);
+    graph.h_Graph[pivot_col].push_back(pivot_row);
+    
     // Update new flow >>
-    h_flowMtx_ptr[min_flow_id] = min_flow;
+    graph.h_flowMtx_ptr[min_flow_id] = min_flow;
 
 }
 
-__host__ static void execute_pivot_on_host(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
-        int * d_adjMtx_ptr, float * d_flowMtx_ptr, int * backtracker, 
-        int pivot_row, int pivot_col, int depth, int V, int numSupplies, int numDemands) {
+__host__ static void execute_pivot_on_host(Graph &graph, 
+    int * backtracker, int pivot_row, int pivot_col, int depth, int numSupplies, int numDemands) {
 
     // *******************************************
     // STEP: Performing the pivot operation 
@@ -190,8 +195,8 @@ __host__ static void execute_pivot_on_host(int * h_adjMtx_ptr, float * h_flowMtx
         {
             _from = backtracker[i];
             _to = backtracker[i+1];
-            id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
-            _flow = h_flowMtx_ptr[id];
+            id = graph.h_adjMtx_ptr[TREE_LOOKUP(_from, _to, graph.V)] - 1;
+            _flow = graph.h_flowMtx_ptr[id];
             
             if (_flow < min_flow) 
             {
@@ -208,9 +213,9 @@ __host__ static void execute_pivot_on_host(int * h_adjMtx_ptr, float * h_flowMtx
     // Skip the first edge (entering edge)
     // Exiting Edge will become automatically zero (min_from, min_to)
     // Note - minflow value is zero if there's a degenerate pivot!
-    do_flow_adjustment_on_host(h_adjMtx_ptr, h_flowMtx_ptr, d_adjMtx_ptr, d_flowMtx_ptr, backtracker,
+    do_flow_adjustment_on_host(graph, backtracker,
             min_flow, min_from, min_to, min_flow_id,
-            pivot_row, pivot_col, depth, V, numSupplies, numDemands);
+            pivot_row, pivot_col, depth, numSupplies, numDemands);
 
 }
 
@@ -283,10 +288,9 @@ __host__ void perform_a_sequencial_pivot(PivotHandler &pivot, PivotTimer &timer,
             // std::cout<<"]"<<std::endl;
             // exit(0);
 
-            execute_pivot_on_host(graph.h_adjMtx_ptr, graph.h_flowMtx_ptr, 
-                    graph.d_adjMtx_ptr, graph.d_flowMtx_ptr, 
+            execute_pivot_on_host(graph, 
                     pivot.backtracker, pivot_row, pivot_col, _depth, 
-                    graph.V, numSupplies, numDemands);
+                    numSupplies, numDemands);
         }
         
         _pivot_end = std::chrono::high_resolution_clock::now();

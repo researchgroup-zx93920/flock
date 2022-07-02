@@ -73,33 +73,6 @@ __host__ void pivotFree(PivotHandler &pivot, char * pivoting_strategy) {
 
 }
 
-/*
-Replaces the exiting basic flow with entering non basic flow
-Does the necessary adjustments on the variables on device memory
-*/
-__host__ static void exit_i_and_enter_j(int * d_adjMtx_ptr, float * d_flowMtx_ptr, int exit_src, int exit_dest, 
-        int enter_src, int enter_dest, int min_flow_indx, float min_flow, int V) {
-            
-    int id;
-    int null_value = 0;
-    int new_value = min_flow_indx + 1;
-
-    // Set value for exiting in d
-    id = TREE_LOOKUP(exit_src, exit_dest, V);
-    gpuErrchk(cudaMemcpy(&d_adjMtx_ptr[id], &null_value, sizeof(int), cudaMemcpyHostToDevice));
-
-    // Set value for entering to the appropriate
-    id = TREE_LOOKUP(enter_src, enter_dest, V);
-    gpuErrchk(cudaMemcpy(&d_adjMtx_ptr[id], &new_value, sizeof(int), cudaMemcpyHostToDevice));
-}
-
-/*
-Do a copy from new value to device pointer
-*/
-__host__ static void modify_flowMtx_on_device(float * d_flowMtx_ptr, int id, float new_value) {
-    gpuErrchk(cudaMemcpy(&d_flowMtx_ptr[id], &new_value, sizeof(float), cudaMemcpyHostToDevice));
-}
-
 __host__ static void do_flow_adjustment_on_host_device(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 
         int * d_adjMtx_ptr, float * d_flowMtx_ptr, int * backtracker, float min_flow, int min_from, int min_to, int min_flow_id,
         int pivot_row, int pivot_col, int depth, int V, int numSupplies, int numDemands) {
@@ -123,6 +96,8 @@ __host__ static void do_flow_adjustment_on_host_device(int * h_adjMtx_ptr, float
  
     int _from, _to, id;
     float _flow;
+    int null_value = 0;
+    int new_value = min_flow_id + 1;
 
     for (int i=1; i<depth; i++) 
     {
@@ -134,20 +109,20 @@ __host__ static void do_flow_adjustment_on_host_device(int * h_adjMtx_ptr, float
     }
 
     // Do the replacment between exiting i - entering j on both host and device
+    // Also communicate device about the removal and addition of an extry-exit variable pair
+    
     // Remove edge
     id = TREE_LOOKUP(min_from, min_to, V);
     h_adjMtx_ptr[id] = 0;
+    gpuErrchk(cudaMemcpy(&d_adjMtx_ptr[id], &null_value, sizeof(int), cudaMemcpyHostToDevice));
+
     // Insert edge
     id = TREE_LOOKUP(pivot_row, pivot_col+ numSupplies, V);
     h_adjMtx_ptr[id] = min_flow_id + 1;
+    gpuErrchk(cudaMemcpy(&d_adjMtx_ptr[id], &new_value, sizeof(int), cudaMemcpyHostToDevice));
+
     // Update new flow 
     h_flowMtx_ptr[min_flow_id] = min_flow;
-
-    // Communicate device about the removal and addition of an extry-exit variable pair
-    exit_i_and_enter_j(d_adjMtx_ptr, d_flowMtx_ptr, 
-        min_from, min_to, 
-        pivot_row, pivot_col + numSupplies, 
-        min_flow_id, min_flow, V);
 }
 
 __host__ static void execute_pivot_on_host_device(int * h_adjMtx_ptr, float * h_flowMtx_ptr, 

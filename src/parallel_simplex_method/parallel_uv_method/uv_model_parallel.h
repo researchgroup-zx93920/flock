@@ -56,10 +56,7 @@ private:
     // Useful for initial basic feasible solution (IBFS), Dual and inbetween simplex
     // Having row column store with reducedcosts allows for reordering during DFS kernels    
     MatrixCell * costMatrix, * device_costMatrix_ptr; 
-    float * d_costs_ptr, * d_reducedCosts_ptr;
-
-    // TEMPORARY or DEBUGGING TOOLS
-    float * h_reduced_costs;
+    float * d_costs_ptr;
 
     // ###############################
     // DUAL and REDUCED COSTS (test for optimality)
@@ -77,6 +74,7 @@ private:
     // ###############################
     void generate_initial_BFS();
     void solve_uv();
+    void setup_host_graph();
     void get_reduced_costs();
     void perform_pivot(bool &result, int iteration);
     void solve();

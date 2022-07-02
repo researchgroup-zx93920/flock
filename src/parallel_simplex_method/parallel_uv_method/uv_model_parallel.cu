@@ -155,11 +155,20 @@ void uvModel_parallel::get_reduced_costs()
         dim3 __dimBlock(reducedcostBlock, reducedcostBlock, 1); // Refine this based on device query
         dim3 __dimGrid(ceil(1.0*data->numDemands/reducedcostBlock), ceil(1.0*data->numSupplies/reducedcostBlock), 1);
         
-        computeReducedCosts<<< __dimGrid, __dimBlock >>>(dual.u_vars_ptr, dual.v_vars_ptr, d_costs_ptr, d_reducedCosts_ptr, 
+        // Compute >> 
+        computeReducedCosts<<< __dimGrid, __dimBlock >>>(dual.u_vars_ptr, dual.v_vars_ptr, d_costs_ptr, pivot.opportunity_cost, 
             data->numSupplies, data->numDemands);
         gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
 
+        // Reduce >> 
+        int min_indx = thrust::min_element(thrust::device,
+                pivot.opportunity_cost, pivot.opportunity_cost + data->numSupplies*data->numDemands) - pivot.opportunity_cost;
+        gpuErrchk(cudaMemcpy(&pivot.reduced_cost, &pivot.opportunity_cost[min_indx], sizeof(float), cudaMemcpyDeviceToHost));
+
+        pivot.pivot_row = min_indx/data->numDemands;
+        pivot.pivot_col = min_indx - (pivot.pivot_row*data->numDemands);
+    
     }
 
     else if (REDUCED_COST_MODE == "sequencial") {
@@ -182,7 +191,9 @@ void uvModel_parallel::get_reduced_costs()
             }
         }
         
-        // Min r - needs to be sent to pivoting somehow >> use pivot row and pivot col
+        pivot.reduced_cost = min_r;
+        pivot.pivot_row = selected_pivot_row;
+        pivot.pivot_col = selected_pivot_column;
 
     }
 }
@@ -194,6 +205,22 @@ void uvModel_parallel::perform_pivot(bool &result, int iteration)
     // Find a negative reduced cost and pivot along >>
     UV_METHOD::perform_a_sequencial_pivot(pivot, timer, graph, result,
             data->numSupplies, data->numDemands);
+
+}
+
+void uvModel_parallel::setup_host_graph() {
+
+    gpuErrchk(cudaMemcpy(graph.h_vertex_degree, &graph.d_vertex_degree[1], sizeof(int)*graph.V, cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(graph.h_vertex_start, graph.d_vertex_start, sizeof(int)*graph.V, cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(graph.h_adjVertices, graph.d_adjVertices, sizeof(int)*2*(graph.V-1), cudaMemcpyDeviceToHost));
+    
+    for (int i=0; i < graph.V; i++) {
+
+        for (int j=0; j < graph.h_vertex_degree[i]; j++) {
+            graph.h_Graph[i].push_back(graph.h_adjVertices[graph.h_vertex_start[i]+j]);
+        }
+    
+    }
 
 }
 
@@ -258,7 +285,9 @@ void uvModel_parallel::execute()
         this is expected to be helpful in parallel pivot to supercharge DFS !! ]
     */
     make_adjacency_list(graph, data->numSupplies, data->numDemands); 
-    // Some auxillary operations will be performed for initialization here >>
+    
+    // Max level pivoting flexibility, STL saved somebody a lifetime
+    setup_host_graph();
 
     // **************************************
     // LOOP STEP 2 : SIMPLEX PROCEDURE

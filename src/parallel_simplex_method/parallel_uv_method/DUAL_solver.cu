@@ -35,11 +35,6 @@ __host__ void dualFree(DualHandler &dual) {
 __host__ void find_dual_using_host_bfs(DualHandler &dual,  Graph &graph, float * h_costs_ptr, 
         int numSupplies, int numDemands) {
 
-        // Copy Adjacency list on host >> assuming Tranformation already occured at the start of pivoting 
-        gpuErrchk(cudaMemcpy(graph.h_vertex_degree, &graph.d_vertex_degree[1], sizeof(int)*graph.V, cudaMemcpyDeviceToHost));
-        gpuErrchk(cudaMemcpy(graph.h_vertex_start, graph.d_vertex_start, sizeof(int)*graph.V, cudaMemcpyDeviceToHost));
-        gpuErrchk(cudaMemcpy(graph.h_adjVertices, graph.d_adjVertices, sizeof(int)*2*(graph.V-1), cudaMemcpyDeviceToHost));
-
         thrust::fill(thrust::host, dual.h_visited, dual.h_visited + graph.V, false);
         thrust::fill(thrust::host, dual.h_variables, dual.h_variables + graph.V, 0.0f);
 
@@ -51,16 +46,11 @@ __host__ void find_dual_using_host_bfs(DualHandler &dual,  Graph &graph, float *
 
         // Perform a BFS on Host (trickle down) >> 
         int parent, child, row, col;
-        
-        int * h_start = graph.h_vertex_start;
-        int * h_length = graph.h_vertex_degree;
-        int * h_Ea = graph.h_adjVertices;
-
-
+     
         while (!assigned_parents.empty()) {
                 parent = assigned_parents.front();
-                for (int i = h_start[parent]; i < h_start[parent] + h_length[parent]; i++) {
-                        child = h_Ea[i];
+                for (int i = 0; i < graph.h_Graph[parent].size(); i++) {
+                        child = graph.h_Graph[parent][i];
                         if (!dual.h_visited[child]) {
                                 dual.h_visited[child] = true;
                                 row = min(parent, child);

@@ -328,8 +328,9 @@ struct Graph {
 
     // Compressed transformation
     int * d_vertex_start, * d_vertex_degree, * d_adjVertices;
-    int * h_vertex_start, * h_vertex_degree, * h_adjVertices; 
+    int * h_vertex_start, * h_vertex_degree, * h_adjVertices;
 
+    std::vector<std::vector<int>> h_Graph;
 };
 
 std::ostream& operator << (std::ostream& o, const vertexPin& x);
