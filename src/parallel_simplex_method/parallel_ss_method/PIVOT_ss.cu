@@ -446,7 +446,7 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
     // Get most opportunistic flow index - 
     bool search_complete = false; 
     int deconflicted_cycles_count = 0;
-    std::cout<<"Num Negative R Costs :"<<h_num_NegativeCosts<<std::endl;
+    // std::cout<<"Num Negative R Costs :"<<h_num_NegativeCosts<<std::endl;
 
     while (!search_complete) {
 
@@ -458,8 +458,6 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
                 d_reducedCosts_ptr, d_reducedCosts_ptr + (h_num_NegativeCosts), compareCells()) - d_reducedCosts_ptr;
         gpuErrchk(cudaMemcpy(&min_opportunity_cost, &d_reducedCosts_ptr[min_indx], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
 
-        std::cout<<"Min Indx | Cost : "<<min_opportunity_cost.cost<<" | Row :"<<min_opportunity_cost.row<<" |  Col :"<<min_opportunity_cost.col<<std::endl;
-
         if (min_opportunity_cost.cost >= 0) {
             search_complete = true;
         }
@@ -468,32 +466,27 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
 
             pivot.deconflicted_cycles[deconflicted_cycles_count] = min_indx;
             min_opportunity_cost.cost = epsilon;
-            gpuErrchk(cudaMemcpy(&d_reducedCosts_ptr[min_indx],&min_opportunity_cost, sizeof(MatrixCell), cudaMemcpyHostToDevice));
+            gpuErrchk(cudaMemcpy(&d_reducedCosts_ptr[min_indx].cost, &min_opportunity_cost.cost, sizeof(float), cudaMemcpyHostToDevice));
         
             cudaDeviceProp prop;
             gpuErrchk(cudaGetDeviceProperties(&prop, 0));
-            int num_strides = ceil(1.0*h_num_NegativeCosts/prop.maxGridSize[1]);
+            int num_strides = 1; //ceil(1.0*h_num_NegativeCosts/prop.maxGridSize[1]);
 
-            for (int stride = 0; stride < num_strides; stride++) {
+            dim3 cf_Block(resolveBlockSize, 1, 1);
+            dim3 cf_Grid(h_num_NegativeCosts, ceil(1.0*diameter/resolveBlockSize), 1);
 
-                dim3 cf_Block(64, 1, 1);
-                dim3 cf_Grid(ceil(1.0*diameter/64), min(h_num_NegativeCosts, 65535), 1);
-
-                check_pivot_feasibility <<< cf_Grid, cf_Block >>> (d_reducedCosts_ptr, min_indx,
-                                min_opportunity_cost.row, min_opportunity_cost.col, 
-                                pivot.d_adjMtx_transform, pivot.d_pivot_cycles,
-                                diameter,numSupplies, numDemands, stride, prop.maxGridSize[1]);
-                gpuErrchk(cudaPeekAtLastError());
-                gpuErrchk(cudaDeviceSynchronize());
-
-            }
+            check_pivot_feasibility <<< cf_Grid, cf_Block >>> (d_reducedCosts_ptr, min_indx,
+                            min_opportunity_cost.row, min_opportunity_cost.col, 
+                            pivot.d_adjMtx_transform, pivot.d_pivot_cycles,
+                            diameter,numSupplies, numDemands);
+            gpuErrchk(cudaPeekAtLastError());
+            gpuErrchk(cudaDeviceSynchronize());
             deconflicted_cycles_count++;
         }
 
     }
     
-    std::cout<<"Found "<<deconflicted_cycles_count<<" deconflicted cycles to be pivoted"<<std::endl;
-    exit(0);
+    // std::cout<<"Found "<<deconflicted_cycles_count<<" deconflicted cycles to be pivoted"<<std::endl;
 
     _pivot_end = std::chrono::high_resolution_clock::now();
     _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
@@ -506,19 +499,46 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
 
     _pivot_start = std::chrono::high_resolution_clock::now();
 
+    MatrixCell pivot_Cell;
+
     for (int i=0; i < deconflicted_cycles_count; i++) {
         
         int pivot_indx = pivot.deconflicted_cycles[i];
-        int pivot_row = pivot_indx/numDemands;
-        int pivot_col = pivot_indx - (pivot_row*numDemands);
-        int offset_1 = pivot_row*numDemands + pivot_col; // to retrieve cycle
-        int offset_2 = pivot_row*graph.V + (pivot_col+numSupplies); // to retrieve depth
+        gpuErrchk(cudaMemcpy(&pivot_Cell, &d_reducedCosts_ptr[pivot_indx], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
+        
+        int pivot_row = pivot_Cell.row;
+        int pivot_col = pivot_Cell.col;
+        
+        gpuErrchk(cudaMemcpy(pivot.deconflicted_cycles_depth, &pivot.d_adjMtx_transform[pivot_row*numDemands + pivot_col], sizeof(int), cudaMemcpyDeviceToHost));
+        gpuErrchk(cudaMemcpy(pivot.deconflicted_cycles_backtracker, &pivot.d_pivot_cycles[pivot_indx*diameter], (*pivot.deconflicted_cycles_depth)*sizeof(int), cudaMemcpyDeviceToHost));
 
-        gpuErrchk(cudaMemcpy(pivot.deconflicted_cycles_depth, &pivot.d_adjMtx_transform[offset_2], sizeof(int), cudaMemcpyDeviceToHost));
-        gpuErrchk(cudaMemcpy(pivot.deconflicted_cycles_backtracker, &pivot.d_pivot_cycles[offset_1*diameter], ((*pivot.deconflicted_cycles_depth)+2)*sizeof(int), cudaMemcpyDeviceToHost));
+        int * this_backtracker = (int *) malloc(sizeof(int)*(*pivot.deconflicted_cycles_depth + 2));
+        this_backtracker[0] = pivot_row;
+        int from_vtx, to_vtx;
+        
+        // Parse edges >>
+
+        for (int i = 0; i < *pivot.deconflicted_cycles_depth; i++) {
+            
+            int edge = pivot.deconflicted_cycles_backtracker[i];
+            
+            if (i%2 == 0) {
+                to_vtx = edge/numDemands;
+                from_vtx = edge - (to_vtx*numDemands) + numSupplies;
+            }
+            
+            else {
+                from_vtx = edge/numDemands;
+                to_vtx = edge - (from_vtx*numDemands) + numSupplies;
+            }
+
+            this_backtracker[i+1] = from_vtx;
+            this_backtracker[i+2] = to_vtx;
+
+        }
 
         execute_pivot_on_host_device(graph.h_adjMtx_ptr, graph.h_flowMtx_ptr, graph.d_adjMtx_ptr, graph.d_flowMtx_ptr, 
-                    pivot.deconflicted_cycles_backtracker, pivot_row, pivot_col, *(pivot.deconflicted_cycles_depth) + 1, 
+                    this_backtracker, pivot_row, pivot_col, *(pivot.deconflicted_cycles_depth) + 1, 
                     graph.V, numSupplies, numDemands);
         
     }

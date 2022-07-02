@@ -754,8 +754,7 @@ If it is infeasible then set the reduced cost of this cell as non-negative to de
 __global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const int min_indx,
                 const int earlier_from, const int earlier_to, 
                 int * d_adjMtx_transform, int * d_pivot_cycles,
-                const int diameter, const int numSupplies, const int numDemands, 
-                const int stride, const int maxGridDim) {
+                const int diameter, const int numSupplies, const int numDemands) {
 
     // Nomenclature : 
     // this_cycle - cycle located on this blockIdx.x
@@ -765,20 +764,19 @@ __global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const i
     //      then this_cycle conflicts with earlier_cycle and it has to die
     //      Set reduced cost = non_negative for this cycle
     
-    __shared__ int this_cycle[blockSize];
-    __shared__ int earlier_cycle[blockSize];
+    __shared__ int this_cycle[resolveBlockSize];
+    __shared__ int earlier_cycle[resolveBlockSize];
     __shared__ bool conflict; // = false; 
     __shared__ MatrixCell this_cycleE;
     __shared__ int this_cycle_depth ,earlier_cycle_depth, num_tiles_earlier, y_offset;
     
     // This cycle is available at offset - blockIdx.x*diameter  
     // Earlier cycle is available at offset - min_indx*diameter
-    if (threadIdx.x ==0 && threadIdx.y == 0) {
-        y_offset = maxGridDim*stride;
-        this_cycleE = d_reducedCosts_ptr[y_offset + blockIdx.y];
+    if (threadIdx.x==0) {
+        this_cycleE = d_reducedCosts_ptr[blockIdx.x];
         this_cycle_depth = d_adjMtx_transform[this_cycleE.row*numDemands + this_cycleE.col];
         earlier_cycle_depth = d_adjMtx_transform[earlier_from*numDemands + earlier_to]; 
-        num_tiles_earlier = ceil(1.0*earlier_cycle_depth/blockDim.x);
+        num_tiles_earlier = ceil(1.0*earlier_cycle_depth/resolveBlockSize);
     }
     
     __syncthreads();
@@ -787,39 +785,43 @@ __global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const i
     if (this_cycleE.cost < 0) {
         
         // One time load per block
-        int idx = blockDim.x*blockIdx.x + threadIdx.x;
-
-        if (threadIdx.y == 0 && idx < this_cycle_depth) {
-            int offset = (y_offset + blockIdx.y)*diameter + idx;
-            this_cycle[threadIdx.x] = d_pivot_cycles[offset];
+        int offset = blockIdx.x*diameter + blockIdx.y*resolveBlockSize; 
+        if (blockIdx.y*resolveBlockSize + threadIdx.x < this_cycle_depth) {
+            this_cycle[threadIdx.x] = d_pivot_cycles[offset + threadIdx.x];
         }
 
         __syncthreads();
 
         // Tiling for earlier cycle >>
         // This cycle static
-        for (int tile_no=0; tile_no < num_tiles_earlier; tile_no++) {
+        for (int tile = 0; tile < num_tiles_earlier; tile++) {
 
-            int load_from = min_indx*diameter + tile_no*blockDim.x;
+            int load_from = min_indx*diameter + tile*resolveBlockSize;
             int load_upto = min_indx*diameter + earlier_cycle_depth;
 
-            if (threadIdx.y == 0 && load_from + threadIdx.x < load_upto) {
+            if (tile*resolveBlockSize + threadIdx.x < earlier_cycle_depth) {
                 earlier_cycle[threadIdx.x] = d_pivot_cycles[load_from + threadIdx.x];
             }
 
             __syncthreads();
 
             // Comparison within block >> 
-            if (idx < this_cycle_depth && load_from + threadIdx.y < load_upto) {
+            // Each thread makes block-size comparisons
+        
+            for (int i = 0; i < resolveBlockSize; i++) {
 
-                if (this_cycle[threadIdx.x] == earlier_cycle[threadIdx.y]) {
-                    d_reducedCosts_ptr[y_offset + blockIdx.y].cost = epsilon; // atomic not required - race is healthy! 
+                if (tile*resolveBlockSize + threadIdx.x < earlier_cycle_depth && blockIdx.y*resolveBlockSize + i < this_cycle_depth) {
+                    bool compare = earlier_cycle[threadIdx.x] == this_cycle[i]; 
+                    if (compare) {
+                        d_reducedCosts_ptr[blockIdx.x].cost = epsilon; // atomic not required - race is healthy!
+                    }
                 }
-            
             }
         }
-    }
+    }            
 }
+
+
 
 
 

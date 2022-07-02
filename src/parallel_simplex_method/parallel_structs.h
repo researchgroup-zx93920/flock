@@ -36,6 +36,7 @@
 #define blockSize 8
 #define reducedcostBlock 16
 #define parallelBFSBlock 64
+#define resolveBlockSize 64
 
 // Maximum number of elements that can be inserted into a block queue
 #define BQ_CAPACITY 256
@@ -105,7 +106,7 @@ Just consider at most 2(M + N) negative reduced costs
 Idea to use from above 1/2
 */
 
-#define MAX_ITERATIONS 10
+#define MAX_ITERATIONS 1000
 
 /* Upper bound on max number of independent pivots */
 #define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
