@@ -773,10 +773,12 @@ __global__ void check_pivot_feasibility(MatrixCell * d_reducedCosts_ptr, const i
     // This cycle is available at offset - blockIdx.x*diameter  
     // Earlier cycle is available at offset - min_indx*diameter
     if (threadIdx.x==0) {
+
         this_cycleE = d_reducedCosts_ptr[blockIdx.x];
         this_cycle_depth = d_adjMtx_transform[this_cycleE.row*numDemands + this_cycleE.col];
         earlier_cycle_depth = d_adjMtx_transform[earlier_from*numDemands + earlier_to]; 
         num_tiles_earlier = ceil(1.0*earlier_cycle_depth/resolveBlockSize);
+    
     }
     
     __syncthreads();
@@ -1384,6 +1386,12 @@ __global__ void update_distance_path_and_create_next_frontier(
 }
 
 
+// SM PROFILING >> LOAD IMBALANCE CHECKING 
+__device__ uint get_smid(void) {
+    uint ret;
+    asm("mov.u32 %0, %smid;" : "=r"(ret));
+    return ret;
+}
 
 __global__ void update_distance_path_and_create_next_frontier_block_per_vertex(
                                         int * pathMtx,
@@ -1399,12 +1407,15 @@ __global__ void update_distance_path_and_create_next_frontier_block_per_vertex(
                                         float * opportunity_cost,
                                         const int numSupplies,
                                         const int numDemands,
-                                        const int iteration_number) 
+                                        const int iteration_number)  
 {
+    // SM PROFILING >> LOAD IMBALANCE CHECKING 
+    // unsigned long long int * sm_profile
  
     // Initialize shared memory queue
     __shared__ int write_offset, read_offset, degree, skip_location;
     __shared__ float update_recirculation;
+    __shared__ unsigned long long int time; 
     vertexPin this_vertex = currLevelNodes[blockIdx.x];
     int V = numSupplies + numDemands;
 
@@ -1414,6 +1425,8 @@ __global__ void update_distance_path_and_create_next_frontier_block_per_vertex(
         degree = d_vertex_length[this_vertex.to];
         write_offset = atomicAdd(numNextLevelNodes, degree-1);
         skip_location = V;
+        // SM PROFILING >> LOAD IMBALANCE CHECKING 
+        // time = clock64();
 
         // Update the pathMatrix and distance
         // Path for this vertex is updated and neighbors of this_vertex are queued >>
@@ -1448,14 +1461,19 @@ __global__ void update_distance_path_and_create_next_frontier_block_per_vertex(
 
         int neighbor = d_adjVertices[read_offset + j];
 
-        // check the position of skip -
+        // check the position of skip ->
         if (neighbor==current_skip) {
             skip_location = j;
         }
+    }
 
-        __syncthreads();
+    __syncthreads();
 
-        // check the position of skip -
+    for (int j = threadIdx.x; j < degree; j += blockDim.x) {
+
+        int neighbor = d_adjVertices[read_offset + j];
+
+        // check the position of skip ->
         if (j < skip_location) {
 
             this_vertex.skip = current;
@@ -1464,7 +1482,7 @@ __global__ void update_distance_path_and_create_next_frontier_block_per_vertex(
         
         }
 
-        if (j > skip_location) {
+        else if (j > skip_location) {
 
             this_vertex.skip = current;
             this_vertex.to = neighbor;
@@ -1473,6 +1491,13 @@ __global__ void update_distance_path_and_create_next_frontier_block_per_vertex(
         }
 
     }
+
+    // SM PROFILING >> LOAD IMBALANCE CHECKING 
+    // __syncthreads();
+    // if (threadIdx.x == 0) {
+    //     time = clock64() - time;
+    //     atomicAdd(&sm_profile[get_smid()], time);
+    // }
 
 }
 

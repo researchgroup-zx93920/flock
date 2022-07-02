@@ -11,13 +11,19 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands, 
     
     gpuErrchk(cudaMalloc((void **) &pivot.d_adjMtx_transform, numSupplies*numDemands*sizeof(int)));
     gpuErrchk(cudaMalloc((void **) &pivot.d_pathMtx, numSupplies*(V)*sizeof(int)));
-
     gpuErrchk(cudaMalloc((void **) &pivot.current_frontier_length, sizeof(int)));
     gpuErrchk(cudaMalloc((void **) &pivot.next_frontier_length, sizeof(int)));
+
+    // Allocate resources for BFS 
+    gpuErrchk(cudaMalloc((void **) &pivot.d_bfs_frontier_current, sizeof(vertexPin)*numSupplies*numDemands));
+    gpuErrchk(cudaMalloc((void **) &pivot.d_bfs_frontier_next, sizeof(vertexPin)*numSupplies*numDemands));
+    
+    // Allocate for Pivoting
+    gpuErrchk(cudaMalloc((void **) &pivot.d_reducedCosts_ptr, sizeof(MatrixCell)*numSupplies*numDemands));
+    gpuErrchk(cudaMalloc((void **) &pivot.d_num_NegativeCosts, sizeof(int)));
     
     // Allocate mem for pivoting items
     gpuErrchk(cudaMalloc((void **) &pivot.opportunity_cost, numSupplies*numDemands*sizeof(float)));
-    
     
     // Storing indexes of deconflicted cycles >>
     pivot.deconflicted_cycles = (int *) malloc(MAX_DECONFLICT_CYCLES(numSupplies, numDemands)*sizeof(int)); // upper bound = M + N - 1/3
@@ -39,6 +45,14 @@ __host__ void pivotFree(PivotHandler &pivot, char * pivoting_strategy) {
     gpuErrchk(cudaFree(pivot.opportunity_cost));
     gpuErrchk(cudaFree(pivot.current_frontier_length));
     gpuErrchk(cudaFree(pivot.next_frontier_length));
+
+    // De-allocate Resources for BFS >>
+    gpuErrchk(cudaFree(pivot.d_bfs_frontier_current));
+    gpuErrchk(cudaFree(pivot.d_bfs_frontier_next));
+    
+     // De-allocate for Pivoting
+    gpuErrchk(cudaFree(pivot.d_reducedCosts_ptr));
+    gpuErrchk(cudaFree(pivot.d_num_NegativeCosts));
     
     free(pivot.deconflicted_cycles);
     free(pivot.deconflicted_cycles_backtracker);
@@ -314,10 +328,6 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
     
     dim3 dimBlock(blockSize, blockSize, 1);
     dim3 dimGrid(ceil(1.0*numDemands/blockSize), ceil(1.0*numSupplies/blockSize),1);
-
-    // Allocate resources for BFS 
-    gpuErrchk(cudaMalloc((void **) &pivot.d_bfs_frontier_current, sizeof(vertexPin)*numSupplies*numDemands));
-    gpuErrchk(cudaMalloc((void **) &pivot.d_bfs_frontier_next, sizeof(vertexPin)*numSupplies*numDemands));
     
     initialize_parallel_pivot <<< dimGrid, dimBlock >>> (pivot.d_bfs_frontier_current, 
             graph.d_vertex_start, &graph.d_vertex_degree[1], graph.d_adjVertices,
@@ -344,13 +354,19 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
         // debug_viewCurrentFrontier(pivot.d_bfs_frontier_current, length_of_frontier);
 
         dim3 dimBFSGrid(length_of_frontier, 1, 1);
-        
+
+        // SM PROFILING >> LOAD IMBALANCE CHECKING 
+        // unsigned long long int * sm_profile;
+        // gpuErrchk(cudaMalloc((void **) &sm_profile, sizeof(unsigned long long int)*68));
+        // gpuErrchk(cudaMemset(sm_profile, 0, sizeof(unsigned long long int)*68));
+
         update_distance_path_and_create_next_frontier_block_per_vertex<<< dimBFSGrid, dimBFSBlock >>>(pivot.d_pathMtx, pivot.d_adjMtx_transform, 
             graph.d_vertex_start, &graph.d_vertex_degree[1], graph.d_adjVertices, 
             pivot.d_bfs_frontier_current, pivot.d_bfs_frontier_next,
             pivot.current_frontier_length, pivot.next_frontier_length,
             d_costs_ptr, pivot.opportunity_cost, 
             numSupplies, numDemands, iteration_number);
+        //  sm_profile
         gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
         
@@ -369,33 +385,40 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
         // debug_viewCurrentFrontier(pivot.d_bfs_frontier_current, length_of_frontier);
         // debug_viewOpportunity_costs(pivot, d_costs_ptr, numSupplies, numDemands);
         // exit(0);
-    
+        
+        // SM PROFILING >> LOAD IMBALANCE CHECKING 
+        // unsigned long long int * h_sm_profile = (unsigned long long int *) malloc(sizeof(unsigned long long int)*68);
+        // cudaMemcpy(h_sm_profile, sm_profile, sizeof(unsigned long long int)*68, cudaMemcpyDeviceToHost);
+        // if (iteration_number==100) {
+        //     for (int k = 0; k < 68; k++) {
+        //         std::cout<<"SM["<<k<<"] = "<<h_sm_profile[k]<<std::endl;
+        //     }
+        //     exit(0);
+        // }
+        // cudaFree(sm_profile);
+        // free(h_sm_profile);
+
     }
 
-    // De-allocate Resources for BFS >>
-    gpuErrchk(cudaFree(pivot.d_bfs_frontier_current));
-    gpuErrchk(cudaFree(pivot.d_bfs_frontier_next));
     
     // DEBUG UTILITY : view path output >>
     // _debug_print_APSP(pivot.d_adjMtx_transform, pivot.d_pathMtx, numSupplies, numDemands);
     // debug_viewOpportunity_costs(pivot, d_costs_ptr, numSupplies, numDemands);
     // exit(0);
 
-    MatrixCell * d_reducedCosts_ptr;
-    int * d_num_NegativeCosts;
     int h_num_NegativeCosts = 0;
     int diameter;
 
-    gpuErrchk(cudaMalloc((void **) &d_reducedCosts_ptr, sizeof(MatrixCell)*numSupplies*numDemands));
-    gpuErrchk(cudaMalloc((void **) &d_num_NegativeCosts, sizeof(int)));
-    gpuErrchk(cudaMemcpy(d_num_NegativeCosts, &h_num_NegativeCosts, sizeof(int), cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(pivot.d_num_NegativeCosts, &h_num_NegativeCosts, sizeof(int), cudaMemcpyHostToDevice));
 
     // Get the diameter of tree  and number of potential pivots and allocate memory for storing cycles
 
     // Figure-out number of negative reduced costs    
     // Populate d_reduced_cost_ptr for this operation
-    collectNegativeReducedCosts<<< dimGrid, dimBlock >>> (d_reducedCosts_ptr, d_num_NegativeCosts, pivot.opportunity_cost, numSupplies, numDemands);
-    gpuErrchk(cudaMemcpy(&h_num_NegativeCosts, d_num_NegativeCosts, sizeof(int), cudaMemcpyDeviceToHost));
+    collectNegativeReducedCosts<<< dimGrid, dimBlock >>> (pivot.d_reducedCosts_ptr, pivot.d_num_NegativeCosts, pivot.opportunity_cost, numSupplies, numDemands);
+    gpuErrchk(cudaPeekAtLastError());
+    gpuErrchk(cudaDeviceSynchronize());
+    gpuErrchk(cudaMemcpy(&h_num_NegativeCosts, pivot.d_num_NegativeCosts, sizeof(int), cudaMemcpyDeviceToHost));
 
     if (h_num_NegativeCosts > 0) {
 
@@ -417,8 +440,8 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
         //             d_num_NegativeCosts, diameter, numSupplies, numDemands); 
         
         derive_cells_on_paths <<< dimGrid3, dimBlock3 >>> (pivot.d_pivot_cycles, 
-                    pivot.d_adjMtx_transform, pivot.d_pathMtx, d_reducedCosts_ptr, 
-                    d_num_NegativeCosts, diameter, numSupplies, numDemands);    
+                    pivot.d_adjMtx_transform, pivot.d_pathMtx, pivot.d_reducedCosts_ptr, 
+                    pivot.d_num_NegativeCosts, diameter, numSupplies, numDemands);    
         
         gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
@@ -455,8 +478,8 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
 
         MatrixCell min_opportunity_cost;
         int min_indx = thrust::min_element(thrust::device,
-                d_reducedCosts_ptr, d_reducedCosts_ptr + (h_num_NegativeCosts), compareCells()) - d_reducedCosts_ptr;
-        gpuErrchk(cudaMemcpy(&min_opportunity_cost, &d_reducedCosts_ptr[min_indx], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
+                pivot.d_reducedCosts_ptr, pivot.d_reducedCosts_ptr + (h_num_NegativeCosts), compareCells()) - pivot.d_reducedCosts_ptr;
+        gpuErrchk(cudaMemcpy(&min_opportunity_cost, &pivot.d_reducedCosts_ptr[min_indx], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
 
         if (min_opportunity_cost.cost >= 0) {
             search_complete = true;
@@ -466,7 +489,7 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
 
             pivot.deconflicted_cycles[deconflicted_cycles_count] = min_indx;
             min_opportunity_cost.cost = epsilon;
-            gpuErrchk(cudaMemcpy(&d_reducedCosts_ptr[min_indx].cost, &min_opportunity_cost.cost, sizeof(float), cudaMemcpyHostToDevice));
+            gpuErrchk(cudaMemcpy(&pivot.d_reducedCosts_ptr[min_indx].cost, &min_opportunity_cost.cost, sizeof(float), cudaMemcpyHostToDevice));
         
             cudaDeviceProp prop;
             gpuErrchk(cudaGetDeviceProperties(&prop, 0));
@@ -475,7 +498,7 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
             dim3 cf_Block(resolveBlockSize, 1, 1);
             dim3 cf_Grid(h_num_NegativeCosts, ceil(1.0*diameter/resolveBlockSize), 1);
 
-            check_pivot_feasibility <<< cf_Grid, cf_Block >>> (d_reducedCosts_ptr, min_indx,
+            check_pivot_feasibility <<< cf_Grid, cf_Block >>> (pivot.d_reducedCosts_ptr, min_indx,
                             min_opportunity_cost.row, min_opportunity_cost.col, 
                             pivot.d_adjMtx_transform, pivot.d_pivot_cycles,
                             diameter,numSupplies, numDemands);
@@ -504,7 +527,7 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
     for (int i=0; i < deconflicted_cycles_count; i++) {
         
         int pivot_indx = pivot.deconflicted_cycles[i];
-        gpuErrchk(cudaMemcpy(&pivot_Cell, &d_reducedCosts_ptr[pivot_indx], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
+        gpuErrchk(cudaMemcpy(&pivot_Cell, &pivot.d_reducedCosts_ptr[pivot_indx], sizeof(MatrixCell), cudaMemcpyDeviceToHost));
         
         int pivot_row = pivot_Cell.row;
         int pivot_col = pivot_Cell.col;

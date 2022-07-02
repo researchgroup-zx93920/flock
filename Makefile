@@ -1,7 +1,7 @@
 CPP=g++ -std=c++14 -DBOOST_LOG_DYN_LINK
 PROFILE_FLAGS=-lineinfo
 DEBUG_FLAGS=-G -g
-CUDA_COMPILER=nvcc -arch=sm_75 -w -std=c++14 -Xcompiler -fopenmp -O3 $(PROFILE_FLAG)
+CUDA_COMPILER=nvcc -arch=sm_75 -w -std=c++14 -Xcompiler -fopenmp -O3 $(PROFILE_FLAGS)
 SRC=./src
 
 BOOST_INCLUDE_PATH=/home/mohitm3/cpp_libs/boost_1_78_0

@@ -172,6 +172,7 @@ __global__ void update_distance_path_and_create_next_frontier_block_per_vertex(i
             int * numCurrLevelNodes, int * numNextLevelNodes,
             float * d_costs_ptr, float * opporutnity_cost, 
             const int numSupplies, const int numDemands, const int iteration_number);
+            // unsigned long long int * sm_profile);
 
 __global__ void collectNegativeReducedCosts(MatrixCell * d_reducedCosts_ptr, int * numNegativeCosts,
     float * opportunity_costs, const int numSupplies, const int numDemands);

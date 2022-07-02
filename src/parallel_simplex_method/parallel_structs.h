@@ -7,6 +7,7 @@
 #include<utility>
 #include<chrono>
 #include<math.h>
+#include<stdint.h>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -106,7 +107,7 @@ Just consider at most 2(M + N) negative reduced costs
 Idea to use from above 1/2
 */
 
-#define MAX_ITERATIONS 1000
+#define MAX_ITERATIONS 10000
 
 /* Upper bound on max number of independent pivots */
 #define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
@@ -357,6 +358,9 @@ struct PivotHandler {
     float * opportunity_cost;
     vertexPin * d_bfs_frontier_current, * d_bfs_frontier_next;
     int * current_frontier_length, * next_frontier_length;
+    MatrixCell * d_reducedCosts_ptr;
+    int * d_num_NegativeCosts;
+
     // Oppotunity cost - Cost Improvement observed per unit along the cycle
     // Delta - Possible Recirculation along the cycle 
     // (computation of delta requires communication of flows to device - this is time taking)
