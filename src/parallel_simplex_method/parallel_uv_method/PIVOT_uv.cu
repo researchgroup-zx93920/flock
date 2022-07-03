@@ -12,10 +12,27 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands, 
     // Pivoting requires some book-keeping (for the DFS procedure)
     // BOOK 1: Stores the routes discovered for each thread -
     pivot.backtracker = (int *) malloc(sizeof(int)*V);    
-    // BOOK 2: Stores the runtime stack for DFS running on each thread
-    pivot.stack = (stackNode *) malloc(sizeof(stackNode)*V);    
-    // BOOK 3: Keeps a track if any vertex was visited during DFS for each thread
-    pivot.visited = (bool *) malloc(sizeof(bool)*V);
+
+    if (SEQ_CYCLE_SEARCH=="bfs") {
+
+        pivot.via_points = (int *)  malloc(sizeof(int)*V); // One row of via matrix - backtracker
+        pivot.depth_tracker = (int *) malloc(sizeof(int)*V);
+
+    }
+
+    else if (SEQ_CYCLE_SEARCH=="dfs") {
+
+        // BOOK 2: Stores the runtime stack for DFS running on each thread
+        pivot.stack = (stackNode *) malloc(sizeof(stackNode)*V);    
+        // BOOK 3: Keeps a track if any vertex was visited during DFS for each thread
+        pivot.visited = (bool *) malloc(sizeof(bool)*V);
+
+    }
+    else {
+
+        std::cout<<"Incorrect mode for cycle search!"<<std::endl;
+    
+    }
 
     if (REDUCED_COST_MODE == "parallel") {
         gpuErrchk(cudaMalloc((void **) &pivot.opportunity_cost, sizeof(float)*numSupplies*numDemands));
@@ -30,8 +47,20 @@ __host__ void pivotFree(PivotHandler &pivot, char * pivoting_strategy) {
 
     // Free up resources acquired for sequencial DFS
     free(pivot.backtracker);
-    free(pivot.stack);
-    free(pivot.visited);
+
+    if (SEQ_CYCLE_SEARCH=="bfs") {
+
+        free(pivot.via_points);
+        free(pivot.depth_tracker);
+
+    }
+
+    else if (SEQ_CYCLE_SEARCH=="dfs") {
+
+        free(pivot.stack);
+        free(pivot.visited);
+
+    }
 
     if (REDUCED_COST_MODE == "parallel") {
 
@@ -64,6 +93,63 @@ __host__ static stackNode stack_pop(stackNode * stack, int &stack_top)
     return vtx;
 }
 
+
+__host__ void perform_bfs_sequencial_on_i(int * adjMtx, std::vector<std::vector<int>> h_Graph, 
+        int * backtracker, int * via_points, int * depth_tracker, 
+        int * depth, int starting_vertex, int target_vertex, int V)
+{   
+    
+    int parent, child, current_depth = 1;
+    bool loop_found = false;
+    
+    thrust::fill(thrust::host, via_points, via_points + V, -1);
+
+    std::queue<int> explore;  // BFS Search Queue
+    // Make the first frontier >>
+    for (int i=0; i < h_Graph[starting_vertex].size(); i++) {
+        child = h_Graph[starting_vertex][i];
+        via_points[child] = starting_vertex;
+        depth_tracker[child] = current_depth;
+        explore.push(child);
+    }
+
+    // Jump Frontier to frontier >>
+    while(!(loop_found))
+    {
+        parent = explore.front(); // Now look at neighbors of parent except parent
+        current_depth = depth_tracker[parent];
+        for (int i = 0; i < h_Graph[parent].size(); i++) {
+            
+            child = h_Graph[parent][i];
+
+            if (!(via_points[parent]== child)) {
+                via_points[child] = parent;
+                depth_tracker[child] = current_depth + 1;
+                explore.push(child);
+            }
+
+            // Check if cycle discovered >>
+            if (child == target_vertex) {
+                loop_found = true;
+                break;
+            }
+        }
+        explore.pop();
+    }
+
+    // Backtrack the path >> 
+    int current_vertex = target_vertex;
+    *depth = depth_tracker[target_vertex]+1;
+
+    for (int i = depth_tracker[target_vertex]; i > 0; i--) {
+        backtracker[i] = via_points[current_vertex];
+        current_vertex = via_points[current_vertex];
+    }
+
+}
+
+
+
 /*
 Perform depth first search looking for route to execute the pivot
 */
@@ -72,6 +158,7 @@ __host__ void perform_dfs_sequencial_on_i(int * adjMtx, std::vector<std::vector<
         int * depth, int starting_vertex, int target_vertex, int V)
 {   
     
+    memset(visited, 0, V*sizeof(bool));
     int key, current_depth = 1, stack_top = -1;
     stackNode current_vertex;
     stack_push(stack, stack_top, starting_vertex, current_depth);
@@ -145,6 +232,7 @@ __host__ static void do_flow_adjustment_on_host(int * h_adjMtx_ptr, float * h_fl
     int _from, _to, id;
     float _flow;
 
+    
     for (int i=1; i<depth; i++) 
     {
         _from = backtracker[i];
@@ -189,23 +277,22 @@ __host__ static void execute_pivot_on_host(Graph &graph,
     // ########### STEP 1 | Finding the minimum flow >>
     // Traverse the loop find the minimum flow that could be increased
     // on the incoming edge >> 
-    for (int i=0; i<depth; i++) 
+    for (int i=1; i<depth; i+=2) 
     {
-        if (i%2==1) 
+        
+        _from = backtracker[i];
+        _to = backtracker[i+1];
+        id = graph.h_adjMtx_ptr[TREE_LOOKUP(_from, _to, graph.V)] - 1;
+        _flow = graph.h_flowMtx_ptr[id];
+        
+        if (_flow < min_flow) 
         {
-            _from = backtracker[i];
-            _to = backtracker[i+1];
-            id = graph.h_adjMtx_ptr[TREE_LOOKUP(_from, _to, graph.V)] - 1;
-            _flow = graph.h_flowMtx_ptr[id];
-            
-            if (_flow < min_flow) 
-            {
-                min_flow = _flow;
-                min_flow_id = id;
-                min_from = _from;
-                min_to = _to;
-            }
+            min_flow = _flow;
+            min_flow_id = id;
+            min_from = _from;
+            min_to = _to;
         }
+
     }
 
     // ########### STEP 2 | Executing the flow adjustment >>
@@ -249,15 +336,26 @@ __host__ void perform_a_sequencial_pivot(PivotHandler &pivot, PivotTimer &timer,
         // *******************************************
         int _depth = 1; // Stores length of cycle discovered for each thread
         pivot.backtracker[0] = pivot_row;
-        memset(pivot.visited, 0, graph.V*sizeof(bool));
 
         // Find a path by performing DFS from pivot_col reaching pivot row to complete cycle >>
         // SEQUENCIAL PROCEDURE to find An incoming edge to vertex = pivot_row from vertex = numSupplies + pivot_col        
         _pivot_start = std::chrono::high_resolution_clock::now();
 
-        perform_dfs_sequencial_on_i(graph.h_adjMtx_ptr, graph.h_Graph, 
+        if (SEQ_CYCLE_SEARCH == "bfs") {
+
+            perform_bfs_sequencial_on_i(graph.h_adjMtx_ptr, graph.h_Graph, 
+            pivot.backtracker, pivot.via_points, pivot.depth_tracker, &_depth, 
+            pivot_col+numSupplies, pivot_row, graph.V);
+
+        }
+        
+        else if (SEQ_CYCLE_SEARCH == "dfs") {
+
+            perform_dfs_sequencial_on_i(graph.h_adjMtx_ptr, graph.h_Graph, 
             pivot.stack, pivot.backtracker, pivot.visited, &_depth, 
             pivot_col+numSupplies, pivot_row, graph.V);
+
+        }
     
         _pivot_end = std::chrono::high_resolution_clock::now();
         _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
@@ -281,13 +379,6 @@ __host__ void perform_a_sequencial_pivot(PivotHandler &pivot, PivotTimer &timer,
             // STEP : Performing the pivot operation 
             // *******************************************
             pivot.backtracker[_depth] = pivot_row;
-
-            // std::cout<<"Printing Cycle :: [ ";
-            // for (int i=0; i<= _depth; i++){
-            //     std::cout<<pivot.backtracker[i]<<", ";         
-            // }
-            // std::cout<<"]"<<std::endl;
-            // exit(0);
 
             execute_pivot_on_host(graph, 
                     pivot.backtracker, pivot_row, pivot_col, _depth, 

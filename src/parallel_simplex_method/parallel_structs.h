@@ -84,6 +84,11 @@ A mode for switching to pure sequencial algorithm
 change it to "sequencial" or "parallel"
 */
 
+#define SEQ_CYCLE_SEARCH "bfs"
+/*
+dfs, bfs 
+*/
+
 // >>>>>>>>>> END OF PARAMETERS // 
 
 #define TREE_LOOKUP(row, col, V) (col>=row?((row*V)-(row*(row+1)/2))+col:((col*V)-(col*(col+1)/2))+row)
@@ -268,7 +273,7 @@ struct PivotHandler {
     // Useful for both seq and parallel strategy >>
     
     // DFS >>
-    int * backtracker, * depth; 
+    int * backtracker, * depth, * via_points, * depth_tracker; 
     bool * visited;
     stackNode * stack;
      

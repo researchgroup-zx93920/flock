@@ -228,7 +228,8 @@ void uvModel_parallel::execute()
 {
     // SIMPLEX ALGORITHM >>
     std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nCALCULATE_DUAL: ";
-    std::cout<<CALCULATE_DUAL<<"\nPIVOTING STRATEGY: sequencial_dfs\n-------------------------------------"<<std::endl;
+    std::cout<<CALCULATE_DUAL<<"\nPIVOTING STRATEGY: sequencial_dfs\n";
+    std::cout<<"REDUCED COST MODE: "<<REDUCED_COST_MODE<<"\n-------------------------------------"<<std::endl;
 
     // **************************************
     // STEP 1: Finding BFS

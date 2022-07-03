@@ -3,11 +3,11 @@
 # make clean
 # make
 nv-nsight-cu-cli \
-  -o ./profiles/profile_bfs19 \
-  --kernel-id ::update_distance_path_and_create_next_frontier_block_per_vertex:5 \
+  -o ./profiles/profile_bfs20 \
+  --kernel-id ::computeReducedCosts:5 \
   --set full \
   --target-processes all \
-  /home/mohitm3/workspace/flock/bin/flock_bkp -i /home/mohitm3/workspace/flock/data/TransportModel_1000_1000_1_equalityConstr.dat -a parallel_ss
+  /home/mohitm3/workspace/flock/bin/flock -i /home/mohitm3/workspace/flock/data/TransportModel_1000_1000_1_equalityConstr.dat -a parallel_uv
 
 # # ex.
 # ../build/exe/src/main.cu.exe -g ../../dataset/gbin/cit-Patents_adj.bel -t ../../dataset/templates/mtx/cq8m1_template.mtx -o full -d 3 -m sgm -p node
