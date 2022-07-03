@@ -152,6 +152,10 @@ void uvModel_parallel::get_reduced_costs()
 {
     if (REDUCED_COST_MODE == "parallel") {
 
+        // Transfer dual costs to GPU 
+        gpuErrchk(cudaMemcpy(dual.u_vars_ptr, &dual.h_variables[0], sizeof(int)*data->numSupplies, cudaMemcpyHostToDevice));
+        gpuErrchk(cudaMemcpy(dual.v_vars_ptr, &dual.h_variables[data->numSupplies], sizeof(int)*data->numDemands, cudaMemcpyHostToDevice));
+
         dim3 __dimBlock(reducedcostBlock, reducedcostBlock, 1); // Refine this based on device query
         dim3 __dimGrid(ceil(1.0*data->numDemands/reducedcostBlock), ceil(1.0*data->numSupplies/reducedcostBlock), 1);
         
@@ -173,8 +177,6 @@ void uvModel_parallel::get_reduced_costs()
 
     else if (REDUCED_COST_MODE == "sequencial") {
 
-        float * h_u_vars = &dual.h_variables[0];
-        float * h_v_vars = &dual.h_variables[data->numSupplies];
         float min_r = INT_MAX*1.0f;
         int selected_pivot_row = -1;
         int selected_pivot_column = -1;
@@ -182,7 +184,7 @@ void uvModel_parallel::get_reduced_costs()
         for (int i = 0; i < data->numSupplies; i ++) {
             for (int j = 0; j < data-> numDemands; j++) {
                 int indx = i*data->numDemands + j;
-                float r = costMatrix[indx].cost - h_u_vars[i] - h_v_vars[j];
+                float r = costMatrix[indx].cost - dual.h_variables[i] - dual.h_variables[data->numSupplies + j];
                 if (r < min_r) {
                     min_r = r;
                     selected_pivot_row = i;
@@ -213,13 +215,11 @@ void uvModel_parallel::setup_host_graph() {
     gpuErrchk(cudaMemcpy(graph.h_vertex_degree, &graph.d_vertex_degree[1], sizeof(int)*graph.V, cudaMemcpyDeviceToHost));
     gpuErrchk(cudaMemcpy(graph.h_vertex_start, graph.d_vertex_start, sizeof(int)*graph.V, cudaMemcpyDeviceToHost));
     gpuErrchk(cudaMemcpy(graph.h_adjVertices, graph.d_adjVertices, sizeof(int)*2*(graph.V-1), cudaMemcpyDeviceToHost));
-    
-    for (int i=0; i < graph.V; i++) {
 
+    for (int i=0; i < graph.V; i++) {
         for (int j=0; j < graph.h_vertex_degree[i]; j++) {
             graph.h_Graph[i].push_back(graph.h_adjVertices[graph.h_vertex_start[i]+j]);
         }
-    
     }
 
 }
@@ -228,7 +228,7 @@ void uvModel_parallel::execute()
 {
     // SIMPLEX ALGORITHM >>
     std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nCALCULATE_DUAL: ";
-    std::cout<<CALCULATE_DUAL<<"\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY<<"\n-------------------------------------"<<std::endl;
+    std::cout<<CALCULATE_DUAL<<"\nPIVOTING STRATEGY: sequencial_dfs\n-------------------------------------"<<std::endl;
 
     // **************************************
     // STEP 1: Finding BFS
@@ -271,7 +271,7 @@ void uvModel_parallel::execute()
     std::cout<<"\tSuccessfully allocated Resources for DUAL ..."<<std::endl;
 
     // Follow PIVOTING_dfs for the following
-    UV_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, PIVOTING_STRATEGY);
+    UV_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, "sequencial_dfs");
     std::cout<<"\tSuccessfully allocated Resources for PIVOTING ..."<<std::endl;
     
     // Create tree structure on host and device (for pivoting)
@@ -351,12 +351,12 @@ void uvModel_parallel::execute()
 
     UV_METHOD::dualFree(dual);
     std::cout<<"\tSuccessfully de-allocated resources for DUAL ..."<<std::endl;
-    UV_METHOD::pivotFree(pivot, PIVOTING_STRATEGY);
+    UV_METHOD::pivotFree(pivot, "sequencial_dfs");
     std::cout<<"\tSuccessfully de-allocated Resources for PIVOT ..."<<std::endl;
 
     std::cout<<"\tProcessing Solution ..."<<std::endl;
     cudaMemcpy(graph.d_flowMtx_ptr, graph.h_flowMtx_ptr, (graph.V-1)*sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(graph.d_adjMtx_ptr, graph.h_adjMtx_ptr, ((graph.V*(graph.V+1))/2)*sizeof(float), cudaMemcpyHostToDevice);    
+    cudaMemcpy(graph.d_adjMtx_ptr, graph.h_adjMtx_ptr, ((graph.V*(graph.V+1))/2)*sizeof(int), cudaMemcpyHostToDevice);    
     retrieve_solution_on_current_tree(feasible_flows, graph, data->active_flows, data->numSupplies, data->numDemands);
 
     std::cout<<"Found "<<data->active_flows<<" active flows in the final result"<<std::endl;
@@ -409,17 +409,7 @@ void uvModel_parallel::view_uv()
 
     // Print U >>
     float * u_vector;
-    
-    if (REDUCED_COST_MODE == "parallel") {
-
-        u_vector = (float *) malloc(data->numSupplies*sizeof(float));
-        gpuErrchk(cudaMemcpy(u_vector, dual.u_vars_ptr, data->numSupplies*sizeof(float), cudaMemcpyDeviceToHost));
-
-    }
-    else {
-        u_vector = &dual.h_variables[0];
-    }
-    
+    u_vector = &dual.h_variables[0];
     for (int i = 0; i < data->numSupplies; i++) {
         std::cout << "U[" << i << "] = " << u_vector[i] << std::endl;
     }
@@ -429,16 +419,8 @@ void uvModel_parallel::view_uv()
     // Print V >>
     float * v_vector;
 
-    if (REDUCED_COST_MODE == "parallel") {
-
-        v_vector = (float *) malloc(data->numDemands*sizeof(float));
-        gpuErrchk(cudaMemcpy(v_vector, dual.v_vars_ptr, data->numDemands*sizeof(float), cudaMemcpyDeviceToHost));
-
-    }
-    else {
-        v_vector = &dual.h_variables[data->numSupplies];
-    }
-
+    v_vector = &dual.h_variables[data->numSupplies];
+    
     for (int i = 0; i < data->numDemands; i++) {
         std::cout << "V[" << i << "] = " << v_vector[i] << std::endl;
     }

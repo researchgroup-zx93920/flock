@@ -64,13 +64,6 @@ device_sparse_linear_solver : solve system of sparse lin_equations on device (sp
 device_dense_linear_solver : solve system of dense lin_equations (dense linear algebra :: cublas)
 */
 
-#define PIVOTING_STRATEGY "parallel_bfs"
-/*
-sequencial_dfs : perform pivoting one at a time based on dantzig's rule
-parallel_bfs : perform parallel pivoting by floyd warshall strategy to build cycles
-*/
-
-
 #define MAX_DECONFLICT_CYCLES(M, N) ((M+N-1)/3)
 /* 
 IDEA:
@@ -80,7 +73,7 @@ in the hope that we'll get the most of the deconflicted cycles from the
 top cream of negative reduced costs
 */
 
-#define MAX_ITERATIONS 10000
+#define MAX_ITERATIONS 100000
 
 /* Upper bound on max number of independent pivots */
 

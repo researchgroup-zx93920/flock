@@ -106,12 +106,18 @@ int main(int argc, char **argv)
     BOOST_LOG_TRIVIAL(info)<<">>>> BASIC STATISTICS | Objective: "<<model.objVal<<" | Iterations: "<<model.totalIterations<<" | Time: "<<model.totalSolveTime \
     <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
 
-    BOOST_LOG_TRIVIAL(info)<<">>>> LVL1 STATISTICS | Total Time: "<<model.totalSolveTime \
+    BOOST_LOG_TRIVIAL(info)<<">>>> LVL1 STATISTICS(A)" \
+    <<" | PIVOT Time: "<<round(model.pivot_time/1000)                                    \
+    <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
+
+    BOOST_LOG_TRIVIAL(info)<<">>>> LVL1 STATISTICS(B)" \
+    <<" | UV Time: "<<round(model.uv_time/1000)                                          \
+    <<" | R Time: "<<round(model.reduced_cost_time/1000)                                 \
     <<" | PIVOT Time: "<<round(model.pivot_time/1000)                                    \
     <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;
 
     BOOST_LOG_TRIVIAL(info)<<">>>> LVL2 PIVOT STATISTICS | Total Pivot Time: "<<round(model.pivot_time/1000)  \
-    <<" | CYCLE Time: "<<round(model.cycle_discovery_time/1000)                                      \
+    <<" | CYCLE Time (parallel BFS + seq DFS): "<<round(model.cycle_discovery_time/1000)                                      \
     <<" | RESOLVE Time: "<<round(model.resolve_time/1000)                              \
     <<" | ADJUST Time: "<<round(model.adjustment_time/1000)                            \
     <<" | MATRIX : "<<problem.numSupplies<<" X "<<problem.numDemands;

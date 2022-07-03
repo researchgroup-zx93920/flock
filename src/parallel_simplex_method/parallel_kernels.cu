@@ -139,6 +139,12 @@ __host__ void create_IBF_tree_on_host_device(Graph &graph, flowInformation * fea
     graph.h_vertex_start = (int *) malloc(sizeof(int)*V);
     graph.h_vertex_degree = (int *) malloc(sizeof(int)*V);
     graph.h_adjVertices = (int *) malloc(sizeof(int)*2*(V-1));
+    
+    // Initialize host graph 
+    std::vector<int> _neighborhood;
+    for (int i=0; i < V; i++) {
+        graph.h_Graph.push_back(_neighborhood);
+    }
 
 }
 
@@ -184,11 +190,15 @@ __host__ void close_solver(Graph &graph)
     gpuErrchk(cudaFree(graph.d_adjMtx_ptr));
     gpuErrchk(cudaFree(graph.d_flowMtx_ptr));
     
+    // DEBUG :: following is double free (-_-) idk where!
+    // Since it's a single time allocation - no tension get rid of this!
+    
     free(graph.h_vertex_start);
     free(graph.h_vertex_degree);
     free(graph.h_adjVertices);
     free(graph.h_adjMtx_ptr);
     free(graph.h_flowMtx_ptr);
+    
 
 }
 

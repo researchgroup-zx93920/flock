@@ -20,16 +20,15 @@ __host__ void dualMalloc(DualHandler &dual, int numSupplies, int numDemands) {
 
 __host__ void dualFree(DualHandler &dual) {
      
+     free(dual.h_visited);
+     free(dual.h_variables);
+
      if (REDUCED_COST_MODE == "parallel") {
 
         gpuErrchk(cudaFree(dual.u_vars_ptr));
         gpuErrchk(cudaFree(dual.v_vars_ptr));
 
      }
-        
-        free(dual.h_visited);
-        free(dual.h_variables);
-
 }
 
 __host__ void find_dual_using_host_bfs(DualHandler &dual,  Graph &graph, float * h_costs_ptr, 
@@ -60,13 +59,6 @@ __host__ void find_dual_using_host_bfs(DualHandler &dual,  Graph &graph, float *
                         }
                 }
                 assigned_parents.pop();
-        }
-
-        // Transfer back to GPU >> 
-        if (REDUCED_COST_MODE == "parallel") {
-
-                gpuErrchk(cudaMemcpy(dual.u_vars_ptr, &dual.h_variables[0], sizeof(int)*numSupplies, cudaMemcpyHostToDevice));
-                gpuErrchk(cudaMemcpy(dual.v_vars_ptr, &dual.h_variables[numSupplies], sizeof(int)*numDemands, cudaMemcpyHostToDevice));
         }
 }
 

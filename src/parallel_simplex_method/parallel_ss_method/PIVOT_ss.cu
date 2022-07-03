@@ -40,7 +40,7 @@ __host__ void pivotMalloc(PivotHandler &pivot, int numSupplies, int numDemands, 
     
     // MegaBytes
     size_of_memory = size_of_memory/(1024*1024);
-    std::cout<<"SS PIVOT MALLOC : "<<size_of_memory<<" MB of device memory allocated!";
+    std::cout<<"\t"<<size_of_memory<<" MB of device memory allocated!"<<std::endl;
  
 }
 
@@ -439,7 +439,7 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
     else {
         
         result = true;
-        std::cout<<"Pivoting Complete!"<<std::endl;
+        std::cout<<"SIMPLEX :: Pivoting Complete!"<<std::endl;
         return;
 
     }

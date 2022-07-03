@@ -47,7 +47,6 @@ switchModel_parallel::switchModel_parallel(ProblemInstance *problem, flowInforma
     graph.V = data->numSupplies+data->numDemands;
 
     // Initialize model statistics >>
-    deviceCommunicationTime = 0.0;
     pivot_time = 0.0;
     cycle_discovery_time = 0.0;
     resolve_time = 0.0;
@@ -70,7 +69,7 @@ switchModel_parallel::~switchModel_parallel()
 
     // FREE GPU MEMORY CREATED IN INITIALIZATION
     gpuErrchk(cudaFree(d_costs_ptr));
-    // gpuErrchk(cudaFree(device_costMatrix_ptr));
+    gpuErrchk(cudaFree(device_costMatrix_ptr));
 }
 
 /*
@@ -114,101 +113,10 @@ void switchModel_parallel::generate_initial_BFS()
     }
 }
 
-/*
-Given a u and v vector on device - computes the dual costs for all the constraints. There could be multiple ways 
-to solve the dual costs for a given problem. Packaged method derive u's and v's and load them onto 
-the U_vars and V_vars attributes
-    1. Use a bfs method for dual (trickle down approach)
-    2. Use a off-the-shelf solver for linear equation 
-*/
 void switchModel_parallel::solve_uv()
 {
-    /* 
-    solve_uv method - Need to populate u_vars_ptr and v_vars_ptr attributes of this class 
-    This is an internal function can't be API'ed - Executes successfully in a specific situation
-    These are special kernels - all are classified in DUAL_solver.h module
-    */
-
-    if (CALCULATE_DUAL=="device_bfs") 
-    {
-        /* 
-        Initialize u and v and then solve them through 
-        Breadth first search using the adj matrix provided
-        BFS is performed on the device
-        */
-        find_dual_using_device_bfs(dual, graph, d_costs_ptr, data->numSupplies, data->numDemands);
-    }
-    else if (CALCULATE_DUAL=="host_bfs") 
-    {
-        /* 
-        Initialize u and v and then solve them through 
-        Breadth first search using the adj matrix provided
-        BFS is performed on the host 
-        */
-        find_dual_using_host_bfs(dual, graph, data->costs, data->numSupplies, data->numDemands);
-    }
-    else if (CALCULATE_DUAL=="host_sparse_linear_solver") 
-    {
-        /* 
-        Solve a system of linear equations
-        1. Create a sparse matrix A and Vector B
-            - Invoke a kernel to fill A_csr, B on device  
-            - Set the default allocation
-        2. Solve the sparse system A_csr * x = b // cuSparse solver
-        */
-       // YET TO BE IMPLEMENTED >> 
-       std::cout<<"ERROR: Cannot Proceed!, Change CALCULATE_DUAL parameter"<<std::endl;
-        // find_dual_using_sparse_solver(u_vars_ptr, v_vars_ptr, d_costs_ptr, d_adjMtx_ptr,
-        //     d_csr_values, d_csr_columns, d_csr_offsets, d_x, d_b, nnz,
-        //     data->numSupplies, data->numDemands);
-    }
-    else if (CALCULATE_DUAL=="host_dense_linear_solver") 
-    {
-        /* 
-        Solve a system of linear equations
-        1. Create a dense matrix A and Vector B
-            - Initialize a zero dense matrix A
-            - Invoke a kernel to fill A, B on device  
-            - Set the default allocation
-        2. Solve the dense system Ax = b  // cuBlas solver
-        */
-        // YET TO BE IMPLEMENTED >> 
-        std::cout<<"ERROR: Cannot Proceed!, Change CALCULATE_DUAL parameter"<<std::endl;
-        // find_dual_using_dense_solver(u_vars_ptr, v_vars_ptr, d_costs_ptr, d_adjMtx_ptr,
-        //     d_A, d_x, d_b, data->numSupplies, data->numDemands);
-    }
-    else if (CALCULATE_DUAL=="device_sparse_linear_solver") 
-    {
-        /* 
-        Solve a system of linear equations
-        1. Create a sparse matrix A and Vector B
-            - Invoke a kernel to fill A_csr, B on device  
-            - Set the default allocation
-        2. Solve the sparse system A_csr * x = b // cuSparse solver
-        */
-        find_dual_using_sparse_solver(dual, graph, d_costs_ptr, 
-            data->numSupplies, data->numDemands);
-    }
-    else if (CALCULATE_DUAL=="device_dense_linear_solver") 
-    {
-        /* 
-        Solve a system of linear equations
-        1. Create a dense matrix A and Vector B
-            - Initialize a zero dense matrix A
-            - Invoke a kernel to fill A, B on device  
-            - Set the default allocation
-        2. Solve the dense system Ax = b  // cuBlas solver
-        */
-        // YET TO BE IMPLEMENTED >> 
-        std::cout<<"ERROR: Cannot Proceed!, Change CALCULATE_DUAL parameter"<<std::endl;
-        // find_dual_using_dense_solver(u_vars_ptr, v_vars_ptr, d_costs_ptr, d_adjMtx_ptr,
-        //     d_A, d_x, d_b, data->numSupplies, data->numDemands);
-    }
-    else 
-    {
-        std::cout<<"Invalid method of dual calculation!"<<std::endl;
-        std::exit(-1); 
-    }
+    // Use the facility method avilable form UV
+    UV_METHOD::find_dual_using_host_bfs(dual, graph, data->costs, data->numSupplies, data->numDemands);
 }
 
 
@@ -218,12 +126,38 @@ costs provided a cost-matrix and u_vars, v_vars and cost Matrix on device
 */
 void switchModel_parallel::get_reduced_costs() 
 {
-    dim3 __dimBlock(32, 32, 1); // Refine this based on device query
-    dim3 __dimGrid(ceil(1.0*data->numDemands/32), ceil(1.0*data->numSupplies/32), 1);
-    computeReducedCosts<<< __dimGrid, __dimBlock >>>(dual.u_vars_ptr, dual.v_vars_ptr, d_costs_ptr, d_reducedCosts_ptr, 
-        data->numSupplies, data->numDemands);
-    gpuErrchk(cudaPeekAtLastError());
-    gpuErrchk(cudaDeviceSynchronize());
+    if (REDUCED_COST_MODE == "parallel") {
+
+        // Transfer dual costs to GPU 
+        gpuErrchk(cudaMemcpy(dual.u_vars_ptr, &dual.h_variables[0], sizeof(int)*data->numSupplies, cudaMemcpyHostToDevice));
+        gpuErrchk(cudaMemcpy(dual.v_vars_ptr, &dual.h_variables[data->numSupplies], sizeof(int)*data->numDemands, cudaMemcpyHostToDevice));
+
+        dim3 __dimBlock(reducedcostBlock, reducedcostBlock, 1); // Refine this based on device query
+        dim3 __dimGrid(ceil(1.0*data->numDemands/reducedcostBlock), ceil(1.0*data->numSupplies/reducedcostBlock), 1);
+        
+        // Compute >> 
+        computeReducedCosts<<< __dimGrid, __dimBlock >>>(dual.u_vars_ptr, dual.v_vars_ptr, d_costs_ptr, pivot.opportunity_cost, 
+            data->numSupplies, data->numDemands);
+        gpuErrchk(cudaPeekAtLastError());
+        gpuErrchk(cudaDeviceSynchronize());
+
+        // Reduce >> 
+        int min_indx = thrust::min_element(thrust::device,
+                pivot.opportunity_cost, pivot.opportunity_cost + data->numSupplies*data->numDemands) - pivot.opportunity_cost;
+        gpuErrchk(cudaMemcpy(&pivot.reduced_cost, &pivot.opportunity_cost[min_indx], sizeof(float), cudaMemcpyDeviceToHost));
+
+        pivot.pivot_row = min_indx/data->numDemands;
+        pivot.pivot_col = min_indx - (pivot.pivot_row*data->numDemands);
+    
+    }
+
+    else { 
+
+        std::cout<<"ERROR : for switching model - enfored reduced cost mode to parallel!"<<std::endl;
+    
+    }
+
+        
 }
 
 
@@ -235,7 +169,7 @@ void switchModel_parallel::perform_pivot(bool &result, int iteration, int &mode)
     // Fixed Pivoting Strategy 
     if (mode == 1) 
     {
-        UV_METHOD::perform_a_sequencial_pivot(pivot, timer, graph, d_reducedCosts_ptr, result,
+        UV_METHOD::perform_a_sequencial_pivot(pivot, timer, graph, result,
             data->numSupplies, data->numDemands);
     }
     else if (mode == 0) 
@@ -244,7 +178,8 @@ void switchModel_parallel::perform_pivot(bool &result, int iteration, int &mode)
         SS_METHOD::perform_a_parallel_pivot(pivot, timer, graph, d_costs_ptr, result,
             data->numSupplies, data->numDemands, iteration, num_pivots);
 
-        if (num_pivots < round(0.02175*data->numSupplies + 0.03414*data->numDemands - 0.06368)/5) {
+        // Switching >>
+        if (num_pivots < 10) {
             mode = 1;
         }
     }
@@ -255,12 +190,29 @@ void switchModel_parallel::perform_pivot(bool &result, int iteration, int &mode)
     }    
 }
 
+void switchModel_parallel::setup_host_graph() {
+
+    gpuErrchk(cudaMemcpy(graph.h_vertex_degree, &graph.d_vertex_degree[1], sizeof(int)*graph.V, cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(graph.h_vertex_start, graph.d_vertex_start, sizeof(int)*graph.V, cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(graph.h_adjVertices, graph.d_adjVertices, sizeof(int)*2*(graph.V-1), cudaMemcpyDeviceToHost));
+    
+    for (int i=0; i < graph.V; i++) {
+
+        for (int j=0; j < graph.h_vertex_degree[i]; j++) {
+            graph.h_Graph[i].push_back(graph.h_adjVertices[graph.h_vertex_start[i]+j]);
+        }
+    
+    }
+
+}
+
+
 
 void switchModel_parallel::execute() 
 {
     // SIMPLEX ALGORITHM >>
-    std::cout<<"------------- PARAMS L1 -------------\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY;
-    std::cout<<"\n-------------------------------------"<<std::endl;
+    std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nCALCULATE_DUAL: ";
+    std::cout<<CALCULATE_DUAL<<"\nPIVOTING STRATEGY: switch-ParallelToSeq\n-------------------------------------"<<std::endl;
 
     // **************************************
     // STEP 1: Finding BFS
@@ -298,7 +250,7 @@ void switchModel_parallel::execute()
     std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
     
     // Follow DUAL_solver for the following
-    SS_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, PIVOTING_STRATEGY);
+    SS_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, "parallel_bfs");
     std::cout<<"\tSuccessfully allocated Resources for PIVOTING ..."<<std::endl;
     
     // Create tree structure on host and device (for pivoting)
@@ -317,7 +269,6 @@ void switchModel_parallel::execute()
 
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
-        make_adjacency_list(graph, data->numSupplies, data->numDemands);
         // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
         // view_tree();
         
@@ -325,14 +276,15 @@ void switchModel_parallel::execute()
 
         if (mode == 0) {
 
+            make_adjacency_list(graph, data->numSupplies, data->numDemands);
+
             iter_start = std::chrono::high_resolution_clock::now();
             
             perform_pivot(result, iteration_counter, mode);
             
             iter_end = std::chrono::high_resolution_clock::now();
             iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
-            pivot_time += iter_duration.count();
-            
+            pivot_time += iter_duration.count();     
             swiched_iteration = (mode == 1);
 
         }
@@ -342,19 +294,16 @@ void switchModel_parallel::execute()
 
             // Follow PIVOTING_dfs for the following
             // Make some interchange
-            SS_METHOD::pivotFree(pivot, PIVOTING_STRATEGY);
+            SS_METHOD::pivotFree(pivot, "parallel_bfs");
             UV_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, "sequencial_dfs");
             std::cout<<"\tSuccessfully re-allocated Resources for PIVOTING ..."<<std::endl;
 
             // Follow DUAL_solver for the following
-            dualMalloc(dual, data->numSupplies, data->numDemands);
+            UV_METHOD::dualMalloc(dual, data->numSupplies, data->numDemands);
             std::cout<<"\tSuccessfully allocated Resources for DUAL ..."<<std::endl;
-
-            d_reducedCosts_ptr = device_costMatrix_ptr;
-            std::cout<<"\tSuccessfully allocated Resources for Reduced costs ..."<<std::endl;
-
+            make_adjacency_list(graph, data->numSupplies, data->numDemands);
+            setup_host_graph();
             swiched_iteration = false;
-
         }
 
         if (mode == 1) {
@@ -411,15 +360,16 @@ void switchModel_parallel::execute()
     // Post process operation after pivoting
     // **************************************
 
-    dualFree(dual);
+    UV_METHOD::dualFree(dual);
     std::cout<<"\tSuccessfully de-allocated resources for DUAL ..."<<std::endl;
     UV_METHOD::pivotFree(pivot, "sequencial_dfs");
     std::cout<<"\tSuccessfully de-allocated Resources for PIVOT ..."<<std::endl;
-    gpuErrchk(cudaFree(d_reducedCosts_ptr));
-    std::cout<<"\tSuccessfully de-allocated Resources for Reduced costs ..."<<std::endl;
 
     std::cout<<"\tProcessing Solution ..."<<std::endl;
+
     cudaMemcpy(graph.d_flowMtx_ptr, graph.h_flowMtx_ptr, (graph.V-1)*sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(graph.d_adjMtx_ptr, graph.h_adjMtx_ptr, ((graph.V*(graph.V+1))/2)*sizeof(int), cudaMemcpyHostToDevice);
+    
     retrieve_solution_on_current_tree(feasible_flows, graph, data->active_flows, data->numSupplies, data->numDemands);
 
     std::cout<<"Found "<<data->active_flows<<" active flows in the final result"<<std::endl;
@@ -455,41 +405,4 @@ void switchModel_parallel::execute()
 void switchModel_parallel::create_flows()
 {
     memcpy(optimal_flows, feasible_flows, (data->active_flows)*sizeof(flowInformation));
-}
-
-
-/*
-For Debugging purposes view - adjMatrix >> 
-*/
-void switchModel_parallel::view_tree() 
-{
-
-    std::cout<<"Viewing tree - adjMatrix & flowMatrix \n *******************************"<<std::endl;
-
-    // Print adjMatrix & flowMatrix >>
-    int * h_adjMtx;
-    float * h_flowMtx;
-    int _V = data->numSupplies+data->numDemands;
-    
-    h_adjMtx = (int *) malloc(((_V*(_V+1))/2)*sizeof(int));
-    gpuErrchk(cudaMemcpy(h_adjMtx, graph.d_adjMtx_ptr, ((_V*(_V+1))/2)*sizeof(int), cudaMemcpyDeviceToHost));
-
-    h_flowMtx = (float *) malloc((_V-1)*sizeof(float));
-    gpuErrchk(cudaMemcpy(h_flowMtx, graph.d_flowMtx_ptr, (_V-1)*sizeof(float), cudaMemcpyDeviceToHost));
-
-    for (int i = 0; i < _V; i++) {
-        for (int j = i; j < _V; j++) {
-                int indx = TREE_LOOKUP(i, j, _V);
-                if (h_adjMtx[indx] > 0) {
-                    std::cout << "adjMatrix[" << i << "]["<< j << "] = "<<indx<<" = "<< h_adjMtx[indx]<< std::endl;
-            }
-        }
-    }
-
-    std::cout<<" *****************************"<<std::endl;
-    
-    for (int i = 0; i < _V-1; i++) {
-        std::cout << "flowMatrix[" << i << "] = " << h_flowMtx[i] << std::endl;
-    }
-
 }

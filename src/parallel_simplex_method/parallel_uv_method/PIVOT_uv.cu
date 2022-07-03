@@ -67,7 +67,7 @@ __host__ static stackNode stack_pop(stackNode * stack, int &stack_top)
 /*
 Perform depth first search looking for route to execute the pivot
 */
-__host__ void perform_dfs_sequencial_on_i(int * adjMtx, int * vertex_start, int * vertex_degree, int * adjVertices, 
+__host__ void perform_dfs_sequencial_on_i(int * adjMtx, std::vector<std::vector<int>> h_Graph, 
         stackNode * stack, int * backtracker, bool * visited, 
         int * depth, int starting_vertex, int target_vertex, int V)
 {   
@@ -104,10 +104,9 @@ __host__ void perform_dfs_sequencial_on_i(int * adjMtx, int * vertex_start, int 
             else
             {
                 // Append the ajacent nodes in stack
-                int _s = vertex_start[current_vertex.index];
-                for (int j = _s; j < _s + vertex_degree[current_vertex.index]; j++)
+                for (int j = 0; j < h_Graph[current_vertex.index].size(); j++)
                 {
-                    stack_push(stack, stack_top, adjVertices[j], current_depth);
+                    stack_push(stack, stack_top, h_Graph[current_vertex.index][j], current_depth);
                 }
             }
             
@@ -122,9 +121,10 @@ __host__ void perform_dfs_sequencial_on_i(int * adjMtx, int * vertex_start, int 
     }
 }
 
-__host__ static void do_flow_adjustment_on_host(Graph &graph,
-        int * backtracker, float min_flow, int min_from, int min_to, int min_flow_id,
-        int pivot_row, int pivot_col, int depth, int numSupplies, int numDemands) {
+__host__ static void do_flow_adjustment_on_host(int * h_adjMtx_ptr, float * h_flowMtx_ptr,
+        std::vector<std::vector<int>> &h_Graph, int * backtracker, 
+        float min_flow, int min_from, int min_to, int min_flow_id,
+        int pivot_row, int pivot_col, int depth, int numSupplies, int numDemands, int V) {
 
     /* *************************** 
         DEBUG UTILITY // Print the discovered loop and pivoting parameters
@@ -149,28 +149,28 @@ __host__ static void do_flow_adjustment_on_host(Graph &graph,
     {
         _from = backtracker[i];
         _to = backtracker[i+1];
-        id = graph.h_adjMtx_ptr[TREE_LOOKUP(_from, _to, graph.V)] - 1;
+        id = h_adjMtx_ptr[TREE_LOOKUP(_from, _to, V)] - 1;
         _flow = ((int) pow(-1, (int)i%2))*min_flow;
-        graph.h_flowMtx_ptr[id] += _flow;
+        h_flowMtx_ptr[id] += _flow;
 
     }
 
     // Do the replacment between exiting i - entering j on host
 
     // Remove edge >>
-    id = TREE_LOOKUP(min_from, min_to, graph.V);
-    graph.h_adjMtx_ptr[id] = 0;
-    std::remove(graph.h_Graph[min_from].begin(),graph.h_Graph[min_from].end(), min_to);
-    std::remove(graph.h_Graph[min_to].begin(),graph.h_Graph[min_to].end(), min_from); 
-    
+    id = TREE_LOOKUP(min_from, min_to, V);
+    h_adjMtx_ptr[id] = 0;
+    h_Graph[min_to].erase(std::remove(h_Graph[min_to].begin(), h_Graph[min_to].end(), min_from), h_Graph[min_to].end());
+    h_Graph[min_from].erase(std::remove(h_Graph[min_from].begin(), h_Graph[min_from].end(), min_to), h_Graph[min_from].end());
+
     // Insert edge >>
-    id = TREE_LOOKUP(pivot_row, pivot_col+ numSupplies, graph.V);
-    graph.h_adjMtx_ptr[id] = min_flow_id + 1;
-    graph.h_Graph[pivot_row].push_back(pivot_col);
-    graph.h_Graph[pivot_col].push_back(pivot_row);
-    
+    id = TREE_LOOKUP(pivot_row, pivot_col+ numSupplies, V);
+    h_adjMtx_ptr[id] = min_flow_id + 1;
+    h_Graph[pivot_row].push_back(pivot_col + numSupplies);
+    h_Graph[pivot_col + numSupplies].push_back(pivot_row);
+
     // Update new flow >>
-    graph.h_flowMtx_ptr[min_flow_id] = min_flow;
+    h_flowMtx_ptr[min_flow_id] = min_flow;
 
 }
 
@@ -213,9 +213,10 @@ __host__ static void execute_pivot_on_host(Graph &graph,
     // Skip the first edge (entering edge)
     // Exiting Edge will become automatically zero (min_from, min_to)
     // Note - minflow value is zero if there's a degenerate pivot!
-    do_flow_adjustment_on_host(graph, backtracker,
-            min_flow, min_from, min_to, min_flow_id,
-            pivot_row, pivot_col, depth, numSupplies, numDemands);
+    do_flow_adjustment_on_host(graph.h_adjMtx_ptr, graph.h_flowMtx_ptr,
+        graph.h_Graph, backtracker,
+        min_flow, min_from, min_to, min_flow_id,
+        pivot_row, pivot_col, depth, numSupplies, numDemands, graph.V);
 
 }
 
@@ -254,7 +255,7 @@ __host__ void perform_a_sequencial_pivot(PivotHandler &pivot, PivotTimer &timer,
         // SEQUENCIAL PROCEDURE to find An incoming edge to vertex = pivot_row from vertex = numSupplies + pivot_col        
         _pivot_start = std::chrono::high_resolution_clock::now();
 
-        perform_dfs_sequencial_on_i(graph.h_adjMtx_ptr, graph.h_vertex_start, graph.h_vertex_degree, graph.h_adjVertices, 
+        perform_dfs_sequencial_on_i(graph.h_adjMtx_ptr, graph.h_Graph, 
             pivot.stack, pivot.backtracker, pivot.visited, &_depth, 
             pivot_col+numSupplies, pivot_row, graph.V);
     
@@ -300,7 +301,7 @@ __host__ void perform_a_sequencial_pivot(PivotHandler &pivot, PivotTimer &timer,
     else
     {
         result = true;
-        std::cout<<"Pivoting Complete!"<<std::endl;
+        std::cout<<"SIMPLEX :: Pivoting Complete!"<<std::endl;
         return;
     }
 }

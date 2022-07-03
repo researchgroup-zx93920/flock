@@ -21,7 +21,6 @@ public:
     void execute();
     void create_flows();
 
-    double deviceCommunicationTime; // Not implemented
     // Model Statistics >>
     double uv_time, reduced_cost_time,pivot_time, cycle_discovery_time, resolve_time, adjustment_time;
 
@@ -47,7 +46,7 @@ private:
     // - cost of flow through an edge
     // Useful for initial basic feasible solution (IBFS), Dual and inbetween simplex
     // Having row column store with reducedcosts allows for reordering during DFS kernels    
-    MatrixCell * costMatrix, * device_costMatrix_ptr, * d_reducedCosts_ptr; 
+    MatrixCell * costMatrix, * device_costMatrix_ptr; 
     float * d_costs_ptr;
         
     // ###############################
@@ -62,14 +61,11 @@ private:
     // CLASS METHODS | Names are self explanatory - doc strings are available on the definition
     // ###############################
     void generate_initial_BFS();
+    void setup_host_graph();
     void perform_pivot(bool &result, int iteration, int &mode);
     void solve();
     void solve_uv();
     void get_reduced_costs();
-
-    // Developer Facility Methods >>
-    void view_uv();
-    void view_tree();
 
 };
 

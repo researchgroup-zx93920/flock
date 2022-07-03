@@ -118,24 +118,17 @@ void ssModel_parallel::generate_initial_BFS()
 void ssModel_parallel::perform_pivot(bool &result, int iteration) 
 {
     // Find a negative reduced cost and pivot along >>
-    if (PIVOTING_STRATEGY == "parallel_bfs")
-    { 
-        int num_pivots = 0;
-        SS_METHOD::perform_a_parallel_pivot(pivot, timer, graph, d_costs_ptr, result,
-            data->numSupplies, data->numDemands, iteration, num_pivots);
-    }
-    else
-    {
-        std::cout<<"Invalid selection of pivoting strategy for ss Model"<<std::endl;
-        exit(-1);
-    }    
+    int num_pivots = 0;
+    SS_METHOD::perform_a_parallel_pivot(pivot, timer, graph, d_costs_ptr, result,
+        data->numSupplies, data->numDemands, iteration, num_pivots);    
+
 }
 
 
 void ssModel_parallel::execute() 
 {
     // SIMPLEX ALGORITHM >>
-    std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY;
+    std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nPIVOTING STRATEGY: sequencial_dfs";
     std::cout<<"\n-------------------------------------"<<std::endl;
 
     // **************************************
@@ -174,7 +167,7 @@ void ssModel_parallel::execute()
     std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
     
     // Follow DUAL_solver for the following
-    SS_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, PIVOTING_STRATEGY);
+    SS_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, "parallel_bfs");
     std::cout<<"\tSuccessfully allocated Resources for PIVOTING ..."<<std::endl;
     
     // Create tree structure on host and device (for pivoting)
@@ -215,7 +208,7 @@ void ssModel_parallel::execute()
     // Post process operation after pivoting
     // **************************************
 
-    SS_METHOD::pivotFree(pivot, PIVOTING_STRATEGY);
+    SS_METHOD::pivotFree(pivot, "parallel_bfs");
     std::cout<<"\tSuccessfully de-allocated Resources for PIVOT ..."<<std::endl;
 
     std::cout<<"\tProcessing Solution ..."<<std::endl;
