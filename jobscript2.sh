@@ -3,7 +3,7 @@
 #SBATCH --mem=100g
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --output=/scratch/bbie/samiran2/mohit/parallel_ss.out
+#SBATCH --output=/scratch/bbie/samiran2/mohit/parallel_uv_%j.out
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=gpuA100x4
 #SBATCH --account=bbie-delta-gpu
@@ -12,4 +12,4 @@
 #SBATCH --gpu-bind=none
 #SBATCH --mail-user=samiran2@illinois.edu
 
-srun ./run_batch_uv_parallel.sh
+srun run_batch_uv_parallel.sh
