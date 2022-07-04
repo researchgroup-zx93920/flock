@@ -122,7 +122,7 @@ __host__ void perform_bfs_sequencial_on_i(int * adjMtx, std::vector<std::vector<
             
             child = h_Graph[parent][i];
 
-            if (!(via_points[parent]== child)) {
+            if (!(via_points[parent] == child)) {
                 via_points[child] = parent;
                 depth_tracker[child] = current_depth + 1;
                 explore.push(child);

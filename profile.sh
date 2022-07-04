@@ -3,8 +3,8 @@
 # make clean
 # make
 nv-nsight-cu-cli \
-  -o ./profiles/profile_bfs20 \
-  --kernel-id ::computeReducedCosts:5 \
+  -o ./profiles/profile_bfs22 \
+  --kernel-id ::computeDifferences:5 \
   --set full \
   --target-processes all \
   /home/mohitm3/workspace/flock/bin/flock -i /home/mohitm3/workspace/flock/data/TransportModel_1000_1000_1_equalityConstr.dat -a parallel_uv

@@ -13,8 +13,6 @@
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h> 
 #include <device_launch_parameters.h>
-#include <cusparse.h>
-#include <cusolverSp.h>
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -28,14 +26,15 @@
 #include "../structs.h"
 
 // Profiling
-#include <nvToolsExt.h>
+// #include <nvToolsExt.h>
 
 #ifndef PARALLEL_STRUCTS
 #define PARALLEL_STRUCTS
 
 // PARAMETERS
 #define blockSize 8
-#define reducedcostBlock 16
+#define vogelBlockSize 64
+#define reducedcostBlock 32
 #define parallelBFSBlock 64
 #define resolveBlockSize 64
 
@@ -84,7 +83,7 @@ A mode for switching to pure sequencial algorithm
 change it to "sequencial" or "parallel"
 */
 
-#define SEQ_CYCLE_SEARCH "bfs"
+#define SEQ_CYCLE_SEARCH "dfs"
 /*
 dfs, bfs 
 */

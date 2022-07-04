@@ -128,7 +128,7 @@ void ssModel_parallel::perform_pivot(bool &result, int iteration)
 void ssModel_parallel::execute() 
 {
     // SIMPLEX ALGORITHM >>
-    std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nPIVOTING STRATEGY: sequencial_dfs";
+    std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nPIVOTING STRATEGY: parallel_bfs";
     std::cout<<"\n-------------------------------------"<<std::endl;
 
     // **************************************

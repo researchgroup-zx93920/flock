@@ -1,0 +1,1392 @@
+FLOCK: Setting up logger
+[2022-07-03 21:00:35.946105]: Start!
+[2022-07-03 21:00:35.946219]: File Name = ./data/TransportModel_100_100_1_equalityConstr.dat
+[2022-07-03 21:00:35.946246]: File available, Now reading file ...
+[2022-07-03 21:00:35.946301]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:35.952566]: Reading input file - complete!
+[2022-07-03 21:00:35.952597]: Problem Dimension => Supplies: 100	Demands: 100
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 1356 | Reduction Time = 7538 | Allocation Time = 743 | Init Time = 375
+vam_device BFS Found in : 10 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	0 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 197 active flows in the final result
+ ============ Simplex completed in : 118 millisecs. and 80 iterations.
+ ============ Current Objective Value = 658043
+
+[2022-07-03 21:00:36.197541]: >>>> BASIC STATISTICS | Objective: 658043 | Iterations: 80 | Time: 128 | MATRIX : 100 X 100
+[2022-07-03 21:00:36.197570]: >>>> LVL1 STATISTICS | Total Time: 128 | PIVOT Time: 116 | MATRIX : 100 X 100
+[2022-07-03 21:00:36.197576]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 116 | CYCLE Time: 83 | RESOLVE Time: 28 | ADJUST Time: 3 | MATRIX : 100 X 100
+[2022-07-03 21:00:36.197589]: Flows created successfully!
+[2022-07-03 21:00:36.197593]: Flows freed successfully!
+ ******************** TEST 01 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:36.227248]: Start!
+[2022-07-03 21:00:36.227324]: File Name = ./data/TransportModel_100_100_2_equalityConstr.dat
+[2022-07-03 21:00:36.227336]: File available, Now reading file ...
+[2022-07-03 21:00:36.227368]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:36.229727]: Reading input file - complete!
+[2022-07-03 21:00:36.229738]: Problem Dimension => Supplies: 100	Demands: 100
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 1408 | Reduction Time = 7427 | Allocation Time = 746 | Init Time = 384
+vam_device BFS Found in : 10 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	0 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 194 active flows in the final result
+ ============ Simplex completed in : 160 millisecs. and 104 iterations.
+ ============ Current Objective Value = 715484
+
+[2022-07-03 21:00:36.489056]: >>>> BASIC STATISTICS | Objective: 715484 | Iterations: 104 | Time: 170 | MATRIX : 100 X 100
+[2022-07-03 21:00:36.489085]: >>>> LVL1 STATISTICS | Total Time: 170 | PIVOT Time: 157 | MATRIX : 100 X 100
+[2022-07-03 21:00:36.489091]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 157 | CYCLE Time: 112 | RESOLVE Time: 40 | ADJUST Time: 5 | MATRIX : 100 X 100
+[2022-07-03 21:00:36.489105]: Flows created successfully!
+[2022-07-03 21:00:36.489109]: Flows freed successfully!
+ ******************** TEST 02 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:36.521585]: Start!
+[2022-07-03 21:00:36.521650]: File Name = ./data/TransportModel_100_100_3_equalityConstr.dat
+[2022-07-03 21:00:36.521664]: File available, Now reading file ...
+[2022-07-03 21:00:36.521692]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:36.523806]: Reading input file - complete!
+[2022-07-03 21:00:36.523815]: Problem Dimension => Supplies: 100	Demands: 100
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 1285 | Reduction Time = 6885 | Allocation Time = 656 | Init Time = 395
+vam_device BFS Found in : 9 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	0 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 198 active flows in the final result
+ ============ Simplex completed in : 132 millisecs. and 91 iterations.
+ ============ Current Objective Value = 644152
+
+[2022-07-03 21:00:36.758608]: >>>> BASIC STATISTICS | Objective: 644152 | Iterations: 91 | Time: 141 | MATRIX : 100 X 100
+[2022-07-03 21:00:36.758638]: >>>> LVL1 STATISTICS | Total Time: 141 | PIVOT Time: 130 | MATRIX : 100 X 100
+[2022-07-03 21:00:36.758644]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 130 | CYCLE Time: 94 | RESOLVE Time: 30 | ADJUST Time: 4 | MATRIX : 100 X 100
+[2022-07-03 21:00:36.758656]: Flows created successfully!
+[2022-07-03 21:00:36.758660]: Flows freed successfully!
+ ******************** TEST 03 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:36.790699]: Start!
+[2022-07-03 21:00:36.790762]: File Name = ./data/TransportModel_100_250_1_equalityConstr.dat
+[2022-07-03 21:00:36.790776]: File available, Now reading file ...
+[2022-07-03 21:00:36.790803]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:36.796649]: Reading input file - complete!
+[2022-07-03 21:00:36.796664]: Problem Dimension => Supplies: 100	Demands: 250
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 2234 | Reduction Time = 12213 | Allocation Time = 1193 | Init Time = 489
+vam_device BFS Found in : 16 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	1 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 348 active flows in the final result
+ ============ Simplex completed in : 389 millisecs. and 209 iterations.
+ ============ Current Objective Value = 3.20698e+06
+
+[2022-07-03 21:00:37.293553]: >>>> BASIC STATISTICS | Objective: 3.20698e+06 | Iterations: 209 | Time: 405 | MATRIX : 100 X 250
+[2022-07-03 21:00:37.293583]: >>>> LVL1 STATISTICS | Total Time: 405 | PIVOT Time: 383 | MATRIX : 100 X 250
+[2022-07-03 21:00:37.293589]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 383 | CYCLE Time: 269 | RESOLVE Time: 101 | ADJUST Time: 12 | MATRIX : 100 X 250
+[2022-07-03 21:00:37.293629]: Flows created successfully!
+[2022-07-03 21:00:37.293634]: Flows freed successfully!
+ ******************** TEST 04 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:37.325122]: Start!
+[2022-07-03 21:00:37.325177]: File Name = ./data/TransportModel_100_500_1_equalityConstr.dat
+[2022-07-03 21:00:37.325190]: File available, Now reading file ...
+[2022-07-03 21:00:37.325218]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:37.335961]: Reading input file - complete!
+[2022-07-03 21:00:37.335974]: Problem Dimension => Supplies: 100	Demands: 500
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 2887 | Reduction Time = 19144 | Allocation Time = 1817 | Init Time = 591
+vam_device BFS Found in : 25 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	3 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 598 active flows in the final result
+ ============ Simplex completed in : 516 millisecs. and 283 iterations.
+ ============ Current Objective Value = 5.25974e+06
+
+[2022-07-03 21:00:37.964121]: >>>> BASIC STATISTICS | Objective: 5.25974e+06 | Iterations: 283 | Time: 541 | MATRIX : 100 X 500
+[2022-07-03 21:00:37.964152]: >>>> LVL1 STATISTICS | Total Time: 541 | PIVOT Time: 508 | MATRIX : 100 X 500
+[2022-07-03 21:00:37.964158]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 508 | CYCLE Time: 371 | RESOLVE Time: 120 | ADJUST Time: 14 | MATRIX : 100 X 500
+[2022-07-03 21:00:37.964204]: Flows created successfully!
+[2022-07-03 21:00:37.964211]: Flows freed successfully!
+ ******************** TEST 05 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:37.994964]: Start!
+[2022-07-03 21:00:37.995025]: File Name = ./data/TransportModel_250_100_1_equalityConstr.dat
+[2022-07-03 21:00:37.995038]: File available, Now reading file ...
+[2022-07-03 21:00:37.995066]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:38.000720]: Reading input file - complete!
+[2022-07-03 21:00:38.000733]: Problem Dimension => Supplies: 250	Demands: 100
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 1760 | Reduction Time = 10748 | Allocation Time = 1066 | Init Time = 403
+vam_device BFS Found in : 14 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	1 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+GPUassert: an illegal memory access was encountered ./src/parallel_simplex_method/parallel_ss_method/PIVOT_ss.cu 356
+ ******************** TEST 06 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:38.159454]: Start!
+[2022-07-03 21:00:38.159518]: File Name = ./data/TransportModel_250_250_1_equalityConstr.dat
+[2022-07-03 21:00:38.159533]: File available, Now reading file ...
+[2022-07-03 21:00:38.159560]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:38.175416]: Reading input file - complete!
+[2022-07-03 21:00:38.175429]: Problem Dimension => Supplies: 250	Demands: 250
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 2667 | Reduction Time = 15709 | Allocation Time = 1547 | Init Time = 1188
+vam_device BFS Found in : 22 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	4 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 492 active flows in the final result
+ ============ Simplex completed in : 1082 millisecs. and 356 iterations.
+ ============ Current Objective Value = 1.59204e+06
+
+[2022-07-03 21:00:39.368981]: >>>> BASIC STATISTICS | Objective: 1.59204e+06 | Iterations: 356 | Time: 1104 | MATRIX : 250 X 250
+[2022-07-03 21:00:39.369013]: >>>> LVL1 STATISTICS | Total Time: 1104 | PIVOT Time: 1072 | MATRIX : 250 X 250
+[2022-07-03 21:00:39.369021]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 1072 | CYCLE Time: 910 | RESOLVE Time: 139 | ADJUST Time: 16 | MATRIX : 250 X 250
+[2022-07-03 21:00:39.369135]: Flows created successfully!
+[2022-07-03 21:00:39.369144]: Flows freed successfully!
+ ******************** TEST 07 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:39.399763]: Start!
+[2022-07-03 21:00:39.399829]: File Name = ./data/TransportModel_250_250_2_equalityConstr.dat
+[2022-07-03 21:00:39.399844]: File available, Now reading file ...
+[2022-07-03 21:00:39.399874]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:39.414719]: Reading input file - complete!
+[2022-07-03 21:00:39.414730]: Problem Dimension => Supplies: 250	Demands: 250
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 2640 | Reduction Time = 15581 | Allocation Time = 1531 | Init Time = 870
+vam_device BFS Found in : 21 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	4 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 494 active flows in the final result
+ ============ Simplex completed in : 804 millisecs. and 269 iterations.
+ ============ Current Objective Value = 1.52115e+06
+
+[2022-07-03 21:00:40.348550]: >>>> BASIC STATISTICS | Objective: 1.52115e+06 | Iterations: 269 | Time: 825 | MATRIX : 250 X 250
+[2022-07-03 21:00:40.348579]: >>>> LVL1 STATISTICS | Total Time: 825 | PIVOT Time: 796 | MATRIX : 250 X 250
+[2022-07-03 21:00:40.348585]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 796 | CYCLE Time: 682 | RESOLVE Time: 97 | ADJUST Time: 11 | MATRIX : 250 X 250
+[2022-07-03 21:00:40.348688]: Flows created successfully!
+[2022-07-03 21:00:40.348696]: Flows freed successfully!
+ ******************** TEST 08 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:40.378985]: Start!
+[2022-07-03 21:00:40.379054]: File Name = ./data/TransportModel_250_250_3_equalityConstr.dat
+[2022-07-03 21:00:40.379069]: File available, Now reading file ...
+[2022-07-03 21:00:40.379097]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:40.393650]: Reading input file - complete!
+[2022-07-03 21:00:40.393662]: Problem Dimension => Supplies: 250	Demands: 250
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 2631 | Reduction Time = 15657 | Allocation Time = 1614 | Init Time = 910
+vam_device BFS Found in : 21 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	4 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 496 active flows in the final result
+ ============ Simplex completed in : 868 millisecs. and 288 iterations.
+ ============ Current Objective Value = 1.50252e+06
+
+[2022-07-03 21:00:41.364675]: >>>> BASIC STATISTICS | Objective: 1.50252e+06 | Iterations: 288 | Time: 889 | MATRIX : 250 X 250
+[2022-07-03 21:00:41.364706]: >>>> LVL1 STATISTICS | Total Time: 889 | PIVOT Time: 859 | MATRIX : 250 X 250
+[2022-07-03 21:00:41.364712]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 859 | CYCLE Time: 726 | RESOLVE Time: 115 | ADJUST Time: 13 | MATRIX : 250 X 250
+[2022-07-03 21:00:41.364828]: Flows created successfully!
+[2022-07-03 21:00:41.364838]: Flows freed successfully!
+ ******************** TEST 09 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:41.396229]: Start!
+[2022-07-03 21:00:41.396287]: File Name = ./data/TransportModel_250_500_1_equalityConstr.dat
+[2022-07-03 21:00:41.396298]: File available, Now reading file ...
+[2022-07-03 21:00:41.396325]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:41.422294]: Reading input file - complete!
+[2022-07-03 21:00:41.422303]: Problem Dimension => Supplies: 250	Demands: 500
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 3968 | Reduction Time = 23415 | Allocation Time = 2293 | Init Time = 1464
+vam_device BFS Found in : 32 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	7 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 744 active flows in the final result
+ ============ Simplex completed in : 2673 millisecs. and 664 iterations.
+ ============ Current Objective Value = 5.05718e+06
+
+[2022-07-03 21:00:44.237451]: >>>> BASIC STATISTICS | Objective: 5.05718e+06 | Iterations: 664 | Time: 2705 | MATRIX : 250 X 500
+[2022-07-03 21:00:44.237480]: >>>> LVL1 STATISTICS | Total Time: 2705 | PIVOT Time: 2648 | MATRIX : 250 X 500
+[2022-07-03 21:00:44.237486]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 2648 | CYCLE Time: 2175 | RESOLVE Time: 404 | ADJUST Time: 42 | MATRIX : 250 X 500
+[2022-07-03 21:00:44.237630]: Flows created successfully!
+[2022-07-03 21:00:44.237638]: Flows freed successfully!
+ ******************** TEST 10 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:44.270916]: Start!
+[2022-07-03 21:00:44.270975]: File Name = ./data/TransportModel_250_1000_1_equalityConstr.dat
+[2022-07-03 21:00:44.270988]: File available, Now reading file ...
+[2022-07-03 21:00:44.271014]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:44.323878]: Reading input file - complete!
+[2022-07-03 21:00:44.323905]: Problem Dimension => Supplies: 250	Demands: 1000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 6851 | Reduction Time = 49444 | Allocation Time = 3873 | Init Time = 2032
+vam_device BFS Found in : 64 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	15 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1246 active flows in the final result
+ ============ Simplex completed in : 4014 millisecs. and 717 iterations.
+ ============ Current Objective Value = 1.4104e+07
+
+[2022-07-03 21:00:48.510772]: >>>> BASIC STATISTICS | Objective: 1.4104e+07 | Iterations: 717 | Time: 4078 | MATRIX : 250 X 1000
+[2022-07-03 21:00:48.510803]: >>>> LVL1 STATISTICS | Total Time: 4078 | PIVOT Time: 3967 | MATRIX : 250 X 1000
+[2022-07-03 21:00:48.510809]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 3967 | CYCLE Time: 3383 | RESOLVE Time: 504 | ADJUST Time: 48 | MATRIX : 250 X 1000
+[2022-07-03 21:00:48.511079]: Flows created successfully!
+[2022-07-03 21:00:48.511088]: Flows freed successfully!
+ ******************** TEST 11 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:48.542877]: Start!
+[2022-07-03 21:00:48.542940]: File Name = ./data/TransportModel_500_250_1_equalityConstr.dat
+[2022-07-03 21:00:48.542954]: File available, Now reading file ...
+[2022-07-03 21:00:48.542981]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:48.570470]: Reading input file - complete!
+[2022-07-03 21:00:48.570481]: Problem Dimension => Supplies: 500	Demands: 250
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 4140 | Reduction Time = 23832 | Allocation Time = 2286 | Init Time = 1433
+vam_device BFS Found in : 33 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	8 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 745 active flows in the final result
+ ============ Simplex completed in : 4566 millisecs. and 750 iterations.
+ ============ Current Objective Value = 4.30982e+06
+
+[2022-07-03 21:00:53.281508]: >>>> BASIC STATISTICS | Objective: 4.30982e+06 | Iterations: 750 | Time: 4599 | MATRIX : 500 X 250
+[2022-07-03 21:00:53.281536]: >>>> LVL1 STATISTICS | Total Time: 4599 | PIVOT Time: 4536 | MATRIX : 500 X 250
+[2022-07-03 21:00:53.281542]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 4536 | CYCLE Time: 4042 | RESOLVE Time: 422 | ADJUST Time: 44 | MATRIX : 500 X 250
+[2022-07-03 21:00:53.281695]: Flows created successfully!
+[2022-07-03 21:00:53.281704]: Flows freed successfully!
+ ******************** TEST 13 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:53.312915]: Start!
+[2022-07-03 21:00:53.312985]: File Name = ./data/TransportModel_500_500_1_equalityConstr.dat
+[2022-07-03 21:00:53.313000]: File available, Now reading file ...
+[2022-07-03 21:00:53.313030]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:53.367339]: Reading input file - complete!
+[2022-07-03 21:00:53.367356]: Problem Dimension => Supplies: 500	Demands: 500
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 5354 | Reduction Time = 37070 | Allocation Time = 3148 | Init Time = 2034
+vam_device BFS Found in : 49 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	16 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 980 active flows in the final result
+ ============ Simplex completed in : 5592 millisecs. and 699 iterations.
+ ============ Current Objective Value = 2.81683e+06
+
+[2022-07-03 21:00:59.119882]: >>>> BASIC STATISTICS | Objective: 2.81683e+06 | Iterations: 699 | Time: 5641 | MATRIX : 500 X 500
+[2022-07-03 21:00:59.119914]: >>>> LVL1 STATISTICS | Total Time: 5641 | PIVOT Time: 5558 | MATRIX : 500 X 500
+[2022-07-03 21:00:59.119920]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 5558 | CYCLE Time: 5186 | RESOLVE Time: 312 | ADJUST Time: 32 | MATRIX : 500 X 500
+[2022-07-03 21:00:59.120201]: Flows created successfully!
+[2022-07-03 21:00:59.120210]: Flows freed successfully!
+ ******************** TEST 14 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:00:59.152691]: Start!
+[2022-07-03 21:00:59.152760]: File Name = ./data/TransportModel_500_500_2_equalityConstr.dat
+[2022-07-03 21:00:59.152771]: File available, Now reading file ...
+[2022-07-03 21:00:59.152798]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:00:59.205259]: Reading input file - complete!
+[2022-07-03 21:00:59.205270]: Problem Dimension => Supplies: 500	Demands: 500
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 5874 | Reduction Time = 40104 | Allocation Time = 3118 | Init Time = 2001
+vam_device BFS Found in : 53 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	16 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 991 active flows in the final result
+ ============ Simplex completed in : 6659 millisecs. and 829 iterations.
+ ============ Current Objective Value = 2.98986e+06
+
+[2022-07-03 21:01:06.028926]: >>>> BASIC STATISTICS | Objective: 2.98986e+06 | Iterations: 829 | Time: 6712 | MATRIX : 500 X 500
+[2022-07-03 21:01:06.028957]: >>>> LVL1 STATISTICS | Total Time: 6712 | PIVOT Time: 6619 | MATRIX : 500 X 500
+[2022-07-03 21:01:06.028963]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 6619 | CYCLE Time: 6125 | RESOLVE Time: 417 | ADJUST Time: 41 | MATRIX : 500 X 500
+[2022-07-03 21:01:06.029250]: Flows created successfully!
+[2022-07-03 21:01:06.029259]: Flows freed successfully!
+ ******************** TEST 15 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:01:06.060750]: Start!
+[2022-07-03 21:01:06.060816]: File Name = ./data/TransportModel_500_500_3_equalityConstr.dat
+[2022-07-03 21:01:06.060832]: File available, Now reading file ...
+[2022-07-03 21:01:06.060861]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:01:06.116403]: Reading input file - complete!
+[2022-07-03 21:01:06.116430]: Problem Dimension => Supplies: 500	Demands: 500
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 5288 | Reduction Time = 37088 | Allocation Time = 3137 | Init Time = 1997
+vam_device BFS Found in : 49 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	16 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 989 active flows in the final result
+ ============ Simplex completed in : 6769 millisecs. and 847 iterations.
+ ============ Current Objective Value = 2.78444e+06
+
+[2022-07-03 21:01:13.040662]: >>>> BASIC STATISTICS | Objective: 2.78444e+06 | Iterations: 847 | Time: 6818 | MATRIX : 500 X 500
+[2022-07-03 21:01:13.040693]: >>>> LVL1 STATISTICS | Total Time: 6818 | PIVOT Time: 6729 | MATRIX : 500 X 500
+[2022-07-03 21:01:13.040699]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 6729 | CYCLE Time: 6278 | RESOLVE Time: 381 | ADJUST Time: 38 | MATRIX : 500 X 500
+[2022-07-03 21:01:13.040987]: Flows created successfully!
+[2022-07-03 21:01:13.040997]: Flows freed successfully!
+ ******************** TEST 16 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:01:13.072380]: Start!
+[2022-07-03 21:01:13.072439]: File Name = ./data/TransportModel_500_750_1_equalityConstr.dat
+[2022-07-03 21:01:13.072452]: File available, Now reading file ...
+[2022-07-03 21:01:13.072477]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:01:13.150354]: Reading input file - complete!
+[2022-07-03 21:01:13.150373]: Problem Dimension => Supplies: 500	Demands: 750
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 7467 | Reduction Time = 46271 | Allocation Time = 3842 | Init Time = 2795
+vam_device BFS Found in : 63 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	23 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1236 active flows in the final result
+ ============ Simplex completed in : 16358 millisecs. and 1657 iterations.
+ ============ Current Objective Value = 5.38747e+06
+
+[2022-07-03 21:01:29.678997]: >>>> BASIC STATISTICS | Objective: 5.38747e+06 | Iterations: 1657 | Time: 16421 | MATRIX : 500 X 750
+[2022-07-03 21:01:29.679029]: >>>> LVL1 STATISTICS | Total Time: 16421 | PIVOT Time: 16252 | MATRIX : 500 X 750
+[2022-07-03 21:01:29.679035]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 16252 | CYCLE Time: 14778 | RESOLVE Time: 1277 | ADJUST Time: 101 | MATRIX : 500 X 750
+[2022-07-03 21:01:29.679390]: Flows created successfully!
+[2022-07-03 21:01:29.679399]: Flows freed successfully!
+ ******************** TEST 17 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:01:29.709407]: Start!
+[2022-07-03 21:01:29.709470]: File Name = ./data/TransportModel_500_1000_1_equalityConstr.dat
+[2022-07-03 21:01:29.709483]: File available, Now reading file ...
+[2022-07-03 21:01:29.709510]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:01:29.817799]: Reading input file - complete!
+[2022-07-03 21:01:29.817831]: Problem Dimension => Supplies: 500	Demands: 1000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 8759 | Reduction Time = 56369 | Allocation Time = 4763 | Init Time = 3400
+vam_device BFS Found in : 76 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	31 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1488 active flows in the final result
+ ============ Simplex completed in : 17808 millisecs. and 1532 iterations.
+ ============ Current Objective Value = 1.18714e+07
+
+[2022-07-03 21:01:47.811212]: >>>> BASIC STATISTICS | Objective: 1.18714e+07 | Iterations: 1532 | Time: 17884 | MATRIX : 500 X 1000
+[2022-07-03 21:01:47.811243]: >>>> LVL1 STATISTICS | Total Time: 17884 | PIVOT Time: 17680 | MATRIX : 500 X 1000
+[2022-07-03 21:01:47.811249]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 17680 | CYCLE Time: 15964 | RESOLVE Time: 1507 | ADJUST Time: 105 | MATRIX : 500 X 1000
+[2022-07-03 21:01:47.811695]: Flows created successfully!
+[2022-07-03 21:01:47.811705]: Flows freed successfully!
+ ******************** TEST 18 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:01:47.844755]: Start!
+[2022-07-03 21:01:47.844824]: File Name = ./data/TransportModel_750_500_1_equalityConstr.dat
+[2022-07-03 21:01:47.844838]: File available, Now reading file ...
+[2022-07-03 21:01:47.844867]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:01:47.923440]: Reading input file - complete!
+[2022-07-03 21:01:47.923453]: Problem Dimension => Supplies: 750	Demands: 500
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 7576 | Reduction Time = 46902 | Allocation Time = 3958 | Init Time = 2767
+vam_device BFS Found in : 63 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	25 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1235 active flows in the final result
+ ============ Simplex completed in : 19694 millisecs. and 1463 iterations.
+ ============ Current Objective Value = 5.16035e+06
+
+[2022-07-03 21:02:07.797758]: >>>> BASIC STATISTICS | Objective: 5.16035e+06 | Iterations: 1463 | Time: 19757 | MATRIX : 750 X 500
+[2022-07-03 21:02:07.797791]: >>>> LVL1 STATISTICS | Total Time: 19757 | PIVOT Time: 19595 | MATRIX : 750 X 500
+[2022-07-03 21:02:07.797798]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 19595 | CYCLE Time: 18267 | RESOLVE Time: 1142 | ADJUST Time: 98 | MATRIX : 750 X 500
+[2022-07-03 21:02:07.798155]: Flows created successfully!
+[2022-07-03 21:02:07.798165]: Flows freed successfully!
+ ******************** TEST 19 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:02:07.830450]: Start!
+[2022-07-03 21:02:07.830510]: File Name = ./data/TransportModel_750_750_1_equalityConstr.dat
+[2022-07-03 21:02:07.830526]: File available, Now reading file ...
+[2022-07-03 21:02:07.830554]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:02:07.950224]: Reading input file - complete!
+[2022-07-03 21:02:07.950241]: Problem Dimension => Supplies: 750	Demands: 750
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 8690 | Reduction Time = 54884 | Allocation Time = 4767 | Init Time = 3714
+vam_device BFS Found in : 75 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	36 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1486 active flows in the final result
+ ============ Simplex completed in : 22147 millisecs. and 1375 iterations.
+ ============ Current Objective Value = 4.37408e+06
+
+[2022-07-03 21:02:30.283628]: >>>> BASIC STATISTICS | Objective: 4.37408e+06 | Iterations: 1375 | Time: 22222 | MATRIX : 750 X 750
+[2022-07-03 21:02:30.283658]: >>>> LVL1 STATISTICS | Total Time: 22222 | PIVOT Time: 22034 | MATRIX : 750 X 750
+[2022-07-03 21:02:30.283664]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 22034 | CYCLE Time: 20913 | RESOLVE Time: 977 | ADJUST Time: 73 | MATRIX : 750 X 750
+[2022-07-03 21:02:30.284134]: Flows created successfully!
+[2022-07-03 21:02:30.284143]: Flows freed successfully!
+ ******************** TEST 20 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:02:30.315297]: Start!
+[2022-07-03 21:02:30.315357]: File Name = ./data/TransportModel_750_750_2_equalityConstr.dat
+[2022-07-03 21:02:30.315371]: File available, Now reading file ...
+[2022-07-03 21:02:30.315398]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:02:30.434714]: Reading input file - complete!
+[2022-07-03 21:02:30.434747]: Problem Dimension => Supplies: 750	Demands: 750
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 8402 | Reduction Time = 55343 | Allocation Time = 4658 | Init Time = 3687
+vam_device BFS Found in : 75 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	36 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1486 active flows in the final result
+ ============ Simplex completed in : 19520 millisecs. and 1224 iterations.
+ ============ Current Objective Value = 4.29993e+06
+
+[2022-07-03 21:02:50.153098]: >>>> BASIC STATISTICS | Objective: 4.29993e+06 | Iterations: 1224 | Time: 19595 | MATRIX : 750 X 750
+[2022-07-03 21:02:50.153132]: >>>> LVL1 STATISTICS | Total Time: 19595 | PIVOT Time: 19419 | MATRIX : 750 X 750
+[2022-07-03 21:02:50.153140]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 19419 | CYCLE Time: 18607 | RESOLVE Time: 692 | ADJUST Time: 62 | MATRIX : 750 X 750
+[2022-07-03 21:02:50.153673]: Flows created successfully!
+[2022-07-03 21:02:50.153682]: Flows freed successfully!
+ ******************** TEST 21 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:02:50.186248]: Start!
+[2022-07-03 21:02:50.186307]: File Name = ./data/TransportModel_750_750_3_equalityConstr.dat
+[2022-07-03 21:02:50.186322]: File available, Now reading file ...
+[2022-07-03 21:02:50.186350]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:02:50.304413]: Reading input file - complete!
+[2022-07-03 21:02:50.304443]: Problem Dimension => Supplies: 750	Demands: 750
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 8854 | Reduction Time = 55858 | Allocation Time = 4673 | Init Time = 3742
+vam_device BFS Found in : 75 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	36 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1486 active flows in the final result
+ ============ Simplex completed in : 20049 millisecs. and 1247 iterations.
+ ============ Current Objective Value = 4.24024e+06
+
+[2022-07-03 21:03:10.540592]: >>>> BASIC STATISTICS | Objective: 4.24024e+06 | Iterations: 1247 | Time: 20124 | MATRIX : 750 X 750
+[2022-07-03 21:03:10.540625]: >>>> LVL1 STATISTICS | Total Time: 20124 | PIVOT Time: 19945 | MATRIX : 750 X 750
+[2022-07-03 21:03:10.540632]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 19945 | CYCLE Time: 19135 | RESOLVE Time: 683 | ADJUST Time: 66 | MATRIX : 750 X 750
+[2022-07-03 21:03:10.541101]: Flows created successfully!
+[2022-07-03 21:03:10.541109]: Flows freed successfully!
+ ******************** TEST 22 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:03:10.572093]: Start!
+[2022-07-03 21:03:10.572160]: File Name = ./data/TransportModel_750_1000_1_equalityConstr.dat
+[2022-07-03 21:03:10.572173]: File available, Now reading file ...
+[2022-07-03 21:03:10.572199]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:03:10.729690]: Reading input file - complete!
+[2022-07-03 21:03:10.729720]: Problem Dimension => Supplies: 750	Demands: 1000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 10682 | Reduction Time = 64083 | Allocation Time = 5300 | Init Time = 4661
+vam_device BFS Found in : 88 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	47 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1733 active flows in the final result
+ ============ Simplex completed in : 50946 millisecs. and 2622 iterations.
+ ============ Current Objective Value = 6.72253e+06
+
+[2022-07-03 21:04:01.878742]: >>>> BASIC STATISTICS | Objective: 6.72253e+06 | Iterations: 2622 | Time: 51034 | MATRIX : 750 X 1000
+[2022-07-03 21:04:01.878773]: >>>> LVL1 STATISTICS | Total Time: 51034 | PIVOT Time: 50679 | MATRIX : 750 X 1000
+[2022-07-03 21:04:01.878779]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 50679 | CYCLE Time: 46648 | RESOLVE Time: 3653 | ADJUST Time: 178 | MATRIX : 750 X 1000
+[2022-07-03 21:04:01.879357]: Flows created successfully!
+[2022-07-03 21:04:01.879366]: Flows freed successfully!
+ ******************** TEST 23 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:04:01.909942]: Start!
+[2022-07-03 21:04:01.910005]: File Name = ./data/TransportModel_1000_500_1_equalityConstr.dat
+[2022-07-03 21:04:01.910019]: File available, Now reading file ...
+[2022-07-03 21:04:01.910046]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:04:02.018137]: Reading input file - complete!
+[2022-07-03 21:04:02.018167]: Problem Dimension => Supplies: 1000	Demands: 500
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 9022 | Reduction Time = 55322 | Allocation Time = 4829 | Init Time = 3444
+vam_device BFS Found in : 75 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	34 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1491 active flows in the final result
+ ============ Simplex completed in : 39731 millisecs. and 1921 iterations.
+ ============ Current Objective Value = 9.48473e+06
+
+[2022-07-03 21:04:41.937114]: >>>> BASIC STATISTICS | Objective: 9.48473e+06 | Iterations: 1921 | Time: 39806 | MATRIX : 1000 X 500
+[2022-07-03 21:04:41.937149]: >>>> LVL1 STATISTICS | Total Time: 39806 | PIVOT Time: 39566 | MATRIX : 1000 X 500
+[2022-07-03 21:04:41.937157]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 39566 | CYCLE Time: 37233 | RESOLVE Time: 2054 | ADJUST Time: 131 | MATRIX : 1000 X 500
+[2022-07-03 21:04:41.937590]: Flows created successfully!
+[2022-07-03 21:04:41.937601]: Flows freed successfully!
+ ******************** TEST 24 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:04:41.969200]: Start!
+[2022-07-03 21:04:41.969261]: File Name = ./data/TransportModel_1000_750_1_equalityConstr.dat
+[2022-07-03 21:04:41.969273]: File available, Now reading file ...
+[2022-07-03 21:04:41.969299]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:04:42.129107]: Reading input file - complete!
+[2022-07-03 21:04:42.129139]: Problem Dimension => Supplies: 1000	Demands: 750
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 11178 | Reduction Time = 68298 | Allocation Time = 5829 | Init Time = 4786
+vam_device BFS Found in : 93 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	49 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1734 active flows in the final result
+ ============ Simplex completed in : 69047 millisecs. and 2814 iterations.
+ ============ Current Objective Value = 6.28014e+06
+
+[2022-07-03 21:05:51.383982]: >>>> BASIC STATISTICS | Objective: 6.28014e+06 | Iterations: 2814 | Time: 69140 | MATRIX : 1000 X 750
+[2022-07-03 21:05:51.384016]: >>>> LVL1 STATISTICS | Total Time: 69140 | PIVOT Time: 68758 | MATRIX : 1000 X 750
+[2022-07-03 21:05:51.384022]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 68758 | CYCLE Time: 64542 | RESOLVE Time: 3817 | ADJUST Time: 187 | MATRIX : 1000 X 750
+[2022-07-03 21:05:51.384651]: Flows created successfully!
+[2022-07-03 21:05:51.384661]: Flows freed successfully!
+ ******************** TEST 25 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:05:51.418421]: Start!
+[2022-07-03 21:05:51.418481]: File Name = ./data/TransportModel_1000_1000_1_equalityConstr.dat
+[2022-07-03 21:05:51.418494]: File available, Now reading file ...
+[2022-07-03 21:05:51.418520]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:05:51.627374]: Reading input file - complete!
+[2022-07-03 21:05:51.627405]: Problem Dimension => Supplies: 1000	Demands: 1000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 11681 | Reduction Time = 75645 | Allocation Time = 6288 | Init Time = 5750
+vam_device BFS Found in : 103 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	64 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1977 active flows in the final result
+ ============ Simplex completed in : 50119 millisecs. and 1832 iterations.
+ ============ Current Objective Value = 5.58269e+06
+
+[2022-07-03 21:06:41.963689]: >>>> BASIC STATISTICS | Objective: 5.58269e+06 | Iterations: 1832 | Time: 50222 | MATRIX : 1000 X 1000
+[2022-07-03 21:06:41.963721]: >>>> LVL1 STATISTICS | Total Time: 50222 | PIVOT Time: 49897 | MATRIX : 1000 X 1000
+[2022-07-03 21:06:41.963727]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 49897 | CYCLE Time: 48043 | RESOLVE Time: 1630 | ADJUST Time: 107 | MATRIX : 1000 X 1000
+[2022-07-03 21:06:41.964494]: Flows created successfully!
+[2022-07-03 21:06:41.964505]: Flows freed successfully!
+ ******************** TEST 26 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:06:41.996120]: Start!
+[2022-07-03 21:06:41.996184]: File Name = ./data/TransportModel_1000_1000_2_equalityConstr.dat
+[2022-07-03 21:06:41.996197]: File available, Now reading file ...
+[2022-07-03 21:06:41.996223]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:06:42.208678]: Reading input file - complete!
+[2022-07-03 21:06:42.208710]: Problem Dimension => Supplies: 1000	Demands: 1000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 11313 | Reduction Time = 75399 | Allocation Time = 6677 | Init Time = 5823
+vam_device BFS Found in : 103 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	64 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1983 active flows in the final result
+ ============ Simplex completed in : 44309 millisecs. and 1626 iterations.
+ ============ Current Objective Value = 5.58068e+06
+
+[2022-07-03 21:07:26.740680]: >>>> BASIC STATISTICS | Objective: 5.58068e+06 | Iterations: 1626 | Time: 44412 | MATRIX : 1000 X 1000
+[2022-07-03 21:07:26.740711]: >>>> LVL1 STATISTICS | Total Time: 44412 | PIVOT Time: 44110 | MATRIX : 1000 X 1000
+[2022-07-03 21:07:26.740716]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 44110 | CYCLE Time: 42619 | RESOLVE Time: 1296 | ADJUST Time: 90 | MATRIX : 1000 X 1000
+[2022-07-03 21:07:26.741494]: Flows created successfully!
+[2022-07-03 21:07:26.741505]: Flows freed successfully!
+ ******************** TEST 27 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:07:26.775325]: Start!
+[2022-07-03 21:07:26.775394]: File Name = ./data/TransportModel_1000_1000_3_equalityConstr.dat
+[2022-07-03 21:07:26.775408]: File available, Now reading file ...
+[2022-07-03 21:07:26.775446]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:07:26.986101]: Reading input file - complete!
+[2022-07-03 21:07:26.986134]: Problem Dimension => Supplies: 1000	Demands: 1000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 11514 | Reduction Time = 74052 | Allocation Time = 6250 | Init Time = 5755
+vam_device BFS Found in : 102 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	64 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 1980 active flows in the final result
+ ============ Simplex completed in : 54917 millisecs. and 2014 iterations.
+ ============ Current Objective Value = 5.61678e+06
+
+[2022-07-03 21:08:22.116995]: >>>> BASIC STATISTICS | Objective: 5.61678e+06 | Iterations: 2014 | Time: 55019 | MATRIX : 1000 X 1000
+[2022-07-03 21:08:22.117033]: >>>> LVL1 STATISTICS | Total Time: 55019 | PIVOT Time: 54673 | MATRIX : 1000 X 1000
+[2022-07-03 21:08:22.117043]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 54673 | CYCLE Time: 52762 | RESOLVE Time: 1666 | ADJUST Time: 115 | MATRIX : 1000 X 1000
+[2022-07-03 21:08:22.117751]: Flows created successfully!
+[2022-07-03 21:08:22.117759]: Flows freed successfully!
+ ******************** TEST 28 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:08:22.150196]: Start!
+[2022-07-03 21:08:22.150257]: File Name = ./data/TransportModel_1000_2500_1_equalityConstr.dat
+[2022-07-03 21:08:22.150268]: File available, Now reading file ...
+[2022-07-03 21:08:22.150293]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:08:22.674661]: Reading input file - complete!
+[2022-07-03 21:08:22.674695]: Problem Dimension => Supplies: 1000	Demands: 2500
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 21595 | Reduction Time = 133532 | Allocation Time = 10942 | Init Time = 12773
+vam_device BFS Found in : 187 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	156 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 3477 active flows in the final result
+ ============ Simplex completed in : 269115 millisecs. and 5085 iterations.
+ ============ Current Objective Value = 2.77213e+07
+
+[2022-07-03 21:12:52.100759]: >>>> BASIC STATISTICS | Objective: 2.77213e+07 | Iterations: 5085 | Time: 269302 | MATRIX : 1000 X 2500
+[2022-07-03 21:12:52.100790]: >>>> LVL1 STATISTICS | Total Time: 269302 | PIVOT Time: 267305 | MATRIX : 1000 X 2500
+[2022-07-03 21:12:52.100795]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 267305 | CYCLE Time: 229869 | RESOLVE Time: 35900 | ADJUST Time: 424 | MATRIX : 1000 X 2500
+[2022-07-03 21:12:52.102412]: Flows created successfully!
+[2022-07-03 21:12:52.102421]: Flows freed successfully!
+ ******************** TEST 29 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:12:52.133588]: Start!
+[2022-07-03 21:12:52.133646]: File Name = ./data/TransportModel_1000_2500_2_equalityConstr.dat
+[2022-07-03 21:12:52.133657]: File available, Now reading file ...
+[2022-07-03 21:12:52.133685]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:12:52.658048]: Reading input file - complete!
+[2022-07-03 21:12:52.658081]: Problem Dimension => Supplies: 1000	Demands: 2500
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 21568 | Reduction Time = 133670 | Allocation Time = 11542 | Init Time = 12822
+vam_device BFS Found in : 187 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	156 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 3485 active flows in the final result
+ ============ Simplex completed in : 244169 millisecs. and 4615 iterations.
+ ============ Current Objective Value = 3.04087e+07
+
+[2022-07-03 21:16:57.136696]: >>>> BASIC STATISTICS | Objective: 3.04087e+07 | Iterations: 4615 | Time: 244356 | MATRIX : 1000 X 2500
+[2022-07-03 21:16:57.136730]: >>>> LVL1 STATISTICS | Total Time: 244356 | PIVOT Time: 242506 | MATRIX : 1000 X 2500
+[2022-07-03 21:16:57.136736]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 242506 | CYCLE Time: 208891 | RESOLVE Time: 32234 | ADJUST Time: 402 | MATRIX : 1000 X 2500
+[2022-07-03 21:16:57.138613]: Flows created successfully!
+[2022-07-03 21:16:57.138626]: Flows freed successfully!
+ ******************** TEST 30 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:16:57.171945]: Start!
+[2022-07-03 21:16:57.172017]: File Name = ./data/TransportModel_1000_2500_3_equalityConstr.dat
+[2022-07-03 21:16:57.172032]: File available, Now reading file ...
+[2022-07-03 21:16:57.172062]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:16:57.695178]: Reading input file - complete!
+[2022-07-03 21:16:57.695211]: Problem Dimension => Supplies: 1000	Demands: 2500
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 21418 | Reduction Time = 131087 | Allocation Time = 10685 | Init Time = 13715
+vam_device BFS Found in : 185 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	156 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 3486 active flows in the final result
+ ============ Simplex completed in : 282348 millisecs. and 5322 iterations.
+ ============ Current Objective Value = 2.74634e+07
+
+[2022-07-03 21:21:40.357352]: >>>> BASIC STATISTICS | Objective: 2.74634e+07 | Iterations: 5322 | Time: 282533 | MATRIX : 1000 X 2500
+[2022-07-03 21:21:40.357382]: >>>> LVL1 STATISTICS | Total Time: 282533 | PIVOT Time: 280444 | MATRIX : 1000 X 2500
+[2022-07-03 21:21:40.357388]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 280444 | CYCLE Time: 240209 | RESOLVE Time: 38630 | ADJUST Time: 464 | MATRIX : 1000 X 2500
+[2022-07-03 21:21:40.359005]: Flows created successfully!
+[2022-07-03 21:21:40.359013]: Flows freed successfully!
+ ******************** TEST 31 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:21:40.389622]: Start!
+[2022-07-03 21:21:40.389684]: File Name = ./data/TransportModel_1000_5000_1_equalityConstr.dat
+[2022-07-03 21:21:40.389697]: File available, Now reading file ...
+[2022-07-03 21:21:40.389724]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:21:41.437364]: Reading input file - complete!
+[2022-07-03 21:21:41.437397]: Problem Dimension => Supplies: 1000	Demands: 5000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 33393 | Reduction Time = 226938 | Allocation Time = 18348 | Init Time = 25500
+vam_device BFS Found in : 318 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	308 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 5979 active flows in the final result
+ ============ Simplex completed in : 497764 millisecs. and 5370 iterations.
+ ============ Current Objective Value = 7.49389e+07
+
+[2022-07-03 21:29:59.663126]: >>>> BASIC STATISTICS | Objective: 7.49389e+07 | Iterations: 5370 | Time: 498082 | MATRIX : 1000 X 5000
+[2022-07-03 21:29:59.663162]: >>>> LVL1 STATISTICS | Total Time: 498082 | PIVOT Time: 491783 | MATRIX : 1000 X 5000
+[2022-07-03 21:29:59.663169]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 491783 | CYCLE Time: 408591 | RESOLVE Time: 80609 | ADJUST Time: 463 | MATRIX : 1000 X 5000
+[2022-07-03 21:29:59.666838]: Flows created successfully!
+[2022-07-03 21:29:59.666851]: Flows freed successfully!
+ ******************** TEST 32 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:29:59.702761]: Start!
+[2022-07-03 21:29:59.702823]: File Name = ./data/TransportModel_1000_5000_2_equalityConstr.dat
+[2022-07-03 21:29:59.702834]: File available, Now reading file ...
+[2022-07-03 21:29:59.702860]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:30:00.753031]: Reading input file - complete!
+[2022-07-03 21:30:00.753064]: Problem Dimension => Supplies: 1000	Demands: 5000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 37328 | Reduction Time = 231358 | Allocation Time = 18884 | Init Time = 24836
+vam_device BFS Found in : 323 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	308 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 5970 active flows in the final result
+ ============ Simplex completed in : 439345 millisecs. and 4635 iterations.
+ ============ Current Objective Value = 8.5095e+07
+
+[2022-07-03 21:37:20.568195]: >>>> BASIC STATISTICS | Objective: 8.5095e+07 | Iterations: 4635 | Time: 439668 | MATRIX : 1000 X 5000
+[2022-07-03 21:37:20.568226]: >>>> LVL1 STATISTICS | Total Time: 439668 | PIVOT Time: 434060 | MATRIX : 1000 X 5000
+[2022-07-03 21:37:20.568233]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 434060 | CYCLE Time: 355182 | RESOLVE Time: 76420 | ADJUST Time: 427 | MATRIX : 1000 X 5000
+[2022-07-03 21:37:20.571873]: Flows created successfully!
+[2022-07-03 21:37:20.571887]: Flows freed successfully!
+ ******************** TEST 33 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:37:20.606334]: Start!
+[2022-07-03 21:37:20.606394]: File Name = ./data/TransportModel_1000_5000_3_equalityConstr.dat
+[2022-07-03 21:37:20.606408]: File available, Now reading file ...
+[2022-07-03 21:37:20.606436]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:37:21.652690]: Reading input file - complete!
+[2022-07-03 21:37:21.652722]: Problem Dimension => Supplies: 1000	Demands: 5000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 33091 | Reduction Time = 224331 | Allocation Time = 19014 | Init Time = 24985
+vam_device BFS Found in : 315 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	308 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 5977 active flows in the final result
+ ============ Simplex completed in : 465903 millisecs. and 4779 iterations.
+ ============ Current Objective Value = 7.50893e+07
+
+[2022-07-03 21:45:08.012931]: >>>> BASIC STATISTICS | Objective: 7.50893e+07 | Iterations: 4779 | Time: 466218 | MATRIX : 1000 X 5000
+[2022-07-03 21:45:08.012968]: >>>> LVL1 STATISTICS | Total Time: 466218 | PIVOT Time: 460469 | MATRIX : 1000 X 5000
+[2022-07-03 21:45:08.012976]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 460469 | CYCLE Time: 368371 | RESOLVE Time: 89348 | ADJUST Time: 458 | MATRIX : 1000 X 5000
+[2022-07-03 21:45:08.017616]: Flows created successfully!
+[2022-07-03 21:45:08.017645]: Flows freed successfully!
+ ******************** TEST 34 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 21:45:08.051714]: Start!
+[2022-07-03 21:45:08.051772]: File Name = ./data/TransportModel_1000_10000_1_equalityConstr.dat
+[2022-07-03 21:45:08.051785]: File available, Now reading file ...
+[2022-07-03 21:45:08.051810]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 21:45:10.146362]: Reading input file - complete!
+[2022-07-03 21:45:10.146395]: Problem Dimension => Supplies: 1000	Demands: 10000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 68197 | Reduction Time = 442957 | Allocation Time = 43867 | Init Time = 52839
+vam_device BFS Found in : 622 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	614 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 10982 active flows in the final result
+ ============ Simplex completed in : 1.37833e+06 millisecs. and 8902 iterations.
+ ============ Current Objective Value = 1.96177e+08
+
+[2022-07-03 22:08:09.353931]: >>>> BASIC STATISTICS | Objective: 1.96177e+08 | Iterations: 8902 | Time: 1.37895e+06 | MATRIX : 1000 X 10000
+[2022-07-03 22:08:09.353967]: >>>> LVL1 STATISTICS | Total Time: 1.37895e+06 | PIVOT Time: 1.33877e+06 | MATRIX : 1000 X 10000
+[2022-07-03 22:08:09.353974]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 1.33877e+06 | CYCLE Time: 1.20665e+06 | RESOLVE Time: 127917 | ADJUST Time: 789 | MATRIX : 1000 X 10000
+[2022-07-03 22:08:09.360892]: Flows created successfully!
+[2022-07-03 22:08:09.360920]: Flows freed successfully!
+ ******************** TEST 35 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 22:08:09.394397]: Start!
+[2022-07-03 22:08:09.394458]: File Name = ./data/TransportModel_1000_10000_2_equalityConstr.dat
+[2022-07-03 22:08:09.394468]: File available, Now reading file ...
+[2022-07-03 22:08:09.394494]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 22:08:11.485228]: Reading input file - complete!
+[2022-07-03 22:08:11.485262]: Problem Dimension => Supplies: 1000	Demands: 10000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 68538 | Reduction Time = 453213 | Allocation Time = 34621 | Init Time = 53146
+vam_device BFS Found in : 633 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	614 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 10974 active flows in the final result
+ ============ Simplex completed in : 1.309e+06 millisecs. and 8070 iterations.
+ ============ Current Objective Value = 1.6944e+08
+
+[2022-07-03 22:30:01.311703]: >>>> BASIC STATISTICS | Objective: 1.6944e+08 | Iterations: 8070 | Time: 1.30964e+06 | MATRIX : 1000 X 10000
+[2022-07-03 22:30:01.311746]: >>>> LVL1 STATISTICS | Total Time: 1.30964e+06 | PIVOT Time: 1.27328e+06 | MATRIX : 1000 X 10000
+[2022-07-03 22:30:01.311753]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 1.27328e+06 | CYCLE Time: 1.09961e+06 | RESOLVE Time: 168775 | ADJUST Time: 717 | MATRIX : 1000 X 10000
+[2022-07-03 22:30:01.318608]: Flows created successfully!
+[2022-07-03 22:30:01.318625]: Flows freed successfully!
+ ******************** TEST 36 | PARALLEL SS SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 22:30:01.353075]: Start!
+[2022-07-03 22:30:01.353137]: File Name = ./data/TransportModel_1000_10000_3_equalityConstr.dat
+[2022-07-03 22:30:01.353151]: File available, Now reading file ...
+[2022-07-03 22:30:01.353177]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 22:30:03.449427]: Reading input file - complete!
+[2022-07-03 22:30:03.449458]: Problem Dimension => Supplies: 1000	Demands: 10000
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 57948 | Reduction Time = 428547 | Allocation Time = 34064 | Init Time = 53638
+vam_device BFS Found in : 600 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	614 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 10973 active flows in the final result
+ ============ Simplex completed in : 853369 millisecs. and 4803 iterations.
+ ============ Current Objective Value = 1.79039e+08
+
+[2022-07-03 22:44:17.600613]: >>>> BASIC STATISTICS | Objective: 1.79039e+08 | Iterations: 4803 | Time: 853969 | MATRIX : 1000 X 10000
+[2022-07-03 22:44:17.600647]: >>>> LVL1 STATISTICS | Total Time: 853969 | PIVOT Time: 831101 | MATRIX : 1000 X 10000
+[2022-07-03 22:44:17.600652]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 831101 | CYCLE Time: 667154 | RESOLVE Time: 159618 | ADJUST Time: 464 | MATRIX : 1000 X 10000
+[2022-07-03 22:44:17.607201]: Flows created successfully!
+[2022-07-03 22:44:17.607219]: Flows freed successfully!
+ ******************** TEST 37 | PARALLEL SS SOLVER COMPLETE ***************** 

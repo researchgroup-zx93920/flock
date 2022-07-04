@@ -12,7 +12,7 @@ GUROBI_HOME=/home/mohitm3/gurobi912/linux64
 LIB_GUROBI=-lgurobi_c++ -lgurobi91
 
 CUDA=/usr/local/cuda
-LIB_CUDA=-lcudart -lnvToolsExt -lcusparse -lcusolver
+LIB_CUDA=-lcudart -lnvToolsExt
 
 all: flock clean
 

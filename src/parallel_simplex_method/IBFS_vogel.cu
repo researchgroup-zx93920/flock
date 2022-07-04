@@ -410,8 +410,8 @@ __host__ void find_vogel_bfs_parallel(int *supplies, int *demands, MatrixCell * 
     // Untested assumption [0] Absence of degeneracy - Todo
     std::cout << "FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment" << std::endl;
     int counter = 0;
-    dim3 dimBlock(blockSize, 1, 1);
-    dim3 dimGrid(ceil(1.0 * differences_vector.size() / blockSize), 1, 1);
+    dim3 dimBlock(vogelBlockSize, 1, 1);
+    dim3 dimGrid(ceil(1.0 * differences_vector.size() / vogelBlockSize), 1, 1);
     // numSupplies + numDemands - 1
 
     while (counter < (numSupplies + numDemands - 1))
