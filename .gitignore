@@ -5,3 +5,6 @@ logs/
 bin/
 data/
 profiles/
+results/
+*.nsys-rep
+*.sqlite

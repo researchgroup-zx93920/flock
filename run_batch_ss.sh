@@ -1,4 +1,5 @@
 #!/bin/sh
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:"/u/samiran2/mohit/boost_1_79_0/stage/lib/"
 
 ./bin/flock -i  ./data/TransportModel_100_100_1_equalityConstr.dat  -a parallel_ss
 echo " ******************** TEST 01 | PARALLEL SS SOLVER COMPLETE ***************** "

@@ -3,11 +3,11 @@
 # make clean
 # make
 nv-nsight-cu-cli \
-  -o ./profiles/profile_bfs22 \
-  --kernel-id ::computeDifferences:5 \
+  -o ./profiles/profile_bfs23 \
+  --kernel-id ::check_pivot_feasibility:5 \
   --set full \
   --target-processes all \
-  /home/mohitm3/workspace/flock/bin/flock -i /home/mohitm3/workspace/flock/data/TransportModel_1000_1000_1_equalityConstr.dat -a parallel_uv
+  /home/mohitm3/workspace/flock/bin/flock -i /home/mohitm3/workspace/flock/data/TransportModel_500_500_1_equalityConstr.dat -a parallel_ss
 
 # # ex.
 # ../build/exe/src/main.cu.exe -g ../../dataset/gbin/cit-Patents_adj.bel -t ../../dataset/templates/mtx/cq8m1_template.mtx -o full -d 3 -m sgm -p node
