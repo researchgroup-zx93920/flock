@@ -331,13 +331,13 @@ void uvModel_parallel::execute()
         // // view_reduced_costs();
         
         // // 2.3
-        // iter_start = std::chrono::high_resolution_clock::now();
+        iter_start = std::chrono::high_resolution_clock::now();
         
-        // perform_pivot(result, iteration_counter);
+        perform_pivot(result, iteration_counter);
 
-        // iter_end = std::chrono::high_resolution_clock::now();
-        // iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
-        // pivot_time += iter_duration.count();
+        iter_end = std::chrono::high_resolution_clock::now();
+        iter_duration = std::chrono::duration_cast<std::chrono::microseconds>(iter_end - iter_start);
+        pivot_time += iter_duration.count();
 
         iteration_counter++;
     }

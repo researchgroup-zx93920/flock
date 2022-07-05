@@ -77,7 +77,7 @@ top cream of negative reduced costs
 /* Upper bound on max number of independent pivots */
 
 
-#define REDUCED_COST_MODE "sequencial"
+#define REDUCED_COST_MODE "parallel"
 /*
 A mode for switching to pure sequencial algorithm
 change it to "sequencial" or "parallel"
