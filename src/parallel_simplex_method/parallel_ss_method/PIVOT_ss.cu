@@ -301,7 +301,7 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
     auto _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
 
     // Discover Cycles
-    _pivot_start = std::chrono::high_resolution_clock::now();
+    // _pivot_start = std::chrono::high_resolution_clock::now();
 
 	// Make a copy of adjacency matrix to make depth
     // IDEA: run my_signum all at once to get rid of that in the floyd warshall kernel - insted of memcpy run a kernel
@@ -337,6 +337,9 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
     while (length_of_frontier > 0) {
 
         // debug_viewCurrentFrontier(pivot.d_bfs_frontier_current, length_of_frontier);
+
+        // Discover Cycles #TEMP-FOR-DELTA
+        _pivot_start = std::chrono::high_resolution_clock::now();
 
         dim3 dimBFSGrid(length_of_frontier, 1, 1);
 
@@ -383,6 +386,11 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
         // cudaFree(sm_profile);
         // free(h_sm_profile);
 
+        // #TEMP-FOR-DELTA
+        _pivot_end = std::chrono::high_resolution_clock::now();
+        _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
+        timer.cycle_discovery += _pivot_duration.count();
+
     }
 
     
@@ -417,6 +425,9 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
         // Allocate memory for storing cycles >> 
         gpuErrchk(cudaMalloc((void **) &pivot.d_pivot_cycles, h_num_NegativeCosts*(diameter)*sizeof(int)));
         
+        // #TEMP-FOR-DELTA
+        _pivot_start = std::chrono::high_resolution_clock::now();
+
         dim3 dimGrid3(ceil(1.0*h_num_NegativeCosts/blockSize), 1, 1);
         dim3 dimBlock3(blockSize, 1, 1);
 
@@ -435,6 +446,11 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
         // _debug_view_discovered_cycles(pivot, d_reducedCosts_ptr, diameter, h_num_NegativeCosts, numSupplies, numDemands);
         // exit(0);
 
+        // #TEMP-FOR-DELTA
+        _pivot_end = std::chrono::high_resolution_clock::now();
+        _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
+        timer.cycle_discovery += _pivot_duration.count();
+
     }
     else {
         
@@ -444,12 +460,12 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
 
     }
     
-    _pivot_end = std::chrono::high_resolution_clock::now();
-    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
-    timer.cycle_discovery += _pivot_duration.count();
+    // _pivot_end = std::chrono::high_resolution_clock::now();
+    // _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
+    // timer.cycle_discovery += _pivot_duration.count();
 
     // DEBUG : View computed opportunity costs
-    _pivot_start = std::chrono::high_resolution_clock::now();
+    // _pivot_start = std::chrono::high_resolution_clock::now();
 
     // Get most opportunistic flow index - 
     bool search_complete = false; 
@@ -476,9 +492,8 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
             min_opportunity_cost.cost = epsilon;
             gpuErrchk(cudaMemcpy(&pivot.d_reducedCosts_ptr[min_indx].cost, &min_opportunity_cost.cost, sizeof(float), cudaMemcpyHostToDevice));
         
-            cudaDeviceProp prop;
-            gpuErrchk(cudaGetDeviceProperties(&prop, 0));
-            int num_strides = 1; //ceil(1.0*h_num_NegativeCosts/prop.maxGridSize[1]);
+            // #TEMP-FOR-DELTA
+            _pivot_start = std::chrono::high_resolution_clock::now();
 
             dim3 cf_Block(resolveBlockSize, 1, 1);
             dim3 cf_Grid(h_num_NegativeCosts, ceil(1.0*diameter/resolveBlockSize), 1);
@@ -490,15 +505,19 @@ __host__ void perform_a_parallel_pivot(PivotHandler &pivot, PivotTimer &timer,
             gpuErrchk(cudaPeekAtLastError());
             gpuErrchk(cudaDeviceSynchronize());
             deconflicted_cycles_count++;
-        }
 
+            // #TEMP-FOR-DELTA
+            _pivot_end = std::chrono::high_resolution_clock::now();
+            _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
+            timer.resolve_time += _pivot_duration.count();
+        }
     }
     
     // std::cout<<"Found "<<deconflicted_cycles_count<<" deconflicted cycles to be pivoted"<<std::endl;
 
-    _pivot_end = std::chrono::high_resolution_clock::now();
-    _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
-    timer.resolve_time += _pivot_duration.count();
+    // _pivot_end = std::chrono::high_resolution_clock::now();
+    // _pivot_duration = std::chrono::duration_cast<std::chrono::microseconds>(_pivot_end - _pivot_start);
+    // timer.resolve_time += _pivot_duration.count();
 
     // Now we have the indexes of feasible pivots in the array - deconflicted_cycles
     // Get these cycles on host and perform the pivot. To achieve this we do following

@@ -72,12 +72,12 @@ in the hope that we'll get the most of the deconflicted cycles from the
 top cream of negative reduced costs
 */
 
-#define MAX_ITERATIONS 100000
+#define MAX_ITERATIONS 10000
 
 /* Upper bound on max number of independent pivots */
 
 
-#define REDUCED_COST_MODE "parallel"
+#define REDUCED_COST_MODE "sequencial"
 /*
 A mode for switching to pure sequencial algorithm
 change it to "sequencial" or "parallel"
