@@ -1,16 +1,19 @@
 #include "lp_model.h"
 
+#if MAKE_WITH_GUROBI == 1
+
 lpModel::lpModel(ProblemInstance *problem, flowInformation *flows)
 {
-	BOOST_LOG_TRIVIAL(debug) << "Initializing LP Model";
+	add_log_msg("debug", "Initializing LP Model");
 	GRBEnv env = GRBEnv();
 	env.set(GRB_IntParam_OutputFlag, GRB_LOGS);
+	add_log_msg("debug", "Environment Created!");
 	model = new GRBModel(env);
 	// data = (ProblemInstance *)malloc(sizeof(ProblemInstance));
 	data = problem;
 	optimal_flows = flows; // Might require a malloc
 						   // construction provision - perform some-more future things here :
-	BOOST_LOG_TRIVIAL(debug) << "An LP model object was successfully created";
+	add_log_msg("debug", "An LP model object was successfully created");
 	
 	// Initialize statistics
 	objVal = 0.0;
@@ -26,7 +29,7 @@ lpModel::~lpModel()
 void lpModel::create_variables()
 {
 	// Add variables
-	BOOST_LOG_TRIVIAL(debug) << "Creating Variables";
+	add_log_msg("debug", "Creating Variables");
 	for (int i = 0; i < data->numSupplies; i++)
 	{
 		for (int j = 0; j < data->numDemands; j++)
@@ -39,7 +42,7 @@ void lpModel::create_variables()
 			x_ij.insert(_pair);
 		}
 	}
-	BOOST_LOG_TRIVIAL(debug) << "Creating Variables - completed!";
+	add_log_msg("debug", "Creating Variables - completed!");
 }
 
 void lpModel::add_constraints()
@@ -47,7 +50,7 @@ void lpModel::add_constraints()
 	// Add constraints
 
 	// Constraint 1 :: Demand Statisfaction of index - j
-	BOOST_LOG_TRIVIAL(debug) << "Creating Consraint - Demand Statisfaction";
+	add_log_msg("debug", "Creating Consraint - Demand Statisfaction");
 	for (int j = 0; j < data->numDemands; j++)
 	{
 		GRBLinExpr lhs = 0;
@@ -59,11 +62,11 @@ void lpModel::add_constraints()
 		}
 		std::stringstream s;
 		s << "satisfyDemand_" << j;
-		model->addConstr(lhs >= data->demands[j], s.str());
+		model->addConstr(lhs == data->demands[j], s.str());
 	}
 
 	// Constraint 2 :: Supply Restrictions on index - i
-	BOOST_LOG_TRIVIAL(debug) << "Creating Consraint - Demand Supply Restriction";
+	add_log_msg("debug", "Creating Consraint - Demand Supply Restriction");
 	for (int i = 0; i < data->numSupplies; i++)
 	{
 		GRBLinExpr lhs = 0;
@@ -75,7 +78,7 @@ void lpModel::add_constraints()
 		}
 		std::stringstream s;
 		s << "restrictSupply_" << i;
-		model->addConstr(lhs <= data->supplies[i], s.str());
+		model->addConstr(lhs == data->supplies[i], s.str());
 	}
 }
 
@@ -91,7 +94,7 @@ void lpModel::get_dual_costs()
 
 void lpModel::solve()
 {
-	BOOST_LOG_TRIVIAL(debug) << "Starting Solver";
+	add_log_msg("debug", "Starting Solver");
 	
 	model->set(GRB_DoubleParam_TimeLimit, GRB_TIMEOUT);
 	
@@ -107,14 +110,16 @@ void lpModel::solve()
 	if (optim_status == 9)
 	{
 		data->solveTime *= -1;
-		BOOST_LOG_TRIVIAL(error) << "Solver did not complete successfully!";
+		add_log_msg("error", "Solver did not complete successfully!");
 		exit(-1);
 	}
 
 	else
 	{
 		// fetch solution >>
-		BOOST_LOG_TRIVIAL(debug) << "Solver Success! Optimal value: " << model->get(GRB_DoubleAttr_ObjVal) << std::endl;
+		std::stringstream log_msg; 
+		log_msg << "Solver Success! Optimal value: " << model->get(GRB_DoubleAttr_ObjVal);
+		add_log_msg("debug", log_msg.str());
 		solved = true;
 		objVal = model->get(GRB_DoubleAttr_ObjVal);
 		data->totalFlowCost = objVal;
@@ -127,10 +132,10 @@ Create flows from the solved model
 */
 void lpModel::create_flows()
 {
-	BOOST_LOG_TRIVIAL(debug) << "Creating flows ...";
+	add_log_msg("debug", "Creating flows ...");
 	if (solved)
 	{	
-		BOOST_LOG_TRIVIAL(debug) << "verified model = solved";
+		add_log_msg("debug", "verified model = solved");
 		auto start = std::chrono::high_resolution_clock::now();
 		
 		int _counter = 0;
@@ -157,14 +162,14 @@ void lpModel::create_flows()
 	}
 	else 
 	{
-		BOOST_LOG_TRIVIAL(error) << "Model is not yet solved";
+		add_log_msg("error", "Model is not yet solved");
 	}
 
 }
 
 void lpModel::execute()
 {
-	BOOST_LOG_TRIVIAL(info) << "Executing LP Model ... ";
+	add_log_msg("info", "Executing LP Model ... ");
 
 	auto start = std::chrono::high_resolution_clock::now();
 
@@ -178,5 +183,60 @@ void lpModel::execute()
 	data->solveTime += duration.count();
 	totalSolveTime = data->solveTime;
 
-	BOOST_LOG_TRIVIAL(debug) << "LP Model was successfully solved!";
+	add_log_msg("debug", "LP Model was successfully solved!");
 }
+#else
+
+lpModel::lpModel(ProblemInstance *problem, flowInformation *flows)
+{
+	// Initialize statistics
+	objVal = 0.0;
+    totalIterations = 0;
+    totalSolveTime = 0.0;
+}
+
+lpModel::~lpModel()
+{
+	// void 
+}
+
+void lpModel::create_variables()
+{
+	// void
+}
+
+void lpModel::add_constraints()
+{	
+	// void
+}
+
+
+void lpModel::add_objective()
+{
+	// void : Objective is added on the GRB variable arugment
+}
+
+void lpModel::get_dual_costs()
+{
+	// void : Future provision
+}
+
+void lpModel::solve()
+{
+	// void
+}
+
+/*
+Create flows from the solved model
+*/
+void lpModel::create_flows()
+{
+	// void
+}
+
+void lpModel::execute()
+{
+	// void
+}
+
+#endif

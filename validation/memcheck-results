@@ -1,0 +1,139 @@
+========= CUDA-MEMCHECK
+========= This tool is deprecated and will be removed in a future release of the CUDA toolkit
+========= Please use the compute-sanitizer tool as a drop-in replacement
+FLOCK: Setting up logger
+[2022-07-02 19:09:30.354846]: Start!
+[2022-07-02 19:09:30.354999]: File Name = ./data/TransportModel_100_100_1_equalityConstr.dat
+[2022-07-02 19:09:30.355038]: File available, Now reading file ...
+[2022-07-02 19:09:30.355369]: Determined problem dimensions, Now reading costs ...
+[2022-07-02 19:09:30.357712]: Reading input file - complete!
+[2022-07-02 19:09:30.357727]: Problem Dimension => Supplies: 100	Demands: 100
+
+Initializing Stepping Stone Model (parallel)
+A ss_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 470418 | Reduction Time = 2.07005e+06 | Allocation Time = 1271 | Init Time = 256256
+vam_device BFS Found in : 2804 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	0 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 197 active flows in the final result
+ ============ Simplex completed in : 16553 millisecs. and 80 iterations.
+ ============ Current Objective Value = 658043
+
+[2022-07-02 19:09:49.825083]: >>>> BASIC STATISTICS | Objective: 658043 | Iterations: 80 | Time: 19357 | MATRIX : 100 X 100
+[2022-07-02 19:09:49.825123]: >>>> LVL1 STATISTICS | Total Time: 19357 | PIVOT Time: 15411 | MATRIX : 100 X 100
+[2022-07-02 19:09:49.825134]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 15411 | CYCLE Time: 10952 | RESOLVE Time: 4335 | ADJUST Time: 5 | MATRIX : 100 X 100
+[2022-07-02 19:09:49.825159]: Flows created successfully!
+[2022-07-02 19:09:49.825168]: Flows freed successfully!
+========= ERROR SUMMARY: 0 errors
+
+
+
+========= CUDA-MEMCHECK
+========= This tool is deprecated and will be removed in a future release of the CUDA toolkit
+========= Please use the compute-sanitizer tool as a drop-in replacement
+FLOCK: Setting up logger
+[2022-07-02 19:11:18.128833]: Start!
+[2022-07-02 19:11:18.129033]: File Name = ./data/TransportModel_100_100_1_equalityConstr.dat
+[2022-07-02 19:11:18.129087]: File available, Now reading file ...
+[2022-07-02 19:11:18.129184]: Determined problem dimensions, Now reading costs ...
+[2022-07-02 19:11:18.136060]: Reading input file - complete!
+[2022-07-02 19:11:18.136073]: Problem Dimension => Supplies: 100	Demands: 100
+
+Initializing UV Model (parallel)
+An uv_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+CALCULATE_DUAL: host_bfs
+PIVOTING STRATEGY: sequencial_dfs
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 461597 | Reduction Time = 2.00184e+06 | Allocation Time = 1228 | Init Time = 250521
+vam_device BFS Found in : 2721 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	Successfully allocated Resources for DUAL ...
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: find the dual -> reduced -> pivots -> repeat!
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated resources for DUAL ...
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 197 active flows in the final result
+ ============ Simplex completed in : 1761 millisecs. and 126 iterations.
+ ============ Current Objective Value = 658043
+
+[2022-07-02 19:11:22.729858]: >>>> BASIC STATISTICS | Objective: 658043 | Iterations: 126 | Time: 4482 | MATRIX : 100 X 100
+[2022-07-02 19:11:22.729893]: >>>> LVL1 STATISTICS | Total Time: 4482 | UV Time: 1 | R Time: 1693 | PIVOT Time: 5 | MATRIX : 100 X 100
+[2022-07-02 19:11:22.729902]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 5 | CYCLE Time: 5 | RESOLVE Time: 0 | ADJUST Time: 0 | MATRIX : 100 X 100
+[2022-07-02 19:11:22.729947]: Flows created successfully!
+[2022-07-02 19:11:22.729958]: Flows freed successfully!
+========= ERROR SUMMARY: 0 errors
+
+
+
+========= CUDA-MEMCHECK
+========= This tool is deprecated and will be removed in a future release of the CUDA toolkit
+========= Please use the compute-sanitizer tool as a drop-in replacement
+FLOCK: Setting up logger
+[2022-07-02 19:11:52.539072]: Start!
+[2022-07-02 19:11:52.539142]: File Name = ./data/TransportModel_100_100_1_equalityConstr.dat
+[2022-07-02 19:11:52.539162]: File available, Now reading file ...
+[2022-07-02 19:11:52.539201]: Determined problem dimensions, Now reading costs ...
+[2022-07-02 19:11:52.541372]: Reading input file - complete!
+[2022-07-02 19:11:52.541386]: Problem Dimension => Supplies: 100	Demands: 100
+
+Initializing Stepping Stone Model (parallel)
+An uv_model_parallel object was successfully created
+------------- PARAMS L1 -------------
+BFS: vam_device
+CALCULATE_DUAL: host_bfs
+PIVOTING STRATEGY: switch-ParallelToSeq
+-------------------------------------
+FINDING BFS : Vogel Device Kernel - Step 0 : Setting up book-keeping structures
+FINDING BFS : Vogel Device Kernel - Step 1 : Preparing for assignment
+FINDING BFS : Vogel Device Kernel - Step 2 : Running Initial Assignment
+FINDING BFS : Vogel Device Kernel - END : Initial Assignment Complete
+FINDING BFS : Step timing (microsecs) | Map Time = 464477 | Reduction Time = 2.05725e+06 | Allocation Time = 1265 | Init Time = 251490
+vam_device BFS Found in : 2780 millisecs.
+SIMPLEX PASS 1 :: creating the necessary data structures on global memory
+	0 MB of device memory allocated!
+	Successfully allocated Resources for PIVOTING ...
+	Generated initial tree (on host & device) ...
+SIMPLEX PASS 2 :: compute loops with cost improvement -> perform pivots -> repeat!
+	Successfully re-allocated Resources for PIVOTING ...
+	Successfully allocated Resources for DUAL ...
+SIMPLEX :: Pivoting Complete!
+SIMPLEX PASS 3 :: Clearing the device memory and transfering the necessary data on CPU
+	Successfully de-allocated resources for DUAL ...
+	Successfully de-allocated Resources for PIVOT ...
+	Processing Solution ...
+Found 197 active flows in the final result
+ ============ Simplex completed in : 2707 millisecs. and 140 iterations.
+ ============ Current Objective Value = 658043
+
+[2022-07-02 19:11:58.147494]: >>>> BASIC STATISTICS | Objective: 658043 | Iterations: 140 | Time: 5487 | MATRIX : 100 X 100
+[2022-07-02 19:11:58.147527]: >>>> LVL1 STATISTICS(A) | PIVOT Time: 701 | MATRIX : 100 X 100
+[2022-07-02 19:11:58.147534]: >>>> LVL1 STATISTICS(B) | UV Time: 1 | R Time: 1916 | PIVOT Time: 701 | MATRIX : 100 X 100
+[2022-07-02 19:11:58.147544]: >>>> LVL2 PIVOT STATISTICS | Total Pivot Time: 701 | CYCLE Time (parallel BFS + seq DFS): 177 | RESOLVE Time: 522 | ADJUST Time: 1 | MATRIX : 100 X 100
+[2022-07-02 19:11:58.147599]: Flows created successfully!
+[2022-07-02 19:11:58.147615]: Flows freed successfully!
+========= ERROR SUMMARY: 0 errors

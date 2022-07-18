@@ -12,7 +12,8 @@ std::ostream &operator<<(std::ostream &o, const vogelDifference &x)
     return o;
 }
 
-std::ostream& operator << (std::ostream& o, const Variable& x) {
-    o << x.value;
+std::ostream& operator << (std::ostream& o, const vertexPin& x) {
+    o << "********\nFrom : "<<x.from<<"\nVia : "<<x.via<<"\nTo : "<<x.to<<"\nSkip : "<<x.skip;
+    std::cout<<"\nAccumualated : "<<x.recirculation<<"\n********"<<std::endl;
     return o;
 }

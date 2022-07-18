@@ -47,7 +47,6 @@ ssModel_parallel::ssModel_parallel(ProblemInstance *problem, flowInformation *fl
     graph.V = data->numSupplies+data->numDemands;
 
     // Initialize model statistics >>
-    deviceCommunicationTime = 0.0;
     pivot_time = 0.0;
     cycle_discovery_time = 0.0;
     resolve_time = 0.0;
@@ -56,7 +55,7 @@ ssModel_parallel::ssModel_parallel(ProblemInstance *problem, flowInformation *fl
     objVal = 0.0;
     totalIterations = 0;
     totalSolveTime = 0.0;
-    std::cout << "An uv_model_parallel object was successfully created" << std::endl; 
+    std::cout << "A ss_model_parallel object was successfully created" << std::endl; 
 }
 
 /*
@@ -119,33 +118,17 @@ void ssModel_parallel::generate_initial_BFS()
 void ssModel_parallel::perform_pivot(bool &result, int iteration) 
 {
     // Find a negative reduced cost and pivot along >>
-    if (PIVOTING_STRATEGY == "sequencial_dfs") 
-    {
-        std::cout<<"sequencial DFS - Not Implemented for Stepping Stone Method, try parallel_fw!"<<std::endl;
-        exit(-1);
-    }
-    else if (PIVOTING_STRATEGY == "parallel_dfs") 
-    {
-        std::cout<<"parallel DFS - Not Implemented for Stepping Stone Method, try parallel_fw!"<<std::endl;
-        exit(-1);
-    }
-    else if (PIVOTING_STRATEGY == "parallel_fw") 
-    {
-        SS_METHOD::perform_a_parallel_pivot_floyd_warshall(pivot, timer, graph, d_costs_ptr, result,
-            data->numSupplies, data->numDemands, iteration);
-    }
-    else
-    {
-        std::cout<<"Invalid selection of pivoting strategy"<<std::endl;
-        exit(-1);
-    }    
+    int num_pivots = 0;
+    SS_METHOD::perform_a_parallel_pivot(pivot, timer, graph, d_costs_ptr, result,
+        data->numSupplies, data->numDemands, iteration, num_pivots);    
+
 }
 
 
 void ssModel_parallel::execute() 
 {
     // SIMPLEX ALGORITHM >>
-    std::cout<<"------------- PARAMS L1 -------------\nPIVOTING STRATEGY: "<<PIVOTING_STRATEGY;
+    std::cout<<"------------- PARAMS L1 -------------\nBFS: "<<BFS_METHOD<<"\nPIVOTING STRATEGY: parallel_bfs";
     std::cout<<"\n-------------------------------------"<<std::endl;
 
     // **************************************
@@ -184,7 +167,7 @@ void ssModel_parallel::execute()
     std::cout<<"SIMPLEX PASS 1 :: creating the necessary data structures on global memory"<<std::endl;
     
     // Follow DUAL_solver for the following
-    SS_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands);
+    SS_METHOD::pivotMalloc(pivot, data->numSupplies, data->numDemands, "parallel_bfs");
     std::cout<<"\tSuccessfully allocated Resources for PIVOTING ..."<<std::endl;
     
     // Create tree structure on host and device (for pivoting)
@@ -202,6 +185,7 @@ void ssModel_parallel::execute()
     while ((!result) && iteration_counter < MAX_ITERATIONS) {
 
         // std::cout<<"Iteration :"<<iteration_counter<<std::endl;
+        make_adjacency_list(graph, data->numSupplies, data->numDemands);
         // view_tree();
         
         // 2.1 
@@ -224,8 +208,7 @@ void ssModel_parallel::execute()
     // Post process operation after pivoting
     // **************************************
 
-    
-    SS_METHOD::pivotFree(pivot);
+    SS_METHOD::pivotFree(pivot, "parallel_bfs");
     std::cout<<"\tSuccessfully de-allocated Resources for PIVOT ..."<<std::endl;
 
     std::cout<<"\tProcessing Solution ..."<<std::endl;

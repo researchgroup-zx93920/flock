@@ -2,19 +2,12 @@
 #include "../parallel_kernels.h"
 #include "../IBFS_vogel.h"
 #include "../IBFS_nwc.h"
-#include "PIVOT_ss.h"
+#include "../parallel_ss_method/PIVOT_ss.h"
+#include "../parallel_uv_method/DUAL_solver.h"
+#include "../parallel_uv_method/PIVOT_uv.h"
 
-/*
-Algorithm alternative to solve transportation problem
-
-Step 1: Generate initial BFS - M + N - 1 edges selected, 
-Compute is performed on device while flow is created loaded on host
-Step 2: Repeat :: 
-    2.1: Find all the possible non-conflicting recirculations with negative costs
-    2.2: Any reduced cost < 0 - repeat, exit otherwise
-Step 3: Return M + N - 1 flows 
-*/
-class ssModel_parallel
+/* Starts on parallel pivot and then  */
+class switchModel_parallel
 {
 
 public:
@@ -29,14 +22,14 @@ public:
     void create_flows();
 
     // Model Statistics >>
-    double pivot_time, cycle_discovery_time, resolve_time, adjustment_time;
+    double uv_time, reduced_cost_time,pivot_time, cycle_discovery_time, resolve_time, adjustment_time;
 
     double objVal;
     int totalIterations;
     double totalSolveTime;
 
-    ssModel_parallel(ProblemInstance * problem, flowInformation * flows);
-    ~ssModel_parallel();
+    switchModel_parallel(ProblemInstance * problem, flowInformation * flows);
+    ~switchModel_parallel();
 
 private:
 
@@ -51,7 +44,8 @@ private:
     // Containers for data exchange between functions 
     // - reduced cost of edges on the device
     // - cost of flow through an edge
-    // Useful for initial basic feasible solution (IBFS), Dual and interchange between simplex flow  
+    // Useful for initial basic feasible solution (IBFS), Dual and inbetween simplex
+    // Having row column store with reducedcosts allows for reordering during DFS kernels    
     MatrixCell * costMatrix, * device_costMatrix_ptr; 
     float * d_costs_ptr;
         
@@ -61,15 +55,19 @@ private:
     PivotHandler pivot;
     PivotTimer timer;
 
+    DualHandler dual;
+
     // ###############################
     // CLASS METHODS | Names are self explanatory - doc strings are available on the definition
     // ###############################
     void generate_initial_BFS();
-    void perform_pivot(bool &result, int iteration);
+    void setup_host_graph();
+    void perform_pivot(bool &result, int iteration, int &mode);
     void solve();
-
-    // Developer Facility Methods for potential analysis, debugging etc. >>
-    void view_uv();
-    void view_tree();
+    void solve_uv();
+    void get_reduced_costs();
 
 };
+
+
+

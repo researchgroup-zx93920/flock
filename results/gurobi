@@ -1,0 +1,1641 @@
+FLOCK: Setting up logger
+[2022-07-03 20:28:39.567981]: Start!
+[2022-07-03 20:28:39.568404]: File Name = ./data/TransportModel_100_100_1_equalityConstr.dat
+[2022-07-03 20:28:39.568445]: File available, Now reading file ...
+[2022-07-03 20:28:39.568696]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:39.572421]: Reading input file - complete!
+[2022-07-03 20:28:39.572447]: Problem Dimension => Supplies: 100	Demands: 100
+[2022-07-03 20:28:39.572458]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:39.604004]: An LP model object was successfully created
+[2022-07-03 20:28:39.604017]: Executing LP Model ... 
+[2022-07-03 20:28:39.604021]: Creating Variables
+[2022-07-03 20:28:39.614074]: Creating Variables - completed!
+[2022-07-03 20:28:39.614083]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:39.620338]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:39.625374]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 200 rows, 10000 columns and 20000 nonzeros
+Model fingerprint: 0x5ecefb33
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 2e+02]
+Presolve time: 0.01s
+Presolved: 200 rows, 10000 columns, 20000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.631000e+03   9.994523e+09      0s
+    1906    6.5804298e+05   0.000000e+00   0.000000e+00      0s
+
+Solved in 1906 iterations and 0.02 seconds
+Optimal objective  6.580429813e+05
+[2022-07-03 20:28:39.646823]: Solver Success! Optimal value: 658043
+[2022-07-03 20:28:39.646850]: LP Model was successfully solved!
+[2022-07-03 20:28:39.646854]: Creating flows ...
+[2022-07-03 20:28:39.646857]: verified model = solved
+[2022-07-03 20:28:39.650820]: >>>> BASIC STATISTICS | Objective: 658043 | Iterations: 1906 | Time: 42 | MATRIX : 100 X 100
+[2022-07-03 20:28:39.651843]: Flows created successfully!
+[2022-07-03 20:28:39.651850]: Flows freed successfully!
+ ******************** TEST 01 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:39.656378]: Start!
+[2022-07-03 20:28:39.656429]: File Name = ./data/TransportModel_100_100_2_equalityConstr.dat
+[2022-07-03 20:28:39.656450]: File available, Now reading file ...
+[2022-07-03 20:28:39.656697]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:39.658963]: Reading input file - complete!
+[2022-07-03 20:28:39.658973]: Problem Dimension => Supplies: 100	Demands: 100
+[2022-07-03 20:28:39.658979]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:39.660121]: An LP model object was successfully created
+[2022-07-03 20:28:39.660131]: Executing LP Model ... 
+[2022-07-03 20:28:39.660135]: Creating Variables
+[2022-07-03 20:28:39.670356]: Creating Variables - completed!
+[2022-07-03 20:28:39.670363]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:39.676558]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:39.681590]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 200 rows, 10000 columns and 20000 nonzeros
+Model fingerprint: 0x8a196da4
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 6e+02]
+Presolve time: 0.00s
+Presolved: 200 rows, 10000 columns, 20000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.844000e+03   9.994525e+09      0s
+    1578    7.1548386e+05   0.000000e+00   0.000000e+00      0s
+
+Solved in 1578 iterations and 0.01 seconds
+Optimal objective  7.154838581e+05
+[2022-07-03 20:28:39.695144]: Solver Success! Optimal value: 715484
+[2022-07-03 20:28:39.695172]: LP Model was successfully solved!
+[2022-07-03 20:28:39.695176]: Creating flows ...
+[2022-07-03 20:28:39.695179]: verified model = solved
+[2022-07-03 20:28:39.699195]: >>>> BASIC STATISTICS | Objective: 715484 | Iterations: 1578 | Time: 35 | MATRIX : 100 X 100
+[2022-07-03 20:28:39.700137]: Flows created successfully!
+[2022-07-03 20:28:39.700144]: Flows freed successfully!
+ ******************** TEST 02 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:39.703613]: Start!
+[2022-07-03 20:28:39.703662]: File Name = ./data/TransportModel_100_100_3_equalityConstr.dat
+[2022-07-03 20:28:39.703682]: File available, Now reading file ...
+[2022-07-03 20:28:39.703886]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:39.706129]: Reading input file - complete!
+[2022-07-03 20:28:39.706140]: Problem Dimension => Supplies: 100	Demands: 100
+[2022-07-03 20:28:39.706145]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:39.707296]: An LP model object was successfully created
+[2022-07-03 20:28:39.707306]: Executing LP Model ... 
+[2022-07-03 20:28:39.707310]: Creating Variables
+[2022-07-03 20:28:39.716737]: Creating Variables - completed!
+[2022-07-03 20:28:39.716745]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:39.722221]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:39.727263]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 200 rows, 10000 columns and 20000 nonzeros
+Model fingerprint: 0x7a604346
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 2e+02]
+Presolve time: 0.00s
+Presolved: 200 rows, 10000 columns, 20000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.366000e+03   9.994501e+09      0s
+    1450    6.4415236e+05   0.000000e+00   0.000000e+00      0s
+
+Solved in 1450 iterations and 0.01 seconds
+Optimal objective  6.441523612e+05
+[2022-07-03 20:28:39.740627]: Solver Success! Optimal value: 644152
+[2022-07-03 20:28:39.740659]: LP Model was successfully solved!
+[2022-07-03 20:28:39.740664]: Creating flows ...
+[2022-07-03 20:28:39.740667]: verified model = solved
+[2022-07-03 20:28:39.744753]: >>>> BASIC STATISTICS | Objective: 644152 | Iterations: 1450 | Time: 33 | MATRIX : 100 X 100
+[2022-07-03 20:28:39.745693]: Flows created successfully!
+[2022-07-03 20:28:39.745700]: Flows freed successfully!
+ ******************** TEST 03 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:39.749063]: Start!
+[2022-07-03 20:28:39.749119]: File Name = ./data/TransportModel_100_250_1_equalityConstr.dat
+[2022-07-03 20:28:39.749144]: File available, Now reading file ...
+[2022-07-03 20:28:39.749402]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:39.754811]: Reading input file - complete!
+[2022-07-03 20:28:39.754822]: Problem Dimension => Supplies: 100	Demands: 250
+[2022-07-03 20:28:39.754829]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:39.755979]: An LP model object was successfully created
+[2022-07-03 20:28:39.755990]: Executing LP Model ... 
+[2022-07-03 20:28:39.755994]: Creating Variables
+[2022-07-03 20:28:39.782540]: Creating Variables - completed!
+[2022-07-03 20:28:39.782568]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:39.798111]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:39.811021]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 350 rows, 25000 columns and 50000 nonzeros
+Model fingerprint: 0xa92e9831
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 7e+03]
+Presolve time: 0.01s
+Presolved: 350 rows, 25000 columns, 50000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   1.297100e+04   2.498631e+10      0s
+    3194    3.2069768e+06   0.000000e+00   0.000000e+00      0s
+
+Solved in 3194 iterations and 0.03 seconds
+Optimal objective  3.206976757e+06
+[2022-07-03 20:28:39.846334]: Solver Success! Optimal value: 3.20698e+06
+[2022-07-03 20:28:39.846396]: LP Model was successfully solved!
+[2022-07-03 20:28:39.846404]: Creating flows ...
+[2022-07-03 20:28:39.846410]: verified model = solved
+[2022-07-03 20:28:39.857518]: >>>> BASIC STATISTICS | Objective: 3.20698e+06 | Iterations: 3194 | Time: 90 | MATRIX : 100 X 250
+[2022-07-03 20:28:39.859991]: Flows created successfully!
+[2022-07-03 20:28:39.860002]: Flows freed successfully!
+ ******************** TEST 04 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:39.863788]: Start!
+[2022-07-03 20:28:39.863843]: File Name = ./data/TransportModel_100_500_1_equalityConstr.dat
+[2022-07-03 20:28:39.863868]: File available, Now reading file ...
+[2022-07-03 20:28:39.864125]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:39.874657]: Reading input file - complete!
+[2022-07-03 20:28:39.874668]: Problem Dimension => Supplies: 100	Demands: 500
+[2022-07-03 20:28:39.874674]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:39.875964]: An LP model object was successfully created
+[2022-07-03 20:28:39.875975]: Executing LP Model ... 
+[2022-07-03 20:28:39.875979]: Creating Variables
+[2022-07-03 20:28:39.928225]: Creating Variables - completed!
+[2022-07-03 20:28:39.928252]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:39.962454]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:39.989832]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 600 rows, 50000 columns and 100000 nonzeros
+Model fingerprint: 0x6597593f
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 6e+03]
+Presolve time: 0.03s
+Presolved: 600 rows, 50000 columns, 100000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   2.677800e+04   4.997247e+10      0s
+    4799    5.2597375e+06   0.000000e+00   0.000000e+00      0s
+
+Solved in 4799 iterations and 0.07 seconds
+Optimal objective  5.259737545e+06
+[2022-07-03 20:28:40.067845]: Solver Success! Optimal value: 5.25974e+06
+[2022-07-03 20:28:40.067889]: LP Model was successfully solved!
+[2022-07-03 20:28:40.067893]: Creating flows ...
+[2022-07-03 20:28:40.067895]: verified model = solved
+[2022-07-03 20:28:40.091402]: >>>> BASIC STATISTICS | Objective: 5.25974e+06 | Iterations: 4799 | Time: 191 | MATRIX : 100 X 500
+[2022-07-03 20:28:40.099056]: Flows created successfully!
+[2022-07-03 20:28:40.099087]: Flows freed successfully!
+ ******************** TEST 05 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:40.102744]: Start!
+[2022-07-03 20:28:40.102793]: File Name = ./data/TransportModel_250_100_1_equalityConstr.dat
+[2022-07-03 20:28:40.102819]: File available, Now reading file ...
+[2022-07-03 20:28:40.103079]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:40.108414]: Reading input file - complete!
+[2022-07-03 20:28:40.108425]: Problem Dimension => Supplies: 250	Demands: 100
+[2022-07-03 20:28:40.108431]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:40.109559]: An LP model object was successfully created
+[2022-07-03 20:28:40.109569]: Executing LP Model ... 
+[2022-07-03 20:28:40.109573]: Creating Variables
+[2022-07-03 20:28:40.134620]: Creating Variables - completed!
+[2022-07-03 20:28:40.134633]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:40.149374]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:40.162425]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 350 rows, 25000 columns and 50000 nonzeros
+Model fingerprint: 0x2f6b846e
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 5e+03]
+Presolve time: 0.01s
+Presolved: 350 rows, 25000 columns, 50000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   1.426900e+04   2.498631e+10      0s
+    3375    2.7979351e+06   0.000000e+00   0.000000e+00      0s
+
+Solved in 3375 iterations and 0.04 seconds
+Optimal objective  2.797935081e+06
+[2022-07-03 20:28:40.203047]: Solver Success! Optimal value: 2.79794e+06
+[2022-07-03 20:28:40.203085]: LP Model was successfully solved!
+[2022-07-03 20:28:40.203089]: Creating flows ...
+[2022-07-03 20:28:40.203092]: verified model = solved
+[2022-07-03 20:28:40.214246]: >>>> BASIC STATISTICS | Objective: 2.79794e+06 | Iterations: 3375 | Time: 93 | MATRIX : 250 X 100
+[2022-07-03 20:28:40.216805]: Flows created successfully!
+[2022-07-03 20:28:40.216814]: Flows freed successfully!
+ ******************** TEST 06 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:40.220504]: Start!
+[2022-07-03 20:28:40.220560]: File Name = ./data/TransportModel_250_250_1_equalityConstr.dat
+[2022-07-03 20:28:40.220580]: File available, Now reading file ...
+[2022-07-03 20:28:40.220844]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:40.234112]: Reading input file - complete!
+[2022-07-03 20:28:40.234123]: Problem Dimension => Supplies: 250	Demands: 250
+[2022-07-03 20:28:40.234129]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:40.235277]: An LP model object was successfully created
+[2022-07-03 20:28:40.235287]: Executing LP Model ... 
+[2022-07-03 20:28:40.235291]: Creating Variables
+[2022-07-03 20:28:40.303652]: Creating Variables - completed!
+[2022-07-03 20:28:40.303680]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:40.347608]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:40.382474]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 500 rows, 62500 columns and 125000 nonzeros
+Model fingerprint: 0xa5c73331
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 7e+02]
+Presolve time: 0.04s
+Presolved: 500 rows, 62500 columns, 125000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   1.467000e+04   6.246577e+10      0s
+    8220    1.5920377e+06   0.000000e+00   0.000000e+00      0s
+
+Solved in 8220 iterations and 0.12 seconds
+Optimal objective  1.592037731e+06
+[2022-07-03 20:28:40.510306]: Solver Success! Optimal value: 1.59204e+06
+[2022-07-03 20:28:40.510350]: LP Model was successfully solved!
+[2022-07-03 20:28:40.510354]: Creating flows ...
+[2022-07-03 20:28:40.510357]: verified model = solved
+[2022-07-03 20:28:40.540097]: >>>> BASIC STATISTICS | Objective: 1.59204e+06 | Iterations: 8220 | Time: 275 | MATRIX : 250 X 250
+[2022-07-03 20:28:40.550658]: Flows created successfully!
+[2022-07-03 20:28:40.551640]: Flows freed successfully!
+ ******************** TEST 07 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:40.555885]: Start!
+[2022-07-03 20:28:40.555936]: File Name = ./data/TransportModel_250_250_2_equalityConstr.dat
+[2022-07-03 20:28:40.555962]: File available, Now reading file ...
+[2022-07-03 20:28:40.556267]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:40.569660]: Reading input file - complete!
+[2022-07-03 20:28:40.569682]: Problem Dimension => Supplies: 250	Demands: 250
+[2022-07-03 20:28:40.569690]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:40.570841]: An LP model object was successfully created
+[2022-07-03 20:28:40.570852]: Executing LP Model ... 
+[2022-07-03 20:28:40.570855]: Creating Variables
+[2022-07-03 20:28:40.637995]: Creating Variables - completed!
+[2022-07-03 20:28:40.638023]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:40.681623]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:40.716022]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 500 rows, 62500 columns and 125000 nonzeros
+Model fingerprint: 0x20d0d208
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 3e+02]
+Presolve time: 0.04s
+Presolved: 500 rows, 62500 columns, 125000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   1.418700e+04   6.246565e+10      0s
+    7448    1.5211503e+06   0.000000e+00   0.000000e+00      0s
+
+Solved in 7448 iterations and 0.12 seconds
+Optimal objective  1.521150260e+06
+[2022-07-03 20:28:40.837959]: Solver Success! Optimal value: 1.52115e+06
+[2022-07-03 20:28:40.838011]: LP Model was successfully solved!
+[2022-07-03 20:28:40.838015]: Creating flows ...
+[2022-07-03 20:28:40.838018]: verified model = solved
+[2022-07-03 20:28:40.867165]: >>>> BASIC STATISTICS | Objective: 1.52115e+06 | Iterations: 7448 | Time: 267 | MATRIX : 250 X 250
+[2022-07-03 20:28:40.877139]: Flows created successfully!
+[2022-07-03 20:28:40.878121]: Flows freed successfully!
+ ******************** TEST 08 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:40.882627]: Start!
+[2022-07-03 20:28:40.882683]: File Name = ./data/TransportModel_250_250_3_equalityConstr.dat
+[2022-07-03 20:28:40.882706]: File available, Now reading file ...
+[2022-07-03 20:28:40.883152]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:40.896364]: Reading input file - complete!
+[2022-07-03 20:28:40.896375]: Problem Dimension => Supplies: 250	Demands: 250
+[2022-07-03 20:28:40.896381]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:40.897573]: An LP model object was successfully created
+[2022-07-03 20:28:40.897583]: Executing LP Model ... 
+[2022-07-03 20:28:40.897587]: Creating Variables
+[2022-07-03 20:28:40.964013]: Creating Variables - completed!
+[2022-07-03 20:28:40.964039]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:41.008503]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:41.045082]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 500 rows, 62500 columns and 125000 nonzeros
+Model fingerprint: 0x1ba9abc7
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 6e+02]
+Presolve time: 0.04s
+Presolved: 500 rows, 62500 columns, 125000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   1.401900e+04   6.246559e+10      0s
+    8432    1.5025187e+06   0.000000e+00   0.000000e+00      0s
+
+Solved in 8432 iterations and 0.12 seconds
+Optimal objective  1.502518651e+06
+[2022-07-03 20:28:41.174889]: Solver Success! Optimal value: 1.50252e+06
+[2022-07-03 20:28:41.174939]: LP Model was successfully solved!
+[2022-07-03 20:28:41.174943]: Creating flows ...
+[2022-07-03 20:28:41.174946]: verified model = solved
+[2022-07-03 20:28:41.203953]: >>>> BASIC STATISTICS | Objective: 1.50252e+06 | Iterations: 8432 | Time: 277 | MATRIX : 250 X 250
+[2022-07-03 20:28:41.213996]: Flows created successfully!
+[2022-07-03 20:28:41.215094]: Flows freed successfully!
+ ******************** TEST 09 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:41.219663]: Start!
+[2022-07-03 20:28:41.219721]: File Name = ./data/TransportModel_250_500_1_equalityConstr.dat
+[2022-07-03 20:28:41.219744]: File available, Now reading file ...
+[2022-07-03 20:28:41.220123]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:41.246457]: Reading input file - complete!
+[2022-07-03 20:28:41.246469]: Problem Dimension => Supplies: 250	Demands: 500
+[2022-07-03 20:28:41.246479]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:41.247675]: An LP model object was successfully created
+[2022-07-03 20:28:41.247685]: Executing LP Model ... 
+[2022-07-03 20:28:41.247689]: Creating Variables
+[2022-07-03 20:28:41.386586]: Creating Variables - completed!
+[2022-07-03 20:28:41.386615]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:41.478575]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:41.552446]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 750 rows, 125000 columns and 250000 nonzeros
+Model fingerprint: 0xb5ca09c1
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 1e+04]
+Presolve time: 0.10s
+Presolved: 750 rows, 125000 columns, 250000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   2.771900e+04   1.249312e+11      0s
+   12471    5.0571841e+06   0.000000e+00   0.000000e+00      0s
+
+Solved in 12471 iterations and 0.26 seconds
+Optimal objective  5.057184136e+06
+[2022-07-03 20:28:41.825159]: Solver Success! Optimal value: 5.05718e+06
+[2022-07-03 20:28:41.825209]: LP Model was successfully solved!
+[2022-07-03 20:28:41.825214]: Creating flows ...
+[2022-07-03 20:28:41.825218]: verified model = solved
+[2022-07-03 20:28:41.885222]: >>>> BASIC STATISTICS | Objective: 5.05718e+06 | Iterations: 12471 | Time: 577 | MATRIX : 250 X 500
+[2022-07-03 20:28:41.909885]: Flows created successfully!
+[2022-07-03 20:28:41.912118]: Flows freed successfully!
+ ******************** TEST 10 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:41.916879]: Start!
+[2022-07-03 20:28:41.916931]: File Name = ./data/TransportModel_250_1000_1_equalityConstr.dat
+[2022-07-03 20:28:41.916953]: File available, Now reading file ...
+[2022-07-03 20:28:41.917210]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:41.969399]: Reading input file - complete!
+[2022-07-03 20:28:41.969412]: Problem Dimension => Supplies: 250	Demands: 1000
+[2022-07-03 20:28:41.969422]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:41.970619]: An LP model object was successfully created
+[2022-07-03 20:28:41.970630]: Executing LP Model ... 
+[2022-07-03 20:28:41.970633]: Creating Variables
+[2022-07-03 20:28:42.254452]: Creating Variables - completed!
+[2022-07-03 20:28:42.254482]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:42.449160]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:42.600974]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1250 rows, 250000 columns and 500000 nonzeros
+Model fingerprint: 0x56a068c7
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 3e+04]
+Presolve time: 0.24s
+Presolved: 1250 rows, 250000 columns, 500000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.488900e+04   2.498627e+11      0s
+   16544    1.4103963e+07   0.000000e+00   0.000000e+00      1s
+
+Solved in 16544 iterations and 0.68 seconds
+Optimal objective  1.410396328e+07
+[2022-07-03 20:28:43.306723]: Solver Success! Optimal value: 1.4104e+07
+[2022-07-03 20:28:43.306774]: LP Model was successfully solved!
+[2022-07-03 20:28:43.306780]: Creating flows ...
+[2022-07-03 20:28:43.306783]: verified model = solved
+[2022-07-03 20:28:43.431257]: >>>> BASIC STATISTICS | Objective: 1.4104e+07 | Iterations: 16544 | Time: 1336 | MATRIX : 250 X 1000
+[2022-07-03 20:28:43.479695]: Flows created successfully!
+[2022-07-03 20:28:43.484679]: Flows freed successfully!
+ ******************** TEST 11 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:43.492283]: Start!
+[2022-07-03 20:28:43.492340]: File Name = ./data/TransportModel_500_250_1_equalityConstr.dat
+[2022-07-03 20:28:43.492361]: File available, Now reading file ...
+[2022-07-03 20:28:43.495009]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:43.523733]: Reading input file - complete!
+[2022-07-03 20:28:43.523765]: Problem Dimension => Supplies: 500	Demands: 250
+[2022-07-03 20:28:43.523776]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:43.544591]: An LP model object was successfully created
+[2022-07-03 20:28:43.544616]: Executing LP Model ... 
+[2022-07-03 20:28:43.544621]: Creating Variables
+[2022-07-03 20:28:43.682603]: Creating Variables - completed!
+[2022-07-03 20:28:43.682632]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:43.777741]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:43.852350]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 750 rows, 125000 columns and 250000 nonzeros
+Model fingerprint: 0x326d6afb
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 8e+03]
+Presolve time: 0.11s
+Presolved: 750 rows, 125000 columns, 250000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   2.643300e+04   1.249312e+11      0s
+   14208    4.3098195e+06   0.000000e+00   0.000000e+00      0s
+
+Solved in 14208 iterations and 0.32 seconds
+Optimal objective  4.309819463e+06
+[2022-07-03 20:28:44.181390]: Solver Success! Optimal value: 4.30982e+06
+[2022-07-03 20:28:44.181440]: LP Model was successfully solved!
+[2022-07-03 20:28:44.181444]: Creating flows ...
+[2022-07-03 20:28:44.181447]: verified model = solved
+[2022-07-03 20:28:44.240951]: >>>> BASIC STATISTICS | Objective: 4.30982e+06 | Iterations: 14208 | Time: 636 | MATRIX : 500 X 250
+[2022-07-03 20:28:44.266794]: Flows created successfully!
+[2022-07-03 20:28:44.269351]: Flows freed successfully!
+ ******************** TEST 13 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:44.274487]: Start!
+[2022-07-03 20:28:44.274544]: File Name = ./data/TransportModel_500_500_1_equalityConstr.dat
+[2022-07-03 20:28:44.274563]: File available, Now reading file ...
+[2022-07-03 20:28:44.279768]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:44.333348]: Reading input file - complete!
+[2022-07-03 20:28:44.333381]: Problem Dimension => Supplies: 500	Demands: 500
+[2022-07-03 20:28:44.333394]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:44.334698]: An LP model object was successfully created
+[2022-07-03 20:28:44.334711]: Executing LP Model ... 
+[2022-07-03 20:28:44.334715]: Creating Variables
+[2022-07-03 20:28:44.618626]: Creating Variables - completed!
+[2022-07-03 20:28:44.618655]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:44.811352]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:44.967005]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1000 rows, 250000 columns and 500000 nonzeros
+Model fingerprint: 0x34c1e6c3
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 2e+02]
+Presolve time: 0.24s
+Presolved: 1000 rows, 250000 columns, 500000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   2.716100e+04   2.498625e+11      0s
+   22252    2.8168297e+06   0.000000e+00   0.000000e+00      1s
+
+Solved in 22252 iterations and 0.72 seconds
+Optimal objective  2.816829672e+06
+[2022-07-03 20:28:45.724621]: Solver Success! Optimal value: 2.81683e+06
+[2022-07-03 20:28:45.724675]: LP Model was successfully solved!
+[2022-07-03 20:28:45.724682]: Creating flows ...
+[2022-07-03 20:28:45.724685]: verified model = solved
+[2022-07-03 20:28:45.850078]: >>>> BASIC STATISTICS | Objective: 2.81683e+06 | Iterations: 22252 | Time: 1389 | MATRIX : 500 X 500
+[2022-07-03 20:28:45.897797]: Flows created successfully!
+[2022-07-03 20:28:45.902756]: Flows freed successfully!
+ ******************** TEST 14 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:45.909203]: Start!
+[2022-07-03 20:28:45.909260]: File Name = ./data/TransportModel_500_500_2_equalityConstr.dat
+[2022-07-03 20:28:45.909280]: File available, Now reading file ...
+[2022-07-03 20:28:45.909639]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:45.962060]: Reading input file - complete!
+[2022-07-03 20:28:45.962094]: Problem Dimension => Supplies: 500	Demands: 500
+[2022-07-03 20:28:45.962105]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:45.980498]: An LP model object was successfully created
+[2022-07-03 20:28:45.980514]: Executing LP Model ... 
+[2022-07-03 20:28:45.980517]: Creating Variables
+[2022-07-03 20:28:46.264832]: Creating Variables - completed!
+[2022-07-03 20:28:46.264866]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:46.455589]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:46.611330]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1000 rows, 250000 columns and 500000 nonzeros
+Model fingerprint: 0xc6212833
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 9e+02]
+Presolve time: 0.24s
+Presolved: 1000 rows, 250000 columns, 500000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   2.871100e+04   2.498627e+11      0s
+   21454    2.9898608e+06   0.000000e+00   0.000000e+00      1s
+
+Solved in 21454 iterations and 0.69 seconds
+Optimal objective  2.989860812e+06
+[2022-07-03 20:28:47.329675]: Solver Success! Optimal value: 2.98986e+06
+[2022-07-03 20:28:47.329726]: LP Model was successfully solved!
+[2022-07-03 20:28:47.329732]: Creating flows ...
+[2022-07-03 20:28:47.329736]: verified model = solved
+[2022-07-03 20:28:47.454044]: >>>> BASIC STATISTICS | Objective: 2.98986e+06 | Iterations: 21454 | Time: 1349 | MATRIX : 500 X 500
+[2022-07-03 20:28:47.500942]: Flows created successfully!
+[2022-07-03 20:28:47.506073]: Flows freed successfully!
+ ******************** TEST 15 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:47.512881]: Start!
+[2022-07-03 20:28:47.512961]: File Name = ./data/TransportModel_500_500_3_equalityConstr.dat
+[2022-07-03 20:28:47.512979]: File available, Now reading file ...
+[2022-07-03 20:28:47.513243]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:47.567636]: Reading input file - complete!
+[2022-07-03 20:28:47.567669]: Problem Dimension => Supplies: 500	Demands: 500
+[2022-07-03 20:28:47.567681]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:47.588578]: An LP model object was successfully created
+[2022-07-03 20:28:47.588605]: Executing LP Model ... 
+[2022-07-03 20:28:47.588610]: Creating Variables
+[2022-07-03 20:28:47.872544]: Creating Variables - completed!
+[2022-07-03 20:28:47.872572]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:48.072280]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:48.227332]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1000 rows, 250000 columns and 500000 nonzeros
+Model fingerprint: 0x68b6f959
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 3e+02]
+Presolve time: 0.24s
+Presolved: 1000 rows, 250000 columns, 500000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   2.684900e+04   2.498627e+11      0s
+   20942    2.7844366e+06   0.000000e+00   0.000000e+00      1s
+
+Solved in 20942 iterations and 0.71 seconds
+Optimal objective  2.784436574e+06
+[2022-07-03 20:28:48.956539]: Solver Success! Optimal value: 2.78444e+06
+[2022-07-03 20:28:48.956590]: LP Model was successfully solved!
+[2022-07-03 20:28:48.956595]: Creating flows ...
+[2022-07-03 20:28:48.956597]: verified model = solved
+[2022-07-03 20:28:49.082056]: >>>> BASIC STATISTICS | Objective: 2.78444e+06 | Iterations: 20942 | Time: 1367 | MATRIX : 500 X 500
+[2022-07-03 20:28:49.129016]: Flows created successfully!
+[2022-07-03 20:28:49.133774]: Flows freed successfully!
+ ******************** TEST 16 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:49.140941]: Start!
+[2022-07-03 20:28:49.140992]: File Name = ./data/TransportModel_500_750_1_equalityConstr.dat
+[2022-07-03 20:28:49.141005]: File available, Now reading file ...
+[2022-07-03 20:28:49.141399]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:49.219922]: Reading input file - complete!
+[2022-07-03 20:28:49.219940]: Problem Dimension => Supplies: 500	Demands: 750
+[2022-07-03 20:28:49.219952]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:49.241039]: An LP model object was successfully created
+[2022-07-03 20:28:49.241057]: Executing LP Model ... 
+[2022-07-03 20:28:49.241064]: Creating Variables
+[2022-07-03 20:28:49.680085]: Creating Variables - completed!
+[2022-07-03 20:28:49.680114]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:49.984057]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:50.217283]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1250 rows, 375000 columns and 750000 nonzeros
+Model fingerprint: 0xf9de3af7
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 1e+04]
+Presolve time: 0.37s
+Presolved: 1250 rows, 375000 columns, 750000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   4.017100e+04   3.747938e+11      0s
+   31579    5.3874685e+06   0.000000e+00   0.000000e+00      1s
+
+Solved in 31579 iterations and 1.14 seconds
+Optimal objective  5.387468506e+06
+[2022-07-03 20:28:51.396550]: Solver Success! Optimal value: 5.38747e+06
+[2022-07-03 20:28:51.396596]: LP Model was successfully solved!
+[2022-07-03 20:28:51.396603]: Creating flows ...
+[2022-07-03 20:28:51.396607]: verified model = solved
+[2022-07-03 20:28:51.588888]: >>>> BASIC STATISTICS | Objective: 5.38747e+06 | Iterations: 31579 | Time: 2155 | MATRIX : 500 X 750
+[2022-07-03 20:28:51.658503]: Flows created successfully!
+[2022-07-03 20:28:51.665751]: Flows freed successfully!
+ ******************** TEST 17 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:51.672888]: Start!
+[2022-07-03 20:28:51.672945]: File Name = ./data/TransportModel_500_1000_1_equalityConstr.dat
+[2022-07-03 20:28:51.672959]: File available, Now reading file ...
+[2022-07-03 20:28:51.673318]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:51.779745]: Reading input file - complete!
+[2022-07-03 20:28:51.779775]: Problem Dimension => Supplies: 500	Demands: 1000
+[2022-07-03 20:28:51.779791]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:51.800894]: An LP model object was successfully created
+[2022-07-03 20:28:51.800913]: Executing LP Model ... 
+[2022-07-03 20:28:51.800918]: Creating Variables
+[2022-07-03 20:28:52.390045]: Creating Variables - completed!
+[2022-07-03 20:28:52.390074]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:52.794646]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:53.109753]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1500 rows, 500000 columns and 1000000 nonzeros
+Model fingerprint: 0x7b5ad144
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 3e+04]
+Presolve time: 0.53s
+Presolved: 1500 rows, 500000 columns, 1000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.435400e+04   4.997250e+11      1s
+   37246    1.1871363e+07   0.000000e+00   0.000000e+00      2s
+
+Solved in 37246 iterations and 1.52 seconds
+Optimal objective  1.187136278e+07
+[2022-07-03 20:28:54.701738]: Solver Success! Optimal value: 1.18714e+07
+[2022-07-03 20:28:54.701786]: LP Model was successfully solved!
+[2022-07-03 20:28:54.701792]: Creating flows ...
+[2022-07-03 20:28:54.701794]: verified model = solved
+[2022-07-03 20:28:54.961335]: >>>> BASIC STATISTICS | Objective: 1.18714e+07 | Iterations: 37246 | Time: 2900 | MATRIX : 500 X 1000
+[2022-07-03 20:28:55.057584]: Flows created successfully!
+[2022-07-03 20:28:55.067577]: Flows freed successfully!
+ ******************** TEST 18 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:55.075346]: Start!
+[2022-07-03 20:28:55.075408]: File Name = ./data/TransportModel_750_500_1_equalityConstr.dat
+[2022-07-03 20:28:55.075441]: File available, Now reading file ...
+[2022-07-03 20:28:55.075704]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:55.154305]: Reading input file - complete!
+[2022-07-03 20:28:55.154320]: Problem Dimension => Supplies: 750	Demands: 500
+[2022-07-03 20:28:55.154332]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:55.173020]: An LP model object was successfully created
+[2022-07-03 20:28:55.173039]: Executing LP Model ... 
+[2022-07-03 20:28:55.173045]: Creating Variables
+[2022-07-03 20:28:55.614621]: Creating Variables - completed!
+[2022-07-03 20:28:55.614651]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:55.907332]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:56.139710]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1250 rows, 375000 columns and 750000 nonzeros
+Model fingerprint: 0x67a49df1
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 5e+03]
+Presolve time: 0.38s
+Presolved: 1250 rows, 375000 columns, 750000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   4.127800e+04   3.747941e+11      0s
+   31830    5.1603546e+06   0.000000e+00   0.000000e+00      1s
+
+Solved in 31830 iterations and 1.21 seconds
+Optimal objective  5.160354647e+06
+[2022-07-03 20:28:57.382478]: Solver Success! Optimal value: 5.16035e+06
+[2022-07-03 20:28:57.382530]: LP Model was successfully solved!
+[2022-07-03 20:28:57.382536]: Creating flows ...
+[2022-07-03 20:28:57.382540]: verified model = solved
+[2022-07-03 20:28:57.573498]: >>>> BASIC STATISTICS | Objective: 5.16035e+06 | Iterations: 31830 | Time: 2209 | MATRIX : 750 X 500
+[2022-07-03 20:28:57.643474]: Flows created successfully!
+[2022-07-03 20:28:57.650695]: Flows freed successfully!
+ ******************** TEST 19 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:28:57.657461]: Start!
+[2022-07-03 20:28:57.657513]: File Name = ./data/TransportModel_750_750_1_equalityConstr.dat
+[2022-07-03 20:28:57.657538]: File available, Now reading file ...
+[2022-07-03 20:28:57.657868]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:28:57.776975]: Reading input file - complete!
+[2022-07-03 20:28:57.777005]: Problem Dimension => Supplies: 750	Demands: 750
+[2022-07-03 20:28:57.777022]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:28:57.797069]: An LP model object was successfully created
+[2022-07-03 20:28:57.797090]: Executing LP Model ... 
+[2022-07-03 20:28:57.797096]: Creating Variables
+[2022-07-03 20:28:58.471506]: Creating Variables - completed!
+[2022-07-03 20:28:58.471535]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:28:58.938305]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:28:59.291741]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1500 rows, 562500 columns and 1125000 nonzeros
+Model fingerprint: 0x4601d6fa
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 1e+03]
+Presolve time: 0.62s
+Presolved: 1500 rows, 562500 columns, 1125000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   4.247900e+04   5.621908e+11      1s
+   38157    4.3740804e+06   0.000000e+00   0.000000e+00      2s
+
+Solved in 38157 iterations and 2.08 seconds
+Optimal objective  4.374080409e+06
+[2022-07-03 20:29:01.430544]: Solver Success! Optimal value: 4.37408e+06
+[2022-07-03 20:29:01.430596]: LP Model was successfully solved!
+[2022-07-03 20:29:01.430601]: Creating flows ...
+[2022-07-03 20:29:01.430604]: verified model = solved
+[2022-07-03 20:29:01.723478]: >>>> BASIC STATISTICS | Objective: 4.37408e+06 | Iterations: 38157 | Time: 3633 | MATRIX : 750 X 750
+[2022-07-03 20:29:01.833782]: Flows created successfully!
+[2022-07-03 20:29:01.844780]: Flows freed successfully!
+ ******************** TEST 20 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:29:01.853313]: Start!
+[2022-07-03 20:29:01.853367]: File Name = ./data/TransportModel_750_750_2_equalityConstr.dat
+[2022-07-03 20:29:01.853391]: File available, Now reading file ...
+[2022-07-03 20:29:01.853727]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:29:01.971437]: Reading input file - complete!
+[2022-07-03 20:29:01.971461]: Problem Dimension => Supplies: 750	Demands: 750
+[2022-07-03 20:29:01.971474]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:29:01.993040]: An LP model object was successfully created
+[2022-07-03 20:29:01.993060]: Executing LP Model ... 
+[2022-07-03 20:29:01.993066]: Creating Variables
+[2022-07-03 20:29:02.659820]: Creating Variables - completed!
+[2022-07-03 20:29:02.659849]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:29:03.125349]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:29:03.476971]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1500 rows, 562500 columns and 1125000 nonzeros
+Model fingerprint: 0x10be4958
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 2e+02]
+Presolve time: 0.62s
+Presolved: 1500 rows, 562500 columns, 1125000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   4.195700e+04   5.621909e+11      1s
+   41130    4.2999279e+06   0.000000e+00   0.000000e+00      2s
+
+Solved in 41130 iterations and 1.94 seconds
+Optimal objective  4.299927869e+06
+[2022-07-03 20:29:05.500795]: Solver Success! Optimal value: 4.29993e+06
+[2022-07-03 20:29:05.500839]: LP Model was successfully solved!
+[2022-07-03 20:29:05.500843]: Creating flows ...
+[2022-07-03 20:29:05.500845]: verified model = solved
+[2022-07-03 20:29:05.793723]: >>>> BASIC STATISTICS | Objective: 4.29993e+06 | Iterations: 41130 | Time: 3507 | MATRIX : 750 X 750
+[2022-07-03 20:29:05.903668]: Flows created successfully!
+[2022-07-03 20:29:05.914826]: Flows freed successfully!
+ ******************** TEST 21 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:29:05.922984]: Start!
+[2022-07-03 20:29:05.923040]: File Name = ./data/TransportModel_750_750_3_equalityConstr.dat
+[2022-07-03 20:29:05.923063]: File available, Now reading file ...
+[2022-07-03 20:29:05.923340]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:29:06.041591]: Reading input file - complete!
+[2022-07-03 20:29:06.041622]: Problem Dimension => Supplies: 750	Demands: 750
+[2022-07-03 20:29:06.041640]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:29:06.061219]: An LP model object was successfully created
+[2022-07-03 20:29:06.061256]: Executing LP Model ... 
+[2022-07-03 20:29:06.061273]: Creating Variables
+[2022-07-03 20:29:06.727123]: Creating Variables - completed!
+[2022-07-03 20:29:06.727155]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:29:07.194194]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:29:07.546492]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1500 rows, 562500 columns and 1125000 nonzeros
+Model fingerprint: 0xfdacbde9
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 1e+02]
+Presolve time: 0.62s
+Presolved: 1500 rows, 562500 columns, 1125000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   4.133000e+04   5.621908e+11      1s
+   37309    4.2402404e+06   0.000000e+00   0.000000e+00      2s
+
+Solved in 37309 iterations and 1.96 seconds
+Optimal objective  4.240240446e+06
+[2022-07-03 20:29:09.576880]: Solver Success! Optimal value: 4.24024e+06
+[2022-07-03 20:29:09.576931]: LP Model was successfully solved!
+[2022-07-03 20:29:09.576937]: Creating flows ...
+[2022-07-03 20:29:09.576940]: verified model = solved
+[2022-07-03 20:29:09.869159]: >>>> BASIC STATISTICS | Objective: 4.24024e+06 | Iterations: 37309 | Time: 3515 | MATRIX : 750 X 750
+[2022-07-03 20:29:09.978800]: Flows created successfully!
+[2022-07-03 20:29:09.989958]: Flows freed successfully!
+ ******************** TEST 22 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:29:09.998058]: Start!
+[2022-07-03 20:29:09.998108]: File Name = ./data/TransportModel_750_1000_1_equalityConstr.dat
+[2022-07-03 20:29:09.998132]: File available, Now reading file ...
+[2022-07-03 20:29:09.998513]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:29:10.157778]: Reading input file - complete!
+[2022-07-03 20:29:10.157810]: Problem Dimension => Supplies: 750	Demands: 1000
+[2022-07-03 20:29:10.157827]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:29:10.176979]: An LP model object was successfully created
+[2022-07-03 20:29:10.176997]: Executing LP Model ... 
+[2022-07-03 20:29:10.177003]: Creating Variables
+[2022-07-03 20:29:11.089943]: Creating Variables - completed!
+[2022-07-03 20:29:11.089974]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:29:11.707403]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:29:12.186272]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1750 rows, 750000 columns and 1500000 nonzeros
+Model fingerprint: 0xf6df9a0e
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 1e+04]
+Presolve time: 0.83s
+Presolved: 1750 rows, 750000 columns, 1500000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.434500e+04   7.495881e+11      1s
+   59587    6.7225251e+06   0.000000e+00   0.000000e+00      3s
+
+Solved in 59587 iterations and 2.68 seconds
+Optimal objective  6.722525136e+06
+[2022-07-03 20:29:14.942067]: Solver Success! Optimal value: 6.72253e+06
+[2022-07-03 20:29:14.942112]: LP Model was successfully solved!
+[2022-07-03 20:29:14.942116]: Creating flows ...
+[2022-07-03 20:29:14.942119]: verified model = solved
+[2022-07-03 20:29:15.337461]: >>>> BASIC STATISTICS | Objective: 6.72253e+06 | Iterations: 59587 | Time: 4765 | MATRIX : 750 X 1000
+[2022-07-03 20:29:15.482629]: Flows created successfully!
+[2022-07-03 20:29:15.497451]: Flows freed successfully!
+ ******************** TEST 23 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:29:15.507757]: Start!
+[2022-07-03 20:29:15.507815]: File Name = ./data/TransportModel_1000_500_1_equalityConstr.dat
+[2022-07-03 20:29:15.507840]: File available, Now reading file ...
+[2022-07-03 20:29:15.508140]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:29:15.614695]: Reading input file - complete!
+[2022-07-03 20:29:15.614726]: Problem Dimension => Supplies: 1000	Demands: 500
+[2022-07-03 20:29:15.614744]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:29:15.632903]: An LP model object was successfully created
+[2022-07-03 20:29:15.632921]: Executing LP Model ... 
+[2022-07-03 20:29:15.632927]: Creating Variables
+[2022-07-03 20:29:16.225213]: Creating Variables - completed!
+[2022-07-03 20:29:16.225241]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:29:16.624924]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:29:16.939483]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1500 rows, 500000 columns and 1000000 nonzeros
+Model fingerprint: 0x9277b1a0
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 2e+04]
+Presolve time: 0.53s
+Presolved: 1500 rows, 500000 columns, 1000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.483600e+04   4.997252e+11      1s
+   40959    9.4847318e+06   0.000000e+00   0.000000e+00      2s
+
+Solved in 40959 iterations and 1.71 seconds
+Optimal objective  9.484731777e+06
+[2022-07-03 20:29:18.724931]: Solver Success! Optimal value: 9.48473e+06
+[2022-07-03 20:29:18.724981]: LP Model was successfully solved!
+[2022-07-03 20:29:18.724986]: Creating flows ...
+[2022-07-03 20:29:18.724989]: verified model = solved
+[2022-07-03 20:29:18.981942]: >>>> BASIC STATISTICS | Objective: 9.48473e+06 | Iterations: 40959 | Time: 3092 | MATRIX : 1000 X 500
+[2022-07-03 20:29:19.078312]: Flows created successfully!
+[2022-07-03 20:29:19.088454]: Flows freed successfully!
+ ******************** TEST 24 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:29:19.096278]: Start!
+[2022-07-03 20:29:19.096332]: File Name = ./data/TransportModel_1000_750_1_equalityConstr.dat
+[2022-07-03 20:29:19.096356]: File available, Now reading file ...
+[2022-07-03 20:29:19.096562]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:29:19.253060]: Reading input file - complete!
+[2022-07-03 20:29:19.253087]: Problem Dimension => Supplies: 1000	Demands: 750
+[2022-07-03 20:29:19.253102]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:29:19.273057]: An LP model object was successfully created
+[2022-07-03 20:29:19.273092]: Executing LP Model ... 
+[2022-07-03 20:29:19.273097]: Creating Variables
+[2022-07-03 20:29:20.173843]: Creating Variables - completed!
+[2022-07-03 20:29:20.173872]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:29:20.801931]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:29:21.280695]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 1750 rows, 750000 columns and 1500000 nonzeros
+Model fingerprint: 0x150abb07
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 8e+03]
+Presolve time: 0.85s
+Presolved: 1750 rows, 750000 columns, 1500000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.438800e+04   7.495876e+11      1s
+   48728    6.2801424e+06   0.000000e+00   0.000000e+00      3s
+
+Solved in 48728 iterations and 2.71 seconds
+Optimal objective  6.280142356e+06
+[2022-07-03 20:29:24.076882]: Solver Success! Optimal value: 6.28014e+06
+[2022-07-03 20:29:24.076933]: LP Model was successfully solved!
+[2022-07-03 20:29:24.076938]: Creating flows ...
+[2022-07-03 20:29:24.076940]: verified model = solved
+[2022-07-03 20:29:24.472328]: >>>> BASIC STATISTICS | Objective: 6.28014e+06 | Iterations: 48728 | Time: 4803 | MATRIX : 1000 X 750
+[2022-07-03 20:29:24.627085]: Flows created successfully!
+[2022-07-03 20:29:24.642685]: Flows freed successfully!
+ ******************** TEST 25 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:29:24.652550]: Start!
+[2022-07-03 20:29:24.652608]: File Name = ./data/TransportModel_1000_1000_1_equalityConstr.dat
+[2022-07-03 20:29:24.652633]: File available, Now reading file ...
+[2022-07-03 20:29:24.652897]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:29:24.863295]: Reading input file - complete!
+[2022-07-03 20:29:24.863328]: Problem Dimension => Supplies: 1000	Demands: 1000
+[2022-07-03 20:29:24.863345]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:29:24.885043]: An LP model object was successfully created
+[2022-07-03 20:29:24.885064]: Executing LP Model ... 
+[2022-07-03 20:29:24.885070]: Creating Variables
+[2022-07-03 20:29:26.111680]: Creating Variables - completed!
+[2022-07-03 20:29:26.111710]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:29:26.976035]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:29:27.630252]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 2000 rows, 1000000 columns and 2000000 nonzeros
+Model fingerprint: 0xa818ebdc
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 6e+02]
+Presolve time: 1.15s
+Presolved: 2000 rows, 1000000 columns, 2000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.478800e+04   9.994508e+11      1s
+   65897    5.5826865e+06   0.000000e+00   0.000000e+00      4s
+
+Solved in 65897 iterations and 3.70 seconds
+Optimal objective  5.582686450e+06
+[2022-07-03 20:29:31.438348]: Solver Success! Optimal value: 5.58269e+06
+[2022-07-03 20:29:31.438400]: LP Model was successfully solved!
+[2022-07-03 20:29:31.438407]: Creating flows ...
+[2022-07-03 20:29:31.438410]: verified model = solved
+[2022-07-03 20:29:31.974921]: >>>> BASIC STATISTICS | Objective: 5.58269e+06 | Iterations: 65897 | Time: 6553 | MATRIX : 1000 X 1000
+[2022-07-03 20:29:32.157773]: Flows created successfully!
+[2022-07-03 20:29:32.178110]: Flows freed successfully!
+ ******************** TEST 26 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:29:32.189172]: Start!
+[2022-07-03 20:29:32.189229]: File Name = ./data/TransportModel_1000_1000_2_equalityConstr.dat
+[2022-07-03 20:29:32.189241]: File available, Now reading file ...
+[2022-07-03 20:29:32.189613]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:29:32.399872]: Reading input file - complete!
+[2022-07-03 20:29:32.399904]: Problem Dimension => Supplies: 1000	Demands: 1000
+[2022-07-03 20:29:32.399921]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:29:32.421043]: An LP model object was successfully created
+[2022-07-03 20:29:32.421061]: Executing LP Model ... 
+[2022-07-03 20:29:32.421067]: Creating Variables
+[2022-07-03 20:29:33.633013]: Creating Variables - completed!
+[2022-07-03 20:29:33.633043]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:29:34.478714]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:29:35.131828]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 2000 rows, 1000000 columns and 2000000 nonzeros
+Model fingerprint: 0xe34ce834
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 6e+02]
+Presolve time: 1.15s
+Presolved: 2000 rows, 1000000 columns, 2000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.473400e+04   9.994505e+11      1s
+   66363    5.5806845e+06   0.000000e+00   0.000000e+00      4s
+
+Solved in 66363 iterations and 3.80 seconds
+Optimal objective  5.580684494e+06
+[2022-07-03 20:29:39.033800]: Solver Success! Optimal value: 5.58068e+06
+[2022-07-03 20:29:39.033850]: LP Model was successfully solved!
+[2022-07-03 20:29:39.033855]: Creating flows ...
+[2022-07-03 20:29:39.033858]: verified model = solved
+[2022-07-03 20:29:39.569280]: >>>> BASIC STATISTICS | Objective: 5.58068e+06 | Iterations: 66363 | Time: 6612 | MATRIX : 1000 X 1000
+[2022-07-03 20:29:39.751192]: Flows created successfully!
+[2022-07-03 20:29:39.772590]: Flows freed successfully!
+ ******************** TEST 27 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:29:39.783593]: Start!
+[2022-07-03 20:29:39.783646]: File Name = ./data/TransportModel_1000_1000_3_equalityConstr.dat
+[2022-07-03 20:29:39.783658]: File available, Now reading file ...
+[2022-07-03 20:29:39.783990]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:29:39.994161]: Reading input file - complete!
+[2022-07-03 20:29:39.994192]: Problem Dimension => Supplies: 1000	Demands: 1000
+[2022-07-03 20:29:39.994210]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:29:40.013025]: An LP model object was successfully created
+[2022-07-03 20:29:40.013049]: Executing LP Model ... 
+[2022-07-03 20:29:40.013056]: Creating Variables
+[2022-07-03 20:29:41.224758]: Creating Variables - completed!
+[2022-07-03 20:29:41.224788]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:29:42.076494]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:29:42.726927]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 2000 rows, 1000000 columns and 2000000 nonzeros
+Model fingerprint: 0xfce7c77d
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 1e+03]
+Presolve time: 1.16s
+Presolved: 2000 rows, 1000000 columns, 2000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.500500e+04   9.994504e+11      1s
+   69111    5.6167770e+06   0.000000e+00   0.000000e+00      4s
+
+Solved in 69111 iterations and 3.89 seconds
+Optimal objective  5.616776985e+06
+[2022-07-03 20:29:46.728104]: Solver Success! Optimal value: 5.61678e+06
+[2022-07-03 20:29:46.728150]: LP Model was successfully solved!
+[2022-07-03 20:29:46.728156]: Creating flows ...
+[2022-07-03 20:29:46.728159]: verified model = solved
+[2022-07-03 20:29:47.267496]: >>>> BASIC STATISTICS | Objective: 5.61678e+06 | Iterations: 69111 | Time: 6715 | MATRIX : 1000 X 1000
+[2022-07-03 20:29:47.450741]: Flows created successfully!
+[2022-07-03 20:29:47.471120]: Flows freed successfully!
+ ******************** TEST 28 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:29:47.482027]: Start!
+[2022-07-03 20:29:47.482080]: File Name = ./data/TransportModel_1000_2500_1_equalityConstr.dat
+[2022-07-03 20:29:47.482102]: File available, Now reading file ...
+[2022-07-03 20:29:47.482488]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:29:48.010085]: Reading input file - complete!
+[2022-07-03 20:29:48.010118]: Problem Dimension => Supplies: 1000	Demands: 2500
+[2022-07-03 20:29:48.010131]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:29:48.028829]: An LP model object was successfully created
+[2022-07-03 20:29:48.028862]: Executing LP Model ... 
+[2022-07-03 20:29:48.028867]: Creating Variables
+[2022-07-03 20:29:51.225239]: Creating Variables - completed!
+[2022-07-03 20:29:51.225269]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:29:53.911858]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:29:55.603356]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 3500 rows, 2500000 columns and 5000000 nonzeros
+Model fingerprint: 0x006298d1
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 6e+04]
+Presolve time: 3.43s
+Presolved: 3500 rows, 2500000 columns, 5000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   1.359010e+05   2.498627e+12      4s
+  106949    2.8185284e+07   0.000000e+00   1.096663e+06      6s
+  133827    2.7721307e+07   0.000000e+00   0.000000e+00     11s
+
+Solved in 133827 iterations and 10.64 seconds
+Optimal objective  2.772130742e+07
+[2022-07-03 20:30:06.659474]: Solver Success! Optimal value: 2.77213e+07
+[2022-07-03 20:30:06.659521]: LP Model was successfully solved!
+[2022-07-03 20:30:06.659526]: Creating flows ...
+[2022-07-03 20:30:06.659529]: verified model = solved
+[2022-07-03 20:30:08.065456]: >>>> BASIC STATISTICS | Objective: 2.77213e+07 | Iterations: 133827 | Time: 18630 | MATRIX : 1000 X 2500
+[2022-07-03 20:30:08.562280]: Flows created successfully!
+[2022-07-03 20:30:08.614073]: Flows freed successfully!
+ ******************** TEST 29 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:30:08.640505]: Start!
+[2022-07-03 20:30:08.640562]: File Name = ./data/TransportModel_1000_2500_2_equalityConstr.dat
+[2022-07-03 20:30:08.640586]: File available, Now reading file ...
+[2022-07-03 20:30:08.640799]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:30:09.169089]: Reading input file - complete!
+[2022-07-03 20:30:09.169123]: Problem Dimension => Supplies: 1000	Demands: 2500
+[2022-07-03 20:30:09.169135]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:30:09.188957]: An LP model object was successfully created
+[2022-07-03 20:30:09.188972]: Executing LP Model ... 
+[2022-07-03 20:30:09.188976]: Creating Variables
+[2022-07-03 20:30:12.373213]: Creating Variables - completed!
+[2022-07-03 20:30:12.373242]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:30:15.046091]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:30:16.735131]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 3500 rows, 2500000 columns and 5000000 nonzeros
+Model fingerprint: 0x6dbcad89
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 7e+04]
+Presolve time: 3.38s
+Presolved: 3500 rows, 2500000 columns, 5000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   1.363590e+05   2.498626e+12      4s
+  116364    3.1356320e+07   0.000000e+00   1.906683e+06      6s
+  150127    3.0408663e+07   0.000000e+00   0.000000e+00     11s
+
+Solved in 150127 iterations and 10.65 seconds
+Optimal objective  3.040866256e+07
+[2022-07-03 20:30:27.700027]: Solver Success! Optimal value: 3.04087e+07
+[2022-07-03 20:30:27.700073]: LP Model was successfully solved!
+[2022-07-03 20:30:27.700078]: Creating flows ...
+[2022-07-03 20:30:27.700081]: verified model = solved
+[2022-07-03 20:30:29.102700]: >>>> BASIC STATISTICS | Objective: 3.04087e+07 | Iterations: 150127 | Time: 18511 | MATRIX : 1000 X 2500
+[2022-07-03 20:30:29.603846]: Flows created successfully!
+[2022-07-03 20:30:29.656156]: Flows freed successfully!
+ ******************** TEST 30 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:30:29.682539]: Start!
+[2022-07-03 20:30:29.682596]: File Name = ./data/TransportModel_1000_2500_3_equalityConstr.dat
+[2022-07-03 20:30:29.682622]: File available, Now reading file ...
+[2022-07-03 20:30:29.682891]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:30:30.209646]: Reading input file - complete!
+[2022-07-03 20:30:30.209679]: Problem Dimension => Supplies: 1000	Demands: 2500
+[2022-07-03 20:30:30.209691]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:30:30.229026]: An LP model object was successfully created
+[2022-07-03 20:30:30.229045]: Executing LP Model ... 
+[2022-07-03 20:30:30.229052]: Creating Variables
+[2022-07-03 20:30:33.400302]: Creating Variables - completed!
+[2022-07-03 20:30:33.400331]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:30:36.001297]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:30:37.684872]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 3500 rows, 2500000 columns and 5000000 nonzeros
+Model fingerprint: 0x00275732
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 6e+04]
+Presolve time: 3.20s
+Presolved: 3500 rows, 2500000 columns, 5000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   1.345640e+05   2.498626e+12      3s
+  108566    2.8064828e+07   0.000000e+00   3.177307e+05      6s
+  136884    2.7463405e+07   0.000000e+00   0.000000e+00     11s
+
+Solved in 136884 iterations and 10.55 seconds
+Optimal objective  2.746340517e+07
+[2022-07-03 20:30:48.522145]: Solver Success! Optimal value: 2.74634e+07
+[2022-07-03 20:30:48.522189]: LP Model was successfully solved!
+[2022-07-03 20:30:48.522194]: Creating flows ...
+[2022-07-03 20:30:48.522196]: verified model = solved
+[2022-07-03 20:30:49.925281]: >>>> BASIC STATISTICS | Objective: 2.74634e+07 | Iterations: 136884 | Time: 18293 | MATRIX : 1000 X 2500
+[2022-07-03 20:30:50.401487]: Flows created successfully!
+[2022-07-03 20:30:50.451849]: Flows freed successfully!
+ ******************** TEST 31 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:30:50.476437]: Start!
+[2022-07-03 20:30:50.476493]: File Name = ./data/TransportModel_1000_5000_1_equalityConstr.dat
+[2022-07-03 20:30:50.476516]: File available, Now reading file ...
+[2022-07-03 20:30:50.476855]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:30:51.528879]: Reading input file - complete!
+[2022-07-03 20:30:51.528913]: Problem Dimension => Supplies: 1000	Demands: 5000
+[2022-07-03 20:30:51.528927]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:30:51.549117]: An LP model object was successfully created
+[2022-07-03 20:30:51.549139]: Executing LP Model ... 
+[2022-07-03 20:30:51.549146]: Creating Variables
+[2022-07-03 20:30:58.139040]: Creating Variables - completed!
+[2022-07-03 20:30:58.139069]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:31:04.038936]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:31:07.476947]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 6000 rows, 5000000 columns and 10000000 nonzeros
+Model fingerprint: 0x8d54d97b
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 1e+05]
+Presolve removed 0 rows and 0 columns (presolve time = 6s) ...
+Presolve time: 7.46s
+Presolved: 6000 rows, 5000000 columns, 10000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   2.711060e+05   4.997252e+12      8s
+    7729    7.4181423e+07   1.065960e+05   1.955867e+12     10s
+   15938    1.2392066e+08   0.000000e+00   4.101813e+09     15s
+   22967    1.1324361e+08   0.000000e+00   1.664707e+08     20s
+   29800    1.0274835e+08   0.000000e+00   1.769541e+08     25s
+   33324    9.7659330e+07   0.000000e+00   5.733565e+07     30s
+   37769    9.2927249e+07   0.000000e+00   1.700574e+07     35s
+   40312    9.0547471e+07   0.000000e+00   5.734327e+07     41s
+   42003    8.9020956e+07   0.000000e+00   7.174219e+07     45s
+   45125    8.7051788e+07   0.000000e+00   1.023959e+07     50s
+   47458    8.5455304e+07   0.000000e+00   2.071430e+08     55s
+   50437    8.3453844e+07   0.000000e+00   1.572977e+07     60s
+   52274    8.2363397e+07   0.000000e+00   4.336476e+07     65s
+   53883    8.1575889e+07   0.000000e+00   2.287338e+07     71s
+   55137    8.0985585e+07   0.000000e+00   1.957067e+07     76s
+   56045    8.0553460e+07   0.000000e+00   2.814431e+06     80s
+   58265    7.9653234e+07   0.000000e+00   4.221727e+06     86s
+   59307    7.9068878e+07   0.000000e+00   5.505028e+06     90s
+   61162    7.8248742e+07   0.000000e+00   1.529542e+06     95s
+   63149    7.7478533e+07   0.000000e+00   1.441440e+07    100s
+   64644    7.6940773e+07   0.000000e+00   2.231464e+06    106s
+   65545    7.6615134e+07   0.000000e+00   8.118009e+05    110s
+   66634    7.6186847e+07   0.000000e+00   1.204152e+06    115s
+   68401    7.5663950e+07   0.000000e+00   1.189754e+05    120s
+   70058    7.5348636e+07   0.000000e+00   2.880614e+05    125s
+   71353    7.5167849e+07   0.000000e+00   1.365825e+05    130s
+   72722    7.5045213e+07   0.000000e+00   3.623162e+05    136s
+   73782    7.4983271e+07   0.000000e+00   4.744040e+04    141s
+   74702    7.4966819e+07   0.000000e+00   1.956148e+04    145s
+   75711    7.4952191e+07   0.000000e+00   4.934025e+03    150s
+   76713    7.4945337e+07   0.000000e+00   2.779634e+03    155s
+   77681    7.4940765e+07   0.000000e+00   1.023712e+03    161s
+   78203    7.4939623e+07   0.000000e+00   6.287565e+02    166s
+   78671    7.4939074e+07   0.000000e+00   1.016704e+02    171s
+   78910    7.4938926e+07   0.000000e+00   3.044987e+01    176s
+   79010    7.4938890e+07   0.000000e+00   8.099876e+00    180s
+   79064    7.4938884e+07   0.000000e+00   0.000000e+00    188s
+
+Solved in 79064 iterations and 187.58 seconds
+Optimal objective  7.493888383e+07
+[2022-07-03 20:34:15.699877]: Solver Success! Optimal value: 7.49389e+07
+[2022-07-03 20:34:15.699938]: LP Model was successfully solved!
+[2022-07-03 20:34:15.699943]: Creating flows ...
+[2022-07-03 20:34:15.699947]: verified model = solved
+[2022-07-03 20:34:18.623849]: >>>> BASIC STATISTICS | Objective: 7.49389e+07 | Iterations: 79064 | Time: 204150 | MATRIX : 1000 X 5000
+[2022-07-03 20:34:19.628107]: Flows created successfully!
+[2022-07-03 20:34:19.732634]: Flows freed successfully!
+ ******************** TEST 32 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:34:19.788272]: Start!
+[2022-07-03 20:34:19.788336]: File Name = ./data/TransportModel_1000_5000_2_equalityConstr.dat
+[2022-07-03 20:34:19.788364]: File available, Now reading file ...
+[2022-07-03 20:34:19.788588]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:34:20.842066]: Reading input file - complete!
+[2022-07-03 20:34:20.842099]: Problem Dimension => Supplies: 1000	Demands: 5000
+[2022-07-03 20:34:20.842112]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:34:20.861325]: An LP model object was successfully created
+[2022-07-03 20:34:20.861341]: Executing LP Model ... 
+[2022-07-03 20:34:20.861346]: Creating Variables
+[2022-07-03 20:34:27.502812]: Creating Variables - completed!
+[2022-07-03 20:34:27.502841]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:34:33.323409]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:34:36.760744]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 6000 rows, 5000000 columns and 10000000 nonzeros
+Model fingerprint: 0xa1baf650
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 2e+05]
+Presolve removed 0 rows and 0 columns (presolve time = 7s) ...
+Presolve time: 7.65s
+Presolved: 6000 rows, 5000000 columns, 10000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   2.736580e+05   4.997252e+12      8s
+    6077    4.0417283e+07   1.707020e+05   3.106755e+12     10s
+   13781    1.2890246e+08   0.000000e+00   6.073151e+09     15s
+   21782    1.1720689e+08   0.000000e+00   2.793592e+08     20s
+   28133    1.0714032e+08   0.000000e+00   3.487317e+08     25s
+   33233    1.0099667e+08   0.000000e+00   4.489634e+08     30s
+   36788    9.7606778e+07   0.000000e+00   2.656797e+08     35s
+   40402    9.4883434e+07   0.000000e+00   7.109980e+06     41s
+   43069    9.3133286e+07   0.000000e+00   7.578084e+07     45s
+   45300    9.2138878e+07   0.000000e+00   5.808187e+06     51s
+   47993    9.0483637e+07   0.000000e+00   2.106254e+07     55s
+   50254    8.9270832e+07   0.000000e+00   1.450753e+06     61s
+   52435    8.8285206e+07   0.000000e+00   4.264928e+06     65s
+   53770    8.7846705e+07   0.000000e+00   1.591599e+06     70s
+   55966    8.6962865e+07   0.000000e+00   3.083106e+06     76s
+   57883    8.6184833e+07   0.000000e+00   1.250164e+06     80s
+   59552    8.5677257e+07   0.000000e+00   5.697174e+05     85s
+   60863    8.5515256e+07   0.000000e+00   3.310054e+05     91s
+   61735    8.5388132e+07   0.000000e+00   3.381487e+05     95s
+   62760    8.5269062e+07   0.000000e+00   3.231688e+05    100s
+   63915    8.5191966e+07   0.000000e+00   1.142446e+05    106s
+   64753    8.5163626e+07   0.000000e+00   2.573579e+05    110s
+   65726    8.5140816e+07   0.000000e+00   2.288509e+05    116s
+   66479    8.5129678e+07   0.000000e+00   2.947874e+04    120s
+   67310    8.5118914e+07   0.000000e+00   1.656347e+04    126s
+   68003    8.5112640e+07   0.000000e+00   3.157313e+04    130s
+   68724    8.5106595e+07   0.000000e+00   1.086608e+04    135s
+   69513    8.5100611e+07   0.000000e+00   9.543488e+03    141s
+   70198    8.5097209e+07   0.000000e+00   1.973663e+03    145s
+   70826    8.5095509e+07   0.000000e+00   4.624427e+02    152s
+   71076    8.5095164e+07   0.000000e+00   6.683326e+02    156s
+   71433    8.5094978e+07   0.000000e+00   8.879250e+00    163s
+   71563    8.5094955e+07   0.000000e+00   9.304047e-01    172s
+   71576    8.5094955e+07   0.000000e+00   0.000000e+00    178s
+
+Solved in 71576 iterations and 178.04 seconds
+Optimal objective  8.509495495e+07
+[2022-07-03 20:37:35.461980]: Solver Success! Optimal value: 8.5095e+07
+[2022-07-03 20:37:35.462027]: LP Model was successfully solved!
+[2022-07-03 20:37:35.462032]: Creating flows ...
+[2022-07-03 20:37:35.462035]: verified model = solved
+[2022-07-03 20:37:38.380965]: >>>> BASIC STATISTICS | Objective: 8.5095e+07 | Iterations: 71576 | Time: 194600 | MATRIX : 1000 X 5000
+[2022-07-03 20:37:39.391457]: Flows created successfully!
+[2022-07-03 20:37:39.495961]: Flows freed successfully!
+ ******************** TEST 33 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:37:39.545163]: Start!
+[2022-07-03 20:37:39.545219]: File Name = ./data/TransportModel_1000_5000_3_equalityConstr.dat
+[2022-07-03 20:37:39.545244]: File available, Now reading file ...
+[2022-07-03 20:37:39.545599]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:37:40.599441]: Reading input file - complete!
+[2022-07-03 20:37:40.599475]: Problem Dimension => Supplies: 1000	Demands: 5000
+[2022-07-03 20:37:40.599488]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:37:40.621012]: An LP model object was successfully created
+[2022-07-03 20:37:40.621030]: Executing LP Model ... 
+[2022-07-03 20:37:40.621036]: Creating Variables
+[2022-07-03 20:37:47.174101]: Creating Variables - completed!
+[2022-07-03 20:37:47.174130]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:37:53.074593]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:37:56.506602]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 6000 rows, 5000000 columns and 10000000 nonzeros
+Model fingerprint: 0x4418c744
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 1e+05]
+Presolve removed 0 rows and 0 columns (presolve time = 7s) ...
+Presolve time: 7.62s
+Presolved: 6000 rows, 5000000 columns, 10000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   2.732700e+05   4.997253e+12      8s
+    7633    7.5790241e+07   1.031990e+05   1.861406e+12     10s
+   15203    1.2321439e+08   0.000000e+00   3.903373e+09     15s
+   20733    1.1368559e+08   0.000000e+00   9.657562e+08     20s
+   27949    1.0260411e+08   0.000000e+00   4.080176e+08     25s
+   32402    9.7270445e+07   0.000000e+00   1.018074e+08     30s
+   34535    9.5110120e+07   0.000000e+00   2.063688e+08     35s
+   38235    9.1363248e+07   0.000000e+00   1.933864e+08     40s
+   42207    8.7976724e+07   0.000000e+00   1.824270e+08     45s
+   45172    8.6308002e+07   0.000000e+00   9.022652e+07     50s
+   49122    8.3942267e+07   0.000000e+00   5.720254e+06     55s
+   51252    8.2967486e+07   0.000000e+00   8.723121e+06     60s
+   53032    8.2272823e+07   0.000000e+00   9.855581e+06     66s
+   55339    8.0999338e+07   0.000000e+00   2.260066e+06     70s
+   56719    8.0461893e+07   0.000000e+00   2.807202e+06     75s
+   58621    7.9406515e+07   0.000000e+00   1.829749e+06     80s
+   60350    7.8466133e+07   0.000000e+00   7.836156e+05     86s
+   61361    7.7863348e+07   0.000000e+00   1.346275e+06     90s
+   62416    7.7307060e+07   0.000000e+00   5.277746e+06     95s
+   64230    7.6605920e+07   0.000000e+00   2.222348e+06    100s
+   65791    7.6132902e+07   0.000000e+00   6.964072e+05    106s
+   66899    7.5739092e+07   0.000000e+00   2.122933e+06    110s
+   68062    7.5502886e+07   0.000000e+00   1.353318e+06    116s
+   69049    7.5344866e+07   0.000000e+00   1.163053e+05    120s
+   69991    7.5222299e+07   0.000000e+00   1.187676e+05    125s
+   70848    7.5176133e+07   0.000000e+00   1.284240e+05    130s
+   71772    7.5142103e+07   0.000000e+00   4.499327e+04    136s
+   72559    7.5125893e+07   0.000000e+00   5.061110e+04    140s
+   73304    7.5115545e+07   0.000000e+00   6.082122e+04    145s
+   74163    7.5105435e+07   0.000000e+00   2.815411e+04    151s
+   74836    7.5099531e+07   0.000000e+00   6.156495e+03    156s
+   75586    7.5094612e+07   0.000000e+00   4.424613e+03    160s
+   76253    7.5091688e+07   0.000000e+00   8.161567e+02    165s
+   76852    7.5089945e+07   0.000000e+00   4.930048e+02    171s
+   77257    7.5089468e+07   0.000000e+00   4.789014e+01    177s
+   77493    7.5089337e+07   0.000000e+00   1.582954e+01    184s
+   77558    7.5089329e+07   0.000000e+00   0.000000e+00    194s
+
+Solved in 77558 iterations and 193.86 seconds
+Optimal objective  7.508932874e+07
+[2022-07-03 20:41:11.015152]: Solver Success! Optimal value: 7.50893e+07
+[2022-07-03 20:41:11.015193]: LP Model was successfully solved!
+[2022-07-03 20:41:11.015198]: Creating flows ...
+[2022-07-03 20:41:11.015201]: verified model = solved
+[2022-07-03 20:41:13.924542]: >>>> BASIC STATISTICS | Objective: 7.50893e+07 | Iterations: 77558 | Time: 210394 | MATRIX : 1000 X 5000
+[2022-07-03 20:41:14.933739]: Flows created successfully!
+[2022-07-03 20:41:15.039491]: Flows freed successfully!
+ ******************** TEST 34 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:41:15.086220]: Start!
+[2022-07-03 20:41:15.086276]: File Name = ./data/TransportModel_1000_10000_1_equalityConstr.dat
+[2022-07-03 20:41:15.086300]: File available, Now reading file ...
+[2022-07-03 20:41:15.086562]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:41:17.189667]: Reading input file - complete!
+[2022-07-03 20:41:17.189700]: Problem Dimension => Supplies: 1000	Demands: 10000
+[2022-07-03 20:41:17.189715]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:41:17.209025]: An LP model object was successfully created
+[2022-07-03 20:41:17.209046]: Executing LP Model ... 
+[2022-07-03 20:41:17.209052]: Creating Variables
+[2022-07-03 20:41:30.968737]: Creating Variables - completed!
+[2022-07-03 20:41:30.968765]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:41:42.725170]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:41:49.852613]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 11000 rows, 10000000 columns and 20000000 nonzeros
+Model fingerprint: 0x48d77ee0
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 4e+05]
+Presolve removed 0 rows and 0 columns (presolve time = 6s) ...
+Presolve removed 0 rows and 0 columns (presolve time = 13s) ...
+Presolve removed 0 rows and 0 columns (presolve time = 15s) ...
+Presolve time: 15.28s
+Presolved: 11000 rows, 10000000 columns, 20000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.418180e+05   9.994504e+12     16s
+  109419    2.1428289e+08   4.552000e+03   2.271544e+11     20s
+  188759    2.0154530e+08   0.000000e+00   6.515424e+07     25s
+  235036    1.9650964e+08   0.000000e+00   1.619793e+05     30s
+  253962    1.9617758e+08   0.000000e+00   2.944078e+02     37s
+  254778    1.9617699e+08   0.000000e+00   0.000000e+00     43s
+
+Solved in 254778 iterations and 42.62 seconds
+Optimal objective  1.961769949e+08
+[2022-07-03 20:42:33.699762]: Solver Success! Optimal value: 1.96177e+08
+[2022-07-03 20:42:33.699810]: LP Model was successfully solved!
+[2022-07-03 20:42:33.699815]: Creating flows ...
+[2022-07-03 20:42:33.699818]: verified model = solved
+[2022-07-03 20:42:39.799612]: >>>> BASIC STATISTICS | Objective: 1.96177e+08 | Iterations: 254778 | Time: 76490 | MATRIX : 1000 X 10000
+[2022-07-03 20:42:41.705091]: Flows created successfully!
+[2022-07-03 20:42:41.914392]: Flows freed successfully!
+ ******************** TEST 35 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:42:41.998516]: Start!
+[2022-07-03 20:42:41.998573]: File Name = ./data/TransportModel_1000_10000_2_equalityConstr.dat
+[2022-07-03 20:42:41.998596]: File available, Now reading file ...
+[2022-07-03 20:42:41.998810]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:42:44.104253]: Reading input file - complete!
+[2022-07-03 20:42:44.104286]: Problem Dimension => Supplies: 1000	Demands: 10000
+[2022-07-03 20:42:44.104298]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:42:44.124997]: An LP model object was successfully created
+[2022-07-03 20:42:44.125018]: Executing LP Model ... 
+[2022-07-03 20:42:44.125024]: Creating Variables
+[2022-07-03 20:42:57.594614]: Creating Variables - completed!
+[2022-07-03 20:42:57.594643]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:43:09.857374]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:43:16.965013]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 11000 rows, 10000000 columns and 20000000 nonzeros
+Model fingerprint: 0x9fe4ec94
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 3e+05]
+Presolve removed 0 rows and 0 columns (presolve time = 6s) ...
+Presolve removed 0 rows and 0 columns (presolve time = 14s) ...
+Presolve removed 0 rows and 0 columns (presolve time = 16s) ...
+Presolve time: 16.13s
+Presolved: 11000 rows, 10000000 columns, 20000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.452520e+05   9.994505e+12     17s
+   79323    1.6763343e+08   3.530900e+04   6.110064e+11     20s
+  164898    1.8341572e+08   0.000000e+00   1.222412e+06     26s
+  211822    1.7508624e+08   0.000000e+00   5.881131e+05     30s
+  253103    1.7010694e+08   0.000000e+00   3.558561e+05     36s
+  273023    1.6944486e+08   0.000000e+00   4.937206e+03     42s
+  276102    1.6944027e+08   0.000000e+00   0.000000e+00     50s
+
+Solved in 276102 iterations and 49.72 seconds
+Optimal objective  1.694402732e+08
+[2022-07-03 20:44:08.004880]: Solver Success! Optimal value: 1.6944e+08
+[2022-07-03 20:44:08.004926]: LP Model was successfully solved!
+[2022-07-03 20:44:08.004931]: Creating flows ...
+[2022-07-03 20:44:08.004934]: verified model = solved
+[2022-07-03 20:44:14.075209]: >>>> BASIC STATISTICS | Objective: 1.6944e+08 | Iterations: 276102 | Time: 83879 | MATRIX : 1000 X 10000
+[2022-07-03 20:44:15.974871]: Flows created successfully!
+[2022-07-03 20:44:16.181312]: Flows freed successfully!
+ ******************** TEST 36 |SWITCHING SOLVER COMPLETE ***************** 
+FLOCK: Setting up logger
+[2022-07-03 20:44:16.265107]: Start!
+[2022-07-03 20:44:16.265174]: File Name = ./data/TransportModel_1000_10000_3_equalityConstr.dat
+[2022-07-03 20:44:16.265207]: File available, Now reading file ...
+[2022-07-03 20:44:16.265515]: Determined problem dimensions, Now reading costs ...
+[2022-07-03 20:44:18.369802]: Reading input file - complete!
+[2022-07-03 20:44:18.369834]: Problem Dimension => Supplies: 1000	Demands: 10000
+[2022-07-03 20:44:18.369847]: Initializing LP Model
+Academic license - for non-commercial use only - expires 2023-01-14
+[2022-07-03 20:44:18.388999]: An LP model object was successfully created
+[2022-07-03 20:44:18.389019]: Executing LP Model ... 
+[2022-07-03 20:44:18.389025]: Creating Variables
+[2022-07-03 20:44:31.896091]: Creating Variables - completed!
+[2022-07-03 20:44:31.896120]: Creating Consraint - Demand Statisfaction
+[2022-07-03 20:44:43.635031]: Creating Consraint - Demand Supply Restriction
+[2022-07-03 20:44:50.770584]: Starting Solver
+Gurobi Optimizer version 9.1.2 build v9.1.2rc0 (linux64)
+Thread count: 4 physical cores, 8 logical processors, using up to 8 threads
+Optimize a model with 11000 rows, 10000000 columns and 20000000 nonzeros
+Model fingerprint: 0x630648d9
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+02, 1e+03]
+  Bounds range     [0e+00, 0e+00]
+  RHS range        [1e+01, 3e+05]
+Presolve removed 0 rows and 0 columns (presolve time = 6s) ...
+Presolve removed 0 rows and 0 columns (presolve time = 13s) ...
+Presolve removed 0 rows and 0 columns (presolve time = 15s) ...
+Presolve time: 15.26s
+Presolved: 11000 rows, 10000000 columns, 20000000 nonzeros
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0    0.0000000e+00   5.462600e+05   9.994506e+12     16s
+   99297    1.8307990e+08   0.000000e+00   7.458367e+07     21s
+  141945    1.7965488e+08   0.000000e+00   4.162281e+05     25s
+  161736    1.7905166e+08   0.000000e+00   5.476606e+03     31s
+  166057    1.7903950e+08   0.000000e+00   0.000000e+00     40s
+
+Solved in 166057 iterations and 40.46 seconds
+Optimal objective  1.790394998e+08
+[2022-07-03 20:45:32.462862]: Solver Success! Optimal value: 1.79039e+08
+[2022-07-03 20:45:32.462906]: LP Model was successfully solved!
+[2022-07-03 20:45:32.462911]: Creating flows ...
+[2022-07-03 20:45:32.462913]: verified model = solved
+[2022-07-03 20:45:38.540051]: >>>> BASIC STATISTICS | Objective: 1.79039e+08 | Iterations: 166057 | Time: 74073 | MATRIX : 1000 X 10000
+[2022-07-03 20:45:40.488375]: Flows created successfully!
+[2022-07-03 20:45:40.697899]: Flows freed successfully!
+ ******************** TEST 37 |SWITCHING SOLVER COMPLETE ***************** 

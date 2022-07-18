@@ -10,19 +10,14 @@ Todo:
 #include "../parallel_structs.h"
 #include "../parallel_kernels.h"
 
+namespace UV_METHOD {
+    
 // ALLOCATE and DE-ALLOCATE RESOURCES for dual based on appropriate strategy
 __host__ void dualMalloc(DualHandler &dual, int numSupplies, int numDemands);
 
 __host__ void dualFree(DualHandler &dual);
 
-
 // BREADTH FIRST SEARCH
-__host__ void find_dual_using_device_bfs(DualHandler &dual, Graph &graph, float * d_costs_ptr, int numSupplies, int numDemands);
-
 __host__ void find_dual_using_host_bfs(DualHandler &dual,  Graph &graph, float * h_costs_ptr, int numSupplies, int numDemands);
 
-
-// SOLVE LINEAR SYSTEM
-__host__ void find_dual_using_sparse_solver(DualHandler &dual, Graph &graph, float * d_costs_ptr, int numSupplies, int numDemands);
-
-__host__ void find_dual_using_dense_solver(DualHandler &dual, Graph &graph, float * d_costs_ptr, int numSupplies, int numDemands);
+} // End of namespace

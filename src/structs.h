@@ -1,5 +1,15 @@
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <chrono>
+#include <fstream>
+#include <vector>
+#include <map>
+#include <cmath>
+#include <iterator>
+#include <algorithm>
+
+#include "parameters.h"
 
 #ifndef STRUCT
 #define STRUCT
@@ -14,7 +24,7 @@ class ProblemInstance
 public:
     bool read_mode;
     std::string filename;
-    enum my_algo {cpu_lp_solve, parallel_uv, parallel_ss};
+    enum my_algo {cpu_lp_solve, parallel_uv, parallel_ss, switch_hybrid};
     my_algo algo;
     int numDemands, numSupplies, *demands, *supplies, active_flows;
     

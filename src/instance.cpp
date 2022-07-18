@@ -9,21 +9,25 @@ void get_input_mode_and_filename(InputParser input, ProblemInstance &problem)
         problem.filename = input.getCmdOption("-i");
         if (problem.filename.empty())
         {
-            BOOST_LOG_TRIVIAL(error) << "No filename provided for arugment -i";
+            add_log_msg("error", "*****************************************************");
+            add_log_msg("error", "No filename provided for arugment -i");
+            add_log_msg("error", "*****************************************************");
             throw FileNotFoundException();
             exit(-1);
         }
         else
         {
-            BOOST_LOG_TRIVIAL(debug) << "File Name = " << problem.filename;
+            add_log_msg("info", "File Name = " + problem.filename);
         }
     }
     else
     {
         problem.read_mode = false;
-        BOOST_LOG_TRIVIAL(error) << "Provide input file with argument -i";
-        problem.filename = "/!\\ NO FILE INPUT - FUTURE OF MAKE RANDOMLY GENERATED INSTANCE";
-        BOOST_LOG_TRIVIAL(error) << problem.filename;
+        add_log_msg("error", "*****************************************************");
+        add_log_msg("error", "Provide input file with argument -i");
+        add_log_msg("error", "*****************************************************");
+        // problem.filename = "/!\\ NO FILE INPUT - FUTURE OF MAKE RANDOMLY GENERATED INSTANCE";
+        // add_log_msg("error", problem.filename);
         throw FileNotFoundException();
         exit(-1);
         // Future: Auto Generate an instance at random
@@ -58,9 +62,14 @@ void get_algorithm(InputParser input, ProblemInstance &problem)
     else if (user_algo == "parallel_ss"){
         problem.algo = ProblemInstance::my_algo::parallel_ss;
     }
+    else if (user_algo == "switch_hybrid"){
+        problem.algo = ProblemInstance::my_algo::switch_hybrid;
+    }
     else
     {
-        BOOST_LOG_TRIVIAL(error) << "Invalid Algorithm!";
+        add_log_msg("error", "*****************************************************");
+        add_log_msg("error", "Invalid Algorithm!");
+        add_log_msg("error", "*****************************************************");
     }
 }
 
@@ -131,6 +140,12 @@ void readCosts(ProblemInstance &problem)
     }
 }
 
+bool is_file_exist(std::string fileName)
+{
+    std::ifstream infile(const_cast<char*>(fileName.c_str()));
+    return infile.good();
+}
+
 void make_problem(InputParser input, ProblemInstance &problem)
 {
 
@@ -138,18 +153,19 @@ void make_problem(InputParser input, ProblemInstance &problem)
     
     get_input_mode_and_filename(input, problem);
     // does filePath actually exist?
-    if (boost::filesystem::exists(problem.filename))
+    
+    if (is_file_exist(problem.filename))
     {
-        BOOST_LOG_TRIVIAL(debug) << "File available, Now reading file ...";
+        add_log_msg("debug", "File available, Now reading file ...");
         readSize(problem);
-        BOOST_LOG_TRIVIAL(debug) << "Determined problem dimensions, Now reading costs ...";
+        add_log_msg("debug", "Determined problem dimensions, Now reading costs ...");
         problem.allocate_memory();
         readCosts(problem);
-        BOOST_LOG_TRIVIAL(debug) << "Reading input file - complete!";
+        add_log_msg("debug", "Reading input file - complete!");
     }
     else
     {
-        BOOST_LOG_TRIVIAL(error) << "File :" << problem.filename << " doesn't exist!";
+        add_log_msg("error", "File :" + problem.filename + " doesn't exist!");
         throw FileNotFoundException();
         exit(-1);
     }
