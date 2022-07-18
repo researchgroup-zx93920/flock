@@ -1,9 +1,6 @@
-#include <iostream>
-#include <boost/filesystem.hpp>
-
-#include "logger.h"
-#include "utils.h"
 #include "structs.h"
+#include "logger.h"
+
 
 struct FileNotFoundException : public std::exception
 {

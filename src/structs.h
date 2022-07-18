@@ -1,6 +1,15 @@
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <chrono>
 #include <fstream>
+#include <vector>
+#include <map>
+#include <cmath>
+#include <iterator>
+#include <algorithm>
+
+#include "parameters.h"
 
 #ifndef STRUCT
 #define STRUCT

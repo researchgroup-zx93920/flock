@@ -1,6 +1,6 @@
 
-# include "./gurobi_lp_method/lp_model.h"
-# include "./parallel_simplex_method/parallel_uv_method/uv_model_parallel.h"
+#include "./gurobi_lp_method/lp_model.h"
+#include "./parallel_simplex_method/parallel_uv_method/uv_model_parallel.h"
 #include "./parallel_simplex_method/parallel_ss_method/ss_model_parallel.h"
 #include "./parallel_simplex_method/switch/switch_model_parallel.h"
 
