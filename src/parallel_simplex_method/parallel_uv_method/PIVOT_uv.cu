@@ -365,10 +365,13 @@ __host__ void perform_a_sequencial_pivot(PivotHandler &pivot, PivotTimer &timer,
         // Beacuse graph is a tree, this should not happen anytime 
         // BUT just in case u know this many not be your day :D
         _pivot_start = std::chrono::high_resolution_clock::now();
+        
+        // std::cout<<"To vtx : "<<pivot_row<<std::endl;
+        // std::cout<<"From vtx : "<<pivot_col+numSupplies<<std::endl;
 
         if (_depth <= 1) {
             std::cout<<" !! Error !! : Pivot cannot be performed, this is probably not a tree but forest!"<<std::endl;
-            std::cout<<"Solution IS NOT OPTIMAL!"<<std::endl;
+            std::cout<<">>>>>>>>> !! Solution IS NOT OPTIMAL !!"<<std::endl;
             result = true;
             return;
         }

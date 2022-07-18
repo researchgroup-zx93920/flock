@@ -1,7 +1,6 @@
 // #include <cuda_runtime.h>
 #include <iostream>
 
-
 #include "logger.h"
 #include "utils.h"
 #include "instance.h"

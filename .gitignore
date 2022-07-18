@@ -8,3 +8,4 @@ profiles/
 results/
 *.nsys-rep
 *.sqlite
+utilities/uszips.csv

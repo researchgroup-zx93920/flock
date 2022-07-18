@@ -59,7 +59,7 @@ void lpModel::add_constraints()
 		}
 		std::stringstream s;
 		s << "satisfyDemand_" << j;
-		model->addConstr(lhs >= data->demands[j], s.str());
+		model->addConstr(lhs == data->demands[j], s.str());
 	}
 
 	// Constraint 2 :: Supply Restrictions on index - i
@@ -75,7 +75,7 @@ void lpModel::add_constraints()
 		}
 		std::stringstream s;
 		s << "restrictSupply_" << i;
-		model->addConstr(lhs <= data->supplies[i], s.str());
+		model->addConstr(lhs == data->supplies[i], s.str());
 	}
 }
 

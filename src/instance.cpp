@@ -134,6 +134,12 @@ void readCosts(ProblemInstance &problem)
     }
 }
 
+bool is_file_exist(std::string fileName)
+{
+    std::ifstream infile(const_cast<char*>(fileName.c_str()));
+    return infile.good();
+}
+
 void make_problem(InputParser input, ProblemInstance &problem)
 {
 
@@ -141,7 +147,8 @@ void make_problem(InputParser input, ProblemInstance &problem)
     
     get_input_mode_and_filename(input, problem);
     // does filePath actually exist?
-    if (boost::filesystem::exists(problem.filename))
+    
+    if (is_file_exist(problem.filename))
     {
         BOOST_LOG_TRIVIAL(debug) << "File available, Now reading file ...";
         readSize(problem);
